@@ -9,7 +9,8 @@ uuid = { version = "0.2", features = ["use_std", "v4"] }
 byteorder = "1"
 error-chain = "0.8"
 protobuf = "1.2"
-protobuf_macros = { version = "0.6", git = "https://github.com/plietar/rust-protobuf-macros.git" }
+# protobuf_macros = { version = "0.6", git = "https://github.com/plietar/rust-protobuf-macros.git" }
+quick-protobuf = "0.4"
 futures = "0.1"
 tokio-core = "0.1"
 tokio-service = "0.1"

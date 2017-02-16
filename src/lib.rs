@@ -3,7 +3,8 @@
 
 #[macro_use]
 extern crate bitflags;
-extern crate protobuf;
+// extern crate protobuf;
+extern crate quick_protobuf;
 extern crate uuid;
 extern crate byteorder;
 #[macro_use]
@@ -18,23 +19,21 @@ extern crate rustc_serialize;
 use std::fmt;
 use std::io;
 use std::io::{Read, Write};
+use std::ops::Range;
+use std::borrow::Cow;
 use uuid::Uuid;
 use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 use tokio_core::io::{Codec, EasyBuf};
 
-// mod ClientMessageDtos;
+// mod pb_client_messages;
+mod messages;
+use messages::mod_EventStore::mod_Client::mod_Messages as client_messages;
 
 pub mod errors {
     use std::str;
-    use std::string;
     use std::io;
 
     error_chain! {
-        foreign_links {
-            Utf8(str::Utf8Error);
-            Io(io::Error);
-        }
-
         errors {
             InvalidFlags(flags: u8) {
                 display("Invalid flags: 0x{:02x}", flags)
@@ -48,15 +47,8 @@ pub mod errors {
     impl Into<io::Error> for Error {
         fn into(self) -> io::Error {
             match self {
-                Error(ErrorKind::Io(e), _) => e,
                 e => io::Error::new(io::ErrorKind::Other, e),
             }
-        }
-    }
-
-    impl From<string::FromUtf8Error> for Error {
-        fn from(e: string::FromUtf8Error) -> Self {
-            e.utf8_error().into()
         }
     }
 
@@ -69,13 +61,6 @@ pub mod errors {
 
 use self::errors::ErrorKind;
 
-/*
-enum ErrorKind {
-    InvalidFlags(u8),
-    UnsupportedDiscriminator(u8),
-}
-*/
-
 bitflags!{
     flags TcpFlags: u8 {
         const FLAG_NONE = 0x00,
@@ -86,7 +71,7 @@ bitflags!{
 
 /// Wrapper for packet in the protocol. On the wire, packets are embedded in frames with length
 /// prefix and suffix.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 pub struct Package {
     /// Possible authentication data included in the packet. `Some`` and `None` values of this will
     /// be used to generate corresponding `TcpFlags` first bit.
@@ -134,7 +119,7 @@ impl UsernamePassword {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 pub enum Message {
     HeartbeatRequest,
     HeartbeatResponse,
@@ -142,11 +127,158 @@ pub enum Message {
     Pong,
 
     WriteEvents,
-    WriteEventsCompleted,
+    WriteEventsCompleted(WriteEventsCompletedData),
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum WriteEventsCompletedData {
+    Success {
+        event_numbers: Range<i32>,
+        prepare_position: Option<i64>,
+        commit_position: Option<i64>,
+    },
+    Failure(Explanation),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Explanation {
+    pub reason: OperationResult,
+    pub message: Option<String>
+}
+
+impl Explanation {
+    fn new(or: client_messages::OperationResult, msg: Option<String>) -> Explanation {
+        Explanation { reason: or.into(), message: msg }
+    }
+}
+
+/// Like `OperationResult` on the wire but does not have a success value. Explains the reason for
+/// failure.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum OperationResult {
+    PrepareTimeout,
+    CommitTimeout,
+    ForwardTimeout,
+    WrongExpectedVersion,
+    StreamDeleted,
+    InvalidTransaction,
+    AccessDenied,
+}
+
+impl Copy for OperationResult {}
+
+impl From<client_messages::OperationResult> for OperationResult {
+    fn from(or: client_messages::OperationResult) -> OperationResult {
+        use client_messages::OperationResult::*;
+
+        match or {
+            Success => panic!("Success type is invalid for this type"),
+            PrepareTimeout => OperationResult::PrepareTimeout,
+            CommitTimeout => OperationResult::CommitTimeout,
+            ForwardTimeout => OperationResult::ForwardTimeout,
+            WrongExpectedVersion => OperationResult::WrongExpectedVersion,
+            StreamDeleted => OperationResult::StreamDeleted,
+            InvalidTransaction => OperationResult::InvalidTransaction,
+            AccessDenied => OperationResult::AccessDenied,
+        }
+    }
+}
+
+impl Into<client_messages::OperationResult> for OperationResult {
+    fn into(self) -> client_messages::OperationResult {
+        use OperationResult::*;
+        match self {
+            PrepareTimeout => client_messages::OperationResult::PrepareTimeout,
+            CommitTimeout => client_messages::OperationResult::CommitTimeout,
+            ForwardTimeout => client_messages::OperationResult::ForwardTimeout,
+            WrongExpectedVersion => client_messages::OperationResult::WrongExpectedVersion,
+            StreamDeleted => client_messages::OperationResult::StreamDeleted,
+            InvalidTransaction => client_messages::OperationResult::InvalidTransaction,
+            AccessDenied => client_messages::OperationResult::AccessDenied
+        }
+    }
+}
+
+impl<'a> From<client_messages::WriteEventsCompleted<'a>> for WriteEventsCompletedData {
+    fn from(wec: client_messages::WriteEventsCompleted<'a>) -> Self {
+        use client_messages::OperationResult::*;
+        match wec.result.expect("Required field was not present in WroteEventsComplete") {
+            Success => {
+                WriteEventsCompletedData::Success {
+                    // off-by one: Range is [start, end)
+                    event_numbers: wec.first_event_number..wec.last_event_number + 1,
+                    prepare_position: wec.prepare_position,
+                    commit_position: wec.commit_position,
+                }
+            }
+            x => WriteEventsCompletedData::Failure(Explanation::new(x, wec.message.map(|x| x.into_owned()))),
+        }
+    }
+}
+
+trait AsMessageWrite<M: quick_protobuf::MessageWrite> {
+    fn as_message_write(&self) -> M;
+
+    fn encode<W: io::Write>(&self, out: &mut W) -> io::Result<()> {
+        let conv = self.as_message_write();
+
+        conv.write_message(&mut quick_protobuf::writer::Writer::new(out)).map_err(convert_qp_err)
+    }
+}
+
+impl<'a> AsMessageWrite<client_messages::WriteEventsCompleted<'a>> for WriteEventsCompletedData {
+    fn as_message_write(&self) -> client_messages::WriteEventsCompleted<'a> {
+        use WriteEventsCompletedData::*;
+        match *self {
+            Success { ref event_numbers, prepare_position, commit_position } => {
+                client_messages::WriteEventsCompleted {
+                    result: Some(client_messages::OperationResult::Success),
+                    message: None,
+                    first_event_number: event_numbers.start,
+                    last_event_number: event_numbers.end - 1,
+                    prepare_position: prepare_position,
+                    commit_position: commit_position
+                }
+            },
+            Failure(Explanation { reason, ref message }) => {
+                client_messages::WriteEventsCompleted {
+                    result: Some(reason.into()),
+                    message: message.clone().map(Cow::Owned),
+                    first_event_number: -1,
+                    last_event_number: -1,
+                    prepare_position: None,
+                    commit_position: None,
+                }
+            }
+        }
+    }
+}
+
+fn convert_qp_err(e: ::quick_protobuf::errors::Error) -> io::Error {
+    use std::io::{Error as IoError, ErrorKind as IoErrorKind};
+    use quick_protobuf::errors::{Error, ErrorKind};
+
+    match e {
+        Error(ErrorKind::Io(e), _) => e,
+        Error(ErrorKind::Utf8(e), _) => IoError::new(IoErrorKind::InvalidData, e.utf8_error()),
+        Error(ErrorKind::StrUtf8(e), _) => IoError::new(IoErrorKind::InvalidData, e),
+        x => IoError::new(IoErrorKind::Other, x)
+    }
+}
+
 
 impl Message {
     fn decode(discriminator: u8, buf: &mut EasyBuf) -> io::Result<Message> {
+
+        macro_rules! parse_pb {
+            ($x:ty, $buf:expr) => {
+                {
+                    let mut reader = ::quick_protobuf::reader::BytesReader::from_bytes($buf.as_slice());
+                    <$x>::from_reader(&mut reader, $buf.as_slice()).map_err(convert_qp_err)
+                }
+            }
+        }
+
         Ok(match discriminator {
             // these hold no data
             0x01 => Self::without_data(Message::HeartbeatRequest, buf),
@@ -155,7 +287,7 @@ impl Message {
             0x04 => Self::without_data(Message::Pong, buf),
 
             0x82 => Self::without_data(Message::WriteEvents, buf),
-            0x83 => Self::without_data(Message::WriteEventsCompleted, buf),
+            0x83 => Message::WriteEventsCompleted(parse_pb!(client_messages::WriteEventsCompleted, buf)?.into()),
 
             /*
             0xB0 => { /* readevent */ }
@@ -191,12 +323,13 @@ impl Message {
         ret
     }
 
-    fn encode<W: WriteBytesExt>(&self, _: &mut W) -> io::Result<()> {
+    fn encode<W: io::Write>(&self, w: &mut W) -> io::Result<()> {
         use Message::*;
-        match *self {
-            HeartbeatRequest | HeartbeatResponse | Ping | Pong => Ok(()),
-            WriteEvents | WriteEventsCompleted => Ok(()),
-        }
+        Ok(match *self {
+            HeartbeatRequest | HeartbeatResponse | Ping | Pong => (),
+            WriteEvents => (),
+            WriteEventsCompleted(ref x) => x.encode(w)?,
+        })
     }
 
     /// In the header of each Package there is single byte discriminator value for the type of the
@@ -209,7 +342,7 @@ impl Message {
             Ping => 0x03,
             Pong => 0x04,
             WriteEvents => 0x82,
-            WriteEventsCompleted => 0x83,
+            WriteEventsCompleted(_) => 0x83,
         }
     }
 }
@@ -342,7 +475,7 @@ mod tests {
     use rustc_serialize::hex::{ToHex, FromHex};
     use tokio_core::io::{Codec, EasyBuf};
     use uuid::Uuid;
-    use super::{PackageCodec, Package, FLAG_NONE, Message};
+    use super::{PackageCodec, Package, FLAG_NONE, Message, WriteEventsCompletedData};
 
     #[test]
     fn decode_ping() {
@@ -413,8 +546,41 @@ mod tests {
                               authentication: None,
                               correlation_id:
                                   Uuid::parse_str("9b59d873-4e9f-d84e-b8a4-21f2666a3aa4").unwrap(),
-                              message: Message::WriteEventsCompleted,
+                              message: Message::WriteEventsCompleted(WriteEventsCompletedData::Success {
+                                  event_numbers: 30..40,
+                                  prepare_position: Some(181349124),
+                                  commit_position: Some(181349124)
+                              })
                           });
+    }
+
+    /*#[test]
+    fn decode_wec2() {
+        use protobuf;
+        use std::io;;
+        use pb_client_messages::WriteEventsCompleted as PBWEC;
+        let input = "0800181e20272884d6bc563084d6bc56".to_string().from_hex().unwrap();
+        println!("{:?}", input);
+        let mut cursor = io::Cursor::new(input);
+        let parsed = protobuf::parse_from_reader::<PBWEC>(&mut cursor).unwrap();
+        println!("{:?}", parsed);
+    }*/
+
+    #[test]
+    fn encode_write_events_completed() {
+        test_encoding_hex("2200000083009b59d8734e9fd84eb8a421f2666a3aa40800181e20272884d6bc563084d6bc56",
+                          PackageCodec,
+                          Package {
+                              authentication: None,
+                              correlation_id:
+                                  Uuid::parse_str("9b59d873-4e9f-d84e-b8a4-21f2666a3aa4").unwrap(),
+                              message: Message::WriteEventsCompleted(WriteEventsCompletedData::Success {
+                                  event_numbers: 30..40,
+                                  prepare_position: Some(181349124),
+                                  commit_position: Some(181349124)
+                              })
+                          });
+
     }
 
     fn test_decoding_hex<C: Codec>(input: &str, codec: C, expected: C::In)
