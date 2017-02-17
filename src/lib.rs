@@ -10,6 +10,8 @@ extern crate byteorder;
 extern crate error_chain;
 extern crate futures;
 extern crate tokio_core;
+extern crate tokio_proto;
+extern crate tokio_service;
 
 #[cfg(test)]
 extern crate rustc_serialize;
@@ -36,7 +38,10 @@ mod package;
 pub use package::Package;
 
 mod codec;
-pub use codec::PackageCodec;
+use codec::PackageCodec;
+
+mod client;
+pub use client::EventStoreClient;
 
 pub mod errors {
     use std::str;
