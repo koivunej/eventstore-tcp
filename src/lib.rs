@@ -331,7 +331,11 @@ impl Message {
                 let mut reason = parse!(client_messages::NotHandled, buf.as_slice())?;
 
                 let master_info = reason.additional_info.take()
-                    .map(|bytes| parse!(MasterInfo, bytes.deref()).map(|x| Self::owned_master_info(x)).map(Option::Some).unwrap_or(None))
+                    .map(|bytes|
+                         parse!(MasterInfo, bytes.deref())
+                             .map(|x| Self::owned_master_info(x))
+                             .map(Option::Some)
+                             .unwrap_or(None))
                     .and_then(|x| x);
 
                 Message::NotHandled(reason.reason.unwrap(), master_info)
