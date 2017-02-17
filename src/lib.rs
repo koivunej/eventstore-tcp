@@ -21,6 +21,7 @@ use std::io;
 use std::io::{Read, Write};
 use std::ops::{Deref, Range};
 use std::borrow::Cow;
+use std::error::Error;
 use uuid::Uuid;
 use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 use tokio_core::io::{Codec, EasyBuf};
@@ -128,7 +129,7 @@ pub enum Message {
     Pong,
 
     WriteEvents,
-    WriteEventsCompleted(WriteEventsCompletedData),
+    WriteEventsCompleted(Result<WriteEventsCompleted, Explanation>),
 
     /// Request was not understood
     BadRequest(Option<String>),
@@ -147,13 +148,10 @@ pub enum Message {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum WriteEventsCompletedData {
-    Success {
-        event_numbers: Range<i32>,
-        prepare_position: Option<i64>,
-        commit_position: Option<i64>,
-    },
-    Failure(Explanation),
+pub struct WriteEventsCompleted {
+    event_numbers: Range<i32>,
+    prepare_position: Option<i64>,
+    commit_position: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -165,6 +163,30 @@ pub struct Explanation {
 impl Explanation {
     fn new(or: client_messages::OperationResult, msg: Option<String>) -> Explanation {
         Explanation { reason: or.into(), message: msg }
+    }
+}
+
+impl fmt::Display for Explanation {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self.message {
+            Some(ref s) => write!(fmt, "{}: {}", self.description(), s),
+            None => write!(fmt, "{}", self.description())
+        }
+    }
+}
+
+impl Error for Explanation {
+    fn description(&self) -> &str {
+        use OperationResult::*;
+        match self.reason {
+            PrepareTimeout => "Internal server timeout, should be retried",
+            CommitTimeout => "Internal server timeout, should be retried",
+            ForwardTimeout => "Server timed out while awaiting response to forwarded request, should be retried",
+            WrongExpectedVersion => "Stream version was not expected, optimistic locking failure",
+            StreamDeleted => "Stream had been deleted",
+            InvalidTransaction => "Transaction had been rolled back",
+            AccessDenied => "Access to stream was denied"
+        }
     }
 }
 
@@ -215,20 +237,26 @@ impl Into<client_messages::OperationResult> for OperationResult {
     }
 }
 
-impl<'a> From<client_messages::WriteEventsCompleted<'a>> for WriteEventsCompletedData {
-    fn from(wec: client_messages::WriteEventsCompleted<'a>) -> Self {
+trait WriteEventsCompletedExt<'a> {
+    fn into_message(self) -> Message;
+}
+
+impl<'a> WriteEventsCompletedExt<'a> for client_messages::WriteEventsCompleted<'a> {
+    fn into_message(self) -> Message {
         use client_messages::OperationResult::*;
-        match wec.result.expect("Required field was not present in WroteEventsComplete") {
+        let res = match self.result.expect("Required field was not present in WroteEventsComplete") {
             Success => {
-                WriteEventsCompletedData::Success {
+                Ok(WriteEventsCompleted {
                     // off-by one: Range is [start, end)
-                    event_numbers: wec.first_event_number..wec.last_event_number + 1,
-                    prepare_position: wec.prepare_position,
-                    commit_position: wec.commit_position,
-                }
+                    event_numbers: self.first_event_number..self.last_event_number + 1,
+                    prepare_position: self.prepare_position,
+                    commit_position: self.commit_position,
+                })
             }
-            x => WriteEventsCompletedData::Failure(Explanation::new(x, wec.message.map(|x| x.into_owned()))),
-        }
+            x => Err(Explanation::new(x, self.message.map(|x| x.into_owned()))),
+        };
+
+        Message::WriteEventsCompleted(res)
     }
 }
 
@@ -241,30 +269,28 @@ trait AsMessageWrite<M: quick_protobuf::MessageWrite> {
     }
 }
 
-impl<'a> AsMessageWrite<client_messages::WriteEventsCompleted<'a>> for WriteEventsCompletedData {
-    fn as_message_write(&self) -> client_messages::WriteEventsCompleted<'a> {
-        use WriteEventsCompletedData::*;
-        match *self {
-            Success { ref event_numbers, prepare_position, commit_position } => {
-                client_messages::WriteEventsCompleted {
-                    result: Some(client_messages::OperationResult::Success),
-                    message: None,
-                    first_event_number: event_numbers.start,
-                    last_event_number: event_numbers.end - 1,
-                    prepare_position: prepare_position,
-                    commit_position: commit_position
-                }
-            },
-            Failure(Explanation { reason, ref message }) => {
-                client_messages::WriteEventsCompleted {
-                    result: Some(reason.into()),
-                    message: message.clone().map(Cow::Owned),
-                    first_event_number: -1,
-                    last_event_number: -1,
-                    prepare_position: None,
-                    commit_position: None,
-                }
-            }
+impl Explanation {
+    fn as_write_events_completed<'a>(&'a self) -> client_messages::WriteEventsCompleted<'a> {
+        client_messages::WriteEventsCompleted {
+            result: Some(self.reason.into()),
+            message: self.message.as_ref().map(|s| Cow::Borrowed(s.as_str())),
+            first_event_number: -1,
+            last_event_number: -1,
+            prepare_position: None,
+            commit_position: None,
+        }
+    }
+}
+
+impl AsMessageWrite<client_messages::WriteEventsCompleted<'static>> for WriteEventsCompleted {
+    fn as_message_write(&self) -> client_messages::WriteEventsCompleted<'static> {
+        client_messages::WriteEventsCompleted {
+            result: Some(client_messages::OperationResult::Success),
+            message: None,
+            first_event_number: self.event_numbers.start,
+            last_event_number: self.event_numbers.end - 1,
+            prepare_position: self.prepare_position,
+            commit_position: self.commit_position
         }
     }
 }
@@ -280,7 +306,6 @@ fn convert_qp_err(e: ::quick_protobuf::errors::Error) -> io::Error {
         x => IoError::new(IoErrorKind::Other, x)
     }
 }
-
 
 impl Message {
     fn decode(discriminator: u8, buf: &mut EasyBuf) -> io::Result<Message> {
@@ -303,7 +328,7 @@ impl Message {
             0x04 => Self::without_data(Message::Pong, buf),
 
             //0x82 => Message::WriteEvents(parse!(client_messages::WriteEvents, buf.as_slice())?.into()),
-            0x83 => Message::WriteEventsCompleted(parse!(client_messages::WriteEventsCompleted, buf.as_slice())?.into()),
+            0x83 => parse!(client_messages::WriteEventsCompleted, buf.as_slice())?.into_message(),
 
             /*
             0xB0 => { /* readevent */ }
@@ -379,6 +404,12 @@ impl Message {
         use Message::*;
         use quick_protobuf::MessageWrite;
 
+        macro_rules! encode {
+            ($x: expr, $w: ident) => {
+                $x.write_message(&mut quick_protobuf::writer::Writer::new($w)).map_err(convert_qp_err)
+            }
+        }
+
         Ok(match *self {
             HeartbeatRequest |
             HeartbeatResponse |
@@ -390,7 +421,9 @@ impl Message {
 
             WriteEvents => (), //x.encode(w)?,
 
-            WriteEventsCompleted(ref x) => x.encode(w)?,
+            WriteEventsCompleted(Ok(ref x)) => encode!(x.as_message_write(), w)?,
+            WriteEventsCompleted(Err(ref x)) => encode!(x.as_write_events_completed(), w)?,
+
             BadRequest(Some(ref info)) => w.write_all(info.as_bytes())?,
             BadRequest(None) => (),
             NotHandled(ref reason, ref x) => {
@@ -567,7 +600,7 @@ mod tests {
     use rustc_serialize::hex::{ToHex, FromHex};
     use tokio_core::io::Codec;
     use uuid::Uuid;
-    use super::{PackageCodec, Package, FLAG_NONE, Message, WriteEventsCompletedData};
+    use super::{PackageCodec, Package, FLAG_NONE, Message, WriteEventsCompleted};
 
     #[test]
     fn decode_ping() {
@@ -638,11 +671,11 @@ mod tests {
                               authentication: None,
                               correlation_id:
                                   Uuid::parse_str("9b59d873-4e9f-d84e-b8a4-21f2666a3aa4").unwrap(),
-                              message: Message::WriteEventsCompleted(WriteEventsCompletedData::Success {
+                              message: Message::WriteEventsCompleted(Ok(WriteEventsCompleted {
                                   event_numbers: 30..40,
                                   prepare_position: Some(181349124),
                                   commit_position: Some(181349124)
-                              })
+                              }))
                           });
     }
 
@@ -666,11 +699,11 @@ mod tests {
                               authentication: None,
                               correlation_id:
                                   Uuid::parse_str("9b59d873-4e9f-d84e-b8a4-21f2666a3aa4").unwrap(),
-                              message: Message::WriteEventsCompleted(WriteEventsCompletedData::Success {
+                              message: Message::WriteEventsCompleted(Ok(WriteEventsCompleted {
                                   event_numbers: 30..40,
                                   prepare_position: Some(181349124),
                                   commit_position: Some(181349124)
-                              })
+                              }))
                           });
 
     }
