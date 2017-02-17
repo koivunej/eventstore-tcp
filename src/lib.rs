@@ -87,7 +87,7 @@ pub struct Package {
 }
 
 /// TODO: investigate if we could at least encode Cow<'a, str>
-#[derive(PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct UsernamePassword(String, String);
 
 impl fmt::Debug for UsernamePassword {
