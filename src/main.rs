@@ -5,22 +5,20 @@ extern crate tokio_service;
 extern crate uuid;
 extern crate es_proto;
 
-use std::io::{self, Read, Write};
+use std::io;
 use std::net::SocketAddr;
-use std::thread;
 
-use futures::{Sink, Future, Stream};
-use futures::sync::mpsc;
+use futures::{Future};
 use tokio_core::reactor::{Core, Handle};
-use tokio_core::io::{Framed, Io, EasyBuf, Codec};
+use tokio_core::io::{Framed, Io};
 use tokio_core::net::TcpStream;
 use tokio_proto::TcpClient;
 use tokio_proto::pipeline::{ClientProto, ClientService};
-use tokio_service::{Service, NewService};
+use tokio_service::{Service};
 
 use uuid::Uuid;
 
-use es_proto::{PackageCodec, Package, Message, UsernamePassword};
+use es_proto::{PackageCodec, Package, Message};
 
 fn main() {
     let mut core = Core::new().unwrap();
