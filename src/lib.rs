@@ -18,12 +18,10 @@ extern crate rustc_serialize;
 
 use std::fmt;
 use std::io;
-use std::io::{Read, Write};
 use std::ops::{Deref, Range};
 use std::borrow::Cow;
 use std::error::Error;
-use uuid::Uuid;
-use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
+use byteorder::{ReadBytesExt, WriteBytesExt};
 use tokio_core::io::EasyBuf;
 
 mod messages;
@@ -32,13 +30,15 @@ use messages::mod_EventStore::mod_Client::mod_Messages::WriteEvents;
 use messages::mod_EventStore::mod_Client::mod_Messages::mod_NotHandled::{NotHandledReason, MasterInfo};
 
 mod messages_ext;
-use messages_ext::{WriteEventsExt, WriteEventsCompletedExt};
+use messages_ext::{WriteEventsExt, WriteEventsCompletedExt, MasterInfoExt};
+
+mod operation_result;
+pub use operation_result::OperationResult;
 
 mod package;
 pub use package::Package;
 
 mod codec;
-use codec::PackageCodec;
 
 mod client;
 pub use client::EventStoreClient;
@@ -87,15 +87,21 @@ impl fmt::Debug for UsernamePassword {
 
 impl UsernamePassword {
     fn decode<R: ReadBytesExt>(buf: &mut R) -> io::Result<Self> {
+        use std::string;
+
+        fn convert_utf8_err(e: string::FromUtf8Error) -> io::Error {
+            io::Error::new(io::ErrorKind::InvalidData, e.utf8_error())
+        }
+
         let len = buf.read_u8()?;
         let mut username = vec![0u8, len];
         buf.read_exact(&mut username[..])?;
-        let username = String::from_utf8(username).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.utf8_error()))?;
+        let username = String::from_utf8(username).map_err(convert_utf8_err)?;
 
         let len = buf.read_u8()?;
         let mut password = vec![0u8, len];
         buf.read_exact(&mut password[..])?;
-        let password = String::from_utf8(password).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.utf8_error()))?;
+        let password = String::from_utf8(password).map_err(convert_utf8_err)?;
 
         Ok(UsernamePassword(username, password))
     }
@@ -176,53 +182,6 @@ impl Error for Explanation {
             StreamDeleted => "Stream had been deleted",
             InvalidTransaction => "Transaction had been rolled back",
             AccessDenied => "Access to stream was denied"
-        }
-    }
-}
-
-/// Like `OperationResult` on the wire but does not have a success value. Explains the reason for
-/// failure.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum OperationResult {
-    PrepareTimeout,
-    CommitTimeout,
-    ForwardTimeout,
-    WrongExpectedVersion,
-    StreamDeleted,
-    InvalidTransaction,
-    AccessDenied,
-}
-
-impl Copy for OperationResult {}
-
-impl From<client_messages::OperationResult> for OperationResult {
-    fn from(or: client_messages::OperationResult) -> OperationResult {
-        use client_messages::OperationResult::*;
-
-        match or {
-            Success => panic!("Success type is invalid for this type"),
-            PrepareTimeout => OperationResult::PrepareTimeout,
-            CommitTimeout => OperationResult::CommitTimeout,
-            ForwardTimeout => OperationResult::ForwardTimeout,
-            WrongExpectedVersion => OperationResult::WrongExpectedVersion,
-            StreamDeleted => OperationResult::StreamDeleted,
-            InvalidTransaction => OperationResult::InvalidTransaction,
-            AccessDenied => OperationResult::AccessDenied,
-        }
-    }
-}
-
-impl Into<client_messages::OperationResult> for OperationResult {
-    fn into(self) -> client_messages::OperationResult {
-        use OperationResult::*;
-        match self {
-            PrepareTimeout => client_messages::OperationResult::PrepareTimeout,
-            CommitTimeout => client_messages::OperationResult::CommitTimeout,
-            ForwardTimeout => client_messages::OperationResult::ForwardTimeout,
-            WrongExpectedVersion => client_messages::OperationResult::WrongExpectedVersion,
-            StreamDeleted => client_messages::OperationResult::StreamDeleted,
-            InvalidTransaction => client_messages::OperationResult::InvalidTransaction,
-            AccessDenied => client_messages::OperationResult::AccessDenied
         }
     }
 }
@@ -323,11 +282,12 @@ impl Message {
                 let mut reason = parse!(client_messages::NotHandled, buf.as_slice())?;
 
                 let master_info = reason.additional_info.take()
-                    .map(|bytes|
+                    .map(|bytes| {
                          parse!(MasterInfo, bytes.deref())
-                             .map(|x| Self::owned_master_info(x))
+                             .map(|x| x.into_owned())
                              .map(Option::Some)
-                             .unwrap_or(None))
+                             .unwrap_or(None)
+                    })
                     .and_then(|x| x);
 
                 Message::NotHandled(reason.reason.unwrap(), master_info)
@@ -342,17 +302,6 @@ impl Message {
 
             x => bail!(ErrorKind::UnsupportedDiscriminator(x)),
         })
-    }
-
-    fn owned_master_info<'a>(m: MasterInfo<'a>) -> MasterInfo<'static> {
-        MasterInfo {
-            external_tcp_address: Cow::Owned(m.external_tcp_address.into_owned()),
-            external_tcp_port: m.external_tcp_port,
-            external_http_address: Cow::Owned(m.external_http_address.into_owned()),
-            external_http_port: m.external_http_port,
-            external_secure_tcp_address: m.external_secure_tcp_address.map(|x| Cow::Owned(x.into_owned())),
-            external_secure_tcp_port: m.external_secure_tcp_port
-        }
     }
 
     fn without_data(ret: Message, _: &mut EasyBuf) -> Message {

@@ -66,3 +66,19 @@ impl<'a> WriteEventsCompletedExt<'a> for client_messages::WriteEventsCompleted<'
     }
 }
 
+pub trait MasterInfoExt<'a> {
+    fn into_owned(self) -> client_messages::mod_NotHandled::MasterInfo<'static>;
+}
+
+impl<'a> MasterInfoExt<'a> for client_messages::mod_NotHandled::MasterInfo<'a> {
+    fn into_owned(self) -> client_messages::mod_NotHandled::MasterInfo<'static> {
+        MasterInfo {
+            external_tcp_address: Cow::Owned(self.external_tcp_address.into_owned()),
+            external_tcp_port: self.external_tcp_port,
+            external_http_address: Cow::Owned(self.external_http_address.into_owned()),
+            external_http_port: self.external_http_port,
+            external_secure_tcp_address: self.external_secure_tcp_address.map(|x| Cow::Owned(x.into_owned())),
+            external_secure_tcp_port: self.external_secure_tcp_port
+        }
+    }
+}

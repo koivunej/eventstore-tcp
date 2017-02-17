@@ -132,7 +132,7 @@ impl Codec for PackageCodec {
 #[cfg(test)]
 mod tests {
     use std::fmt::Debug;
-    use rustc_serialize::hex::{ToHex, FromHex};
+    use rustc_serialize::hex::FromHex;
     use tokio_core::io::Codec;
     use uuid::Uuid;
     use super::{PackageCodec};
