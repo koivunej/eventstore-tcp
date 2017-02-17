@@ -29,6 +29,7 @@ use tokio_core::io::{Codec, EasyBuf};
 // mod pb_client_messages;
 mod messages;
 use messages::mod_EventStore::mod_Client::mod_Messages as client_messages;
+use messages::mod_EventStore::mod_Client::mod_Messages::{WriteEvents, NewEvent};
 use messages::mod_EventStore::mod_Client::mod_Messages::mod_NotHandled::{NotHandledReason, MasterInfo};
 
 pub mod errors {
@@ -128,7 +129,7 @@ pub enum Message {
     Ping,
     Pong,
 
-    WriteEvents,
+    WriteEvents(WriteEvents<'static>),
     WriteEventsCompleted(Result<WriteEventsCompleted, Explanation>),
 
     /// Request was not understood
@@ -147,17 +148,54 @@ pub enum Message {
     NotAuthenticated
 }
 
+trait WriteEventsExt<'a> {
+    fn into_message(self) -> Message;
+    fn into_owned(self) -> WriteEvents<'static>;
+}
+
+impl<'a> WriteEventsExt<'a> for WriteEvents<'a> {
+    fn into_message(self) -> Message {
+        Message::WriteEvents(self.into_owned())
+    }
+
+    fn into_owned(self) -> WriteEvents<'static> {
+        WriteEvents {
+            event_stream_id: Cow::Owned(self.event_stream_id.into_owned()),
+            expected_version: self.expected_version,
+            events: self.events.into_iter().map(|x| x.into_owned()).collect(),
+            require_master: self.require_master,
+        }
+    }
+}
+
+trait NewEventExt<'a> {
+    fn into_owned(self) -> NewEvent<'static>;
+}
+
+impl<'a> NewEventExt<'a> for NewEvent<'a> {
+    fn into_owned(self) -> NewEvent<'static> {
+        NewEvent {
+            event_id: Cow::Owned(self.event_id.into_owned()),
+            event_type: Cow::Owned(self.event_type.into_owned()),
+            data_content_type: self.data_content_type,
+            metadata_content_type: self.metadata_content_type,
+            data: Cow::Owned(self.data.into_owned()),
+            metadata: self.metadata.map(|x| Cow::Owned(x.into_owned())),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WriteEventsCompleted {
-    event_numbers: Range<i32>,
-    prepare_position: Option<i64>,
-    commit_position: Option<i64>,
+    pub event_numbers: Range<i32>,
+    pub prepare_position: Option<i64>,
+    pub commit_position: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Explanation {
-    pub reason: OperationResult,
-    pub message: Option<String>
+    reason: OperationResult,
+    message: Option<String>
 }
 
 impl Explanation {
@@ -327,7 +365,7 @@ impl Message {
             0x03 => Self::without_data(Message::Ping, buf),
             0x04 => Self::without_data(Message::Pong, buf),
 
-            //0x82 => Message::WriteEvents(parse!(client_messages::WriteEvents, buf.as_slice())?.into()),
+            0x82 => parse!(client_messages::WriteEvents, buf.as_slice())?.into_message(),
             0x83 => parse!(client_messages::WriteEventsCompleted, buf.as_slice())?.into_message(),
 
             /*
@@ -419,7 +457,7 @@ impl Message {
             Authenticated |
             NotAuthenticated => (),
 
-            WriteEvents => (), //x.encode(w)?,
+            WriteEvents(ref x) => encode!(x, w)?,
 
             WriteEventsCompleted(Ok(ref x)) => encode!(x.as_message_write(), w)?,
             WriteEventsCompleted(Err(ref x)) => encode!(x.as_write_events_completed(), w)?,
@@ -460,7 +498,7 @@ impl Message {
             Ping => 0x03,
             Pong => 0x04,
 
-            WriteEvents => 0x82,
+            WriteEvents(_) => 0x82,
             WriteEventsCompleted(_) => 0x83,
 
             BadRequest(_) => 0xf0,
