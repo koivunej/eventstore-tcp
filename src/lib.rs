@@ -19,7 +19,7 @@ extern crate rustc_serialize;
 use std::fmt;
 use std::io;
 use std::io::{Read, Write};
-use std::ops::Range;
+use std::ops::{Deref, Range};
 use std::borrow::Cow;
 use uuid::Uuid;
 use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
@@ -28,6 +28,7 @@ use tokio_core::io::{Codec, EasyBuf};
 // mod pb_client_messages;
 mod messages;
 use messages::mod_EventStore::mod_Client::mod_Messages as client_messages;
+use messages::mod_EventStore::mod_Client::mod_Messages::mod_NotHandled::{NotHandledReason, MasterInfo};
 
 pub mod errors {
     use std::str;
@@ -128,6 +129,21 @@ pub enum Message {
 
     WriteEvents,
     WriteEventsCompleted(WriteEventsCompletedData),
+
+    /// Request was not understood
+    BadRequest(Option<String>),
+
+    /// Correlated request was not handled
+    NotHandled(NotHandledReason, Option<MasterInfo<'static>>),
+
+    /// Request to authenticate
+    Authenticate,
+
+    /// Positive authentication response
+    Authenticated,
+
+    /// Negative authentication response
+    NotAuthenticated
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -221,7 +237,6 @@ trait AsMessageWrite<M: quick_protobuf::MessageWrite> {
 
     fn encode<W: io::Write>(&self, out: &mut W) -> io::Result<()> {
         let conv = self.as_message_write();
-
         conv.write_message(&mut quick_protobuf::writer::Writer::new(out)).map_err(convert_qp_err)
     }
 }
@@ -269,12 +284,13 @@ fn convert_qp_err(e: ::quick_protobuf::errors::Error) -> io::Error {
 
 impl Message {
     fn decode(discriminator: u8, buf: &mut EasyBuf) -> io::Result<Message> {
-
-        macro_rules! parse_pb {
+        macro_rules! parse {
             ($x:ty, $buf:expr) => {
                 {
-                    let mut reader = ::quick_protobuf::reader::BytesReader::from_bytes($buf.as_slice());
-                    <$x>::from_reader(&mut reader, $buf.as_slice()).map_err(convert_qp_err)
+                    let mut reader = ::quick_protobuf::reader::BytesReader::from_bytes($buf);
+                    let res = <$x>::from_reader(&mut reader, $buf).map_err(convert_qp_err);
+                    assert!(reader.is_eof());
+                    res
                 }
             }
         }
@@ -286,8 +302,8 @@ impl Message {
             0x03 => Self::without_data(Message::Ping, buf),
             0x04 => Self::without_data(Message::Pong, buf),
 
-            0x82 => Self::without_data(Message::WriteEvents, buf),
-            0x83 => Message::WriteEventsCompleted(parse_pb!(client_messages::WriteEventsCompleted, buf)?.into()),
+            //0x82 => Message::WriteEvents(parse!(client_messages::WriteEvents, buf.as_slice())?.into()),
+            0x83 => Message::WriteEventsCompleted(parse!(client_messages::WriteEventsCompleted, buf.as_slice())?.into()),
 
             /*
             0xB0 => { /* readevent */ }
@@ -300,14 +316,48 @@ impl Message {
             0xB7 => { /* readalleventsfwdcompleted */ }
             0xB8 => { /* readalleventsbackwrd */ }
             0xB9 => { /* readalleventsbackwrdcompleted */ }
+            */
 
-            0xF0 => { /* badrequest */ }
-            0xF1 => { /* not handled */ }
-            0xF2 => { /* authenticate */ }
-            0xF3 => { /* authenticated */ }
-            0xF4 => { /* not authenticated */ }*/
+            0xF0 => {
+                let info = if buf.len() > 0 {
+                    Some(String::from_utf8_lossy(buf.as_slice()).into_owned())
+                } else {
+                    None
+                };
+                Message::BadRequest(info)
+            },
+
+            0xF1 => {
+                let mut reason: client_messages::NotHandled = parse!(client_messages::NotHandled, buf.as_slice())?;
+                reason.additional_info = reason.additional_info.take().map(|x| x.to_owned());
+
+                let master_info = reason.additional_info.take()
+                    .map(|bytes| parse!(MasterInfo, bytes.deref()).map(|x| Self::owned_master_info(x)).map(Option::Some).unwrap_or(None))
+                    .and_then(|x| x);
+
+                Message::NotHandled(reason.reason.unwrap(), master_info)
+            },
+
+            0xF2 => Self::without_data(Message::Authenticate, buf),
+
+            0xF3 => Self::without_data(Message::Authenticated, buf),
+
+            // server might send some reason here
+            0xF4 => Self::without_data(Message::NotAuthenticated, buf),
+
             x => bail!(ErrorKind::UnsupportedDiscriminator(x)),
         })
+    }
+
+    fn owned_master_info<'a>(m: MasterInfo<'a>) -> MasterInfo<'static> {
+        MasterInfo {
+            external_tcp_address: Cow::Owned(m.external_tcp_address.into_owned()),
+            external_tcp_port: m.external_tcp_port,
+            external_http_address: Cow::Owned(m.external_http_address.into_owned()),
+            external_http_port: m.external_http_port,
+            external_secure_tcp_address: m.external_secure_tcp_address.map(|x| Cow::Owned(x.into_owned())),
+            external_secure_tcp_port: m.external_secure_tcp_port
+        }
     }
 
     fn without_data(ret: Message, _: &mut EasyBuf) -> Message {
@@ -319,16 +369,48 @@ impl Message {
         //              ret,
         //              len);
         // }
-
         ret
     }
 
     fn encode<W: io::Write>(&self, w: &mut W) -> io::Result<()> {
         use Message::*;
+        use quick_protobuf::MessageWrite;
+
         Ok(match *self {
-            HeartbeatRequest | HeartbeatResponse | Ping | Pong => (),
-            WriteEvents => (),
+            HeartbeatRequest |
+            HeartbeatResponse |
+            Ping |
+            Pong |
+            Authenticate |
+            Authenticated |
+            NotAuthenticated => (),
+
+            WriteEvents => (), //x.encode(w)?,
+
             WriteEventsCompleted(ref x) => x.encode(w)?,
+            BadRequest(Some(ref info)) => w.write_all(info.as_bytes())?,
+            BadRequest(None) => (),
+            NotHandled(ref reason, ref x) => {
+
+                let additional_info = match x {
+                    &Some(ref info) => {
+                        let mut buf = Vec::new();
+                        info.write_message(&mut quick_protobuf::writer::Writer::new(&mut buf))
+                            .map(move |_| buf)
+                            .map(Cow::Owned)
+                            .map(Option::Some)
+                            .map_err(convert_qp_err)?
+                    },
+                    &None => None
+                };
+
+                let msg = client_messages::NotHandled {
+                    reason: Some(*reason),
+                    additional_info: additional_info,
+                };
+
+                msg.write_message(&mut quick_protobuf::writer::Writer::new(w)).map_err(convert_qp_err)?
+            },
         })
     }
 
@@ -341,8 +423,15 @@ impl Message {
             HeartbeatResponse => 0x02,
             Ping => 0x03,
             Pong => 0x04,
+
             WriteEvents => 0x82,
             WriteEventsCompleted(_) => 0x83,
+
+            BadRequest(_) => 0xf0,
+            NotHandled(..) => 0xf1,
+            Authenticate => 0xf2,
+            Authenticated => 0xf3,
+            NotAuthenticated => 0xf4
         }
     }
 }
@@ -473,7 +562,7 @@ impl Codec for PackageCodec {
 mod tests {
     use std::fmt::Debug;
     use rustc_serialize::hex::{ToHex, FromHex};
-    use tokio_core::io::{Codec, EasyBuf};
+    use tokio_core::io::Codec;
     use uuid::Uuid;
     use super::{PackageCodec, Package, FLAG_NONE, Message, WriteEventsCompletedData};
 
