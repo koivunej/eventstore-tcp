@@ -43,6 +43,9 @@ mod codec;
 mod client;
 pub use client::EventStoreClient;
 
+pub mod builder;
+pub use builder::{Builder, ExpectedVersion, StreamVersion};
+
 pub mod errors {
     use std::str;
     use std::io;
