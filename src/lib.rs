@@ -260,8 +260,8 @@ impl Message {
             0x03 => Self::without_data(Message::Ping, buf),
             0x04 => Self::without_data(Message::Pong, buf),
 
-            0x82 => parse!(client_messages::WriteEvents, buf.as_slice())?.into_message(),
-            0x83 => parse!(client_messages::WriteEventsCompleted, buf.as_slice())?.into_message(),
+            0x82 => parse!(client_messages::WriteEvents, buf.as_slice())?.into(),
+            0x83 => parse!(client_messages::WriteEventsCompleted, buf.as_slice())?.into(),
 
             /*
             0xB0 => { /* readevent */ }
@@ -392,5 +392,19 @@ impl Message {
             Authenticated => 0xf3,
             NotAuthenticated => 0xf4
         }
+    }
+}
+
+impl<'a> From<WriteEvents<'a>> for Message {
+    fn from(we: WriteEvents<'a>) -> Message {
+        use messages_ext::WriteEventsExt;
+        Message::WriteEvents(we.into_owned())
+    }
+}
+
+impl<'a> From<client_messages::WriteEventsCompleted<'a>> for Message {
+    fn from(wec: client_messages::WriteEventsCompleted<'a>) -> Message {
+        use messages_ext::WriteEventsCompletedExt;
+        wec.into_message()
     }
 }

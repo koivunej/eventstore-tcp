@@ -13,7 +13,8 @@ pub trait WriteEventsExt<'a> {
 
 impl<'a> WriteEventsExt<'a> for WriteEvents<'a> {
     fn into_message(self) -> Message {
-        Message::WriteEvents(self.into_owned())
+        Message::from(self)
+        //Message::WriteEvents(self.into_owned())
     }
 
     fn into_owned(self) -> WriteEvents<'static> {
