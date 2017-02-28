@@ -8,8 +8,12 @@ use messages::mod_EventStore::mod_Client::mod_Messages::{WriteEvents, NewEvent};
 pub struct Builder;
 
 impl Builder {
-    pub fn authenticate() -> AuthenticateBuilder {
-        AuthenticateBuilder
+    pub fn ping() -> SimpleBuilder {
+        SimpleBuilder(Message::Ping)
+    }
+
+    pub fn authenticate() -> SimpleBuilder {
+        SimpleBuilder(Message::Authenticate)
     }
 
     pub fn write_events() -> WriteEventsBuilder {
@@ -17,14 +21,14 @@ impl Builder {
     }
 }
 
-pub struct AuthenticateBuilder;
+pub struct SimpleBuilder(Message);
 
-impl AuthenticateBuilder {
-    pub fn build_package(&mut self, authentication: Option<UsernamePassword>, correlation_id: Option<Uuid>) -> Package {
+impl SimpleBuilder {
+    pub fn build_package(self, authentication: Option<UsernamePassword>, correlation_id: Option<Uuid>) -> Package {
         Package {
             authentication: authentication,
             correlation_id: correlation_id.unwrap_or_else(|| Uuid::new_v4()),
-            message: Message::Authenticate
+            message: self.0
         }
     }
 }
