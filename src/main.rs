@@ -24,7 +24,7 @@ use es_proto::{EventStoreClient, Package, Message, Builder, ExpectedVersion, Str
 
 fn main() {
 
-    let matches = App::new("test-client")
+    let matches = App::new("testclient")
         .version("0.1.0")
         .about("Test client similar to EventStore.TestClient in EventStore binary distribution")
         .arg(Arg::with_name("hostname")
@@ -39,6 +39,11 @@ fn main() {
                 .value_name("PORT")
                 .takes_value(true)
                 .help("The port to connect to, default: 1113"))
+        .arg(Arg::with_name("verbose")
+                 .short("v")
+                 .long("verbose")
+                 .takes_value(false)
+                 .help("Output verbose timings"))
         .subcommand(SubCommand::with_name("ping")
                         .about("Send a ping to the host after possibly authenticating depending on the options"))
         .subcommand(SubCommand::with_name("write")
@@ -46,97 +51,87 @@ fn main() {
                         .arg(Arg::with_name("stream_id")
                                 .value_name("STREAM-ID")
                                 .required(true)
-                                .index(1))
+                                .index(1)
+                                .help("Stream id to write to"))
                         .arg(Arg::with_name("expected_version")
                                 .value_name("EXPECTED_VERSION")
                                 .required(true)
                                 .index(2)
                                 .help("Acceptable values: any|created|n where n >= -2"))
+                        .arg(Arg::with_name("type")
+                                .value_name("TYPE")
+                                .required(true)
+                                .index(3)
+                                .help("Type name of the event"))
                         .arg(Arg::with_name("data")
                                 .value_name("DATA")
                                 .required(true)
-                                .index(3)
+                                .index(4)
                                 .help("Raw bytes of data."))
                         .arg(Arg::with_name("metadata")
                                 .value_name("METADATA")
                                 .required(false)
-                                .index(4)
-                                .help("Raw bytes of metadata, optional."))
+                                .index(5)
+                                .help("Raw bytes of metadata, optional"))
                         .arg(Arg::with_name("json")
                                 .short("j")
                                 .long("json")
                                 .takes_value(false)
-                                .help("Flags the data and metadata (when given) as json values"))
-                        .arg(Arg::with_name("type")
-                                .short("t")
-                                .long("type")
-                                .value_name("TYPE")
-                                .takes_value(true)
-                                .help("Marks the data as being of given type, required if data is json")))
+                                .help("Flags the data and metadata (when given) as json values")))
         .get_matches();
 
     let addr = {
-        let s = format!("{}:{}", matches.value_of("HOST").unwrap_or("127.0.0.1"), matches.value_of("PORT").unwrap_or("1113"));
+        let s = format!("{}:{}", matches.value_of("hostname").unwrap_or("127.0.0.1"), matches.value_of("port").unwrap_or("1113"));
         s.parse::<SocketAddr>().expect("Failed to parse host:port as SocketAddr")
     };
 
-    let res = if let Some(_) = matches.subcommand_matches("ping") {
-        ping(addr)
-    } else if let Some(write) = matches.subcommand_matches("write") {
-        unimplemented!()
+    let verbose = matches.is_present("verbose");
+
+    let res = if let Some(matches) = matches.subcommand_matches("ping") {
+        ping(addr, verbose)
+    } else if let Some(w) = matches.subcommand_matches("write") {
+
+        let mut builder = Builder::write_events();
+        builder.stream_id(w.value_of("stream_id").unwrap().to_owned())
+            .expected_version(match w.value_of("expected_version").unwrap() {
+                "any" => ExpectedVersion::Any,
+                "created" => ExpectedVersion::NewStream,
+                n => ExpectedVersion::Exact(StreamVersion::from_opt(n.parse().unwrap()).expect("Stream version out of bounds"))
+            })
+            .require_master(w.is_present("require_master"));
+
+        {
+            let mut event = builder.new_event();
+
+            event = event.data(w.value_of("data").unwrap().as_bytes().iter().cloned().collect::<Vec<_>>())
+                .data_content_type(w.is_present("json"))
+                .event_type(w.value_of("type").unwrap().to_owned());
+
+            event = if let Some(x) = w.value_of("metadata") {
+                event.metadata(x.as_bytes().iter().cloned().collect::<Vec<_>>())
+                    .metadata_content_type(w.is_present("json"))
+            } else {
+                event
+            };
+
+            event.done();
+        }
+
+        write(addr, verbose, builder.build_package(None, None))
     } else {
         println!("Subcommand is required.\n\n{}", matches.usage());
         process::exit(1);
     };
 
-    /*
-    let mut core = Core::new().unwrap();
-    let handle = core.handle();
-
-    let client = EventStoreClient::connect(&addr, &handle);
-
-    let job = client.and_then(|client| {
-        println!("connected!");
-        let nak_auth = client.call(
-            Builder::authenticate().build_package(Some(UsernamePassword::new("asdfasfdasf", "asdfasdffsa")), None)
-        ).and_then(|resp| {
-            assert_eq!(resp.message, Message::NotAuthenticated);
-            Ok(())
-        });
-
-        let write_events = client.call(
-            Builder::write_events()
-                .stream_id("foobar")
-                .expected_version(ExpectedVersion::Exact(StreamVersion::from_opt(3).unwrap()))
-                .new_event()
-                    .event_type("test_event")
-                    .data(vec![0xaa, 0xbb, 0xcc, 0xdd])
-                    .done()
-                .new_event()
-                    .event_type("test_other")
-                    .data(b"{ \"json-example\": true }".into_iter().cloned().collect::<Vec<u8>>())
-                    .done()
-                .build_package(Some(UsernamePassword::new("admin", "changeit")), None))
-            .and_then(|resp| {
-                match resp.message {
-                    Message::WriteEventsCompleted(Ok(ref x)) => println!("success: {:?}", x),
-                    Message::WriteEventsCompleted(Err(ref x)) => println!("failure: {:?}", x),
-                    Message::NotAuthenticated => println!("need to authenticate"),
-                    y => println!("unexpected: {:?}", y)
-                }
-                Ok(())
-            });
-
-        nak_auth.join(write_events)
-    });
-
-    core.run(job).unwrap();
-    */
+    if let Err(e) = res {
+        println!("Failure: {:?}", e);
+        process::exit(1);
+    }
 }
 
-fn ping(addr: SocketAddr) -> Result<(), io::Error> {
-    use std::time::Instant;
+use std::time::Instant;
 
+fn ping(addr: SocketAddr, verbose: bool) -> Result<(), io::Error> {
     let mut core = Core::new().unwrap();
     let handle = core.handle();
 
@@ -157,17 +152,47 @@ fn ping(addr: SocketAddr) -> Result<(), io::Error> {
                 msg => Err(io::Error::new(io::ErrorKind::Other, format!("Unexpected response: {:?}", msg)))
             }
         }).and_then(move |(connected, send_began, received)| {
-            let conn_in = connected - started;
-            let send_began_in = send_began - connected;
-            let rx_in = received - send_began;
-
-            print_elapsed("connected in  ", conn_in);
-            print_elapsed("ready to send ", send_began_in);
-            print_elapsed("received in   ", rx_in);
-            print_elapsed("total         ", started.elapsed());
+            if verbose {
+                print_elapsed("connected in  ", connected - started);
+                print_elapsed("ready to send ", send_began - connected);
+                print_elapsed("received in   ", received - send_began);
+                print_elapsed("total         ", started.elapsed());
+            } else {
+                print_elapsed("pong received in", started.elapsed());
+            }
 
             Ok(())
         });
+
+    core.run(job)
+}
+
+fn write(addr: SocketAddr, verbose: bool, pkg: Package) -> Result<(), io::Error> {
+    let mut core = Core::new().unwrap();
+    let handle = core.handle();
+
+    let client = EventStoreClient::connect(&addr, &handle);
+    let started = Instant::now();
+
+    let job = client.and_then(|client| {
+        client.call(pkg)
+    }).and_then(|resp| {
+        match resp.message {
+            Message::WriteEventsCompleted(Ok(success)) => {
+                print_elapsed("Success in", started.elapsed());
+                if verbose {
+                    println!("{:#?}", success);
+                }
+                Ok(())
+            },
+            Message::WriteEventsCompleted(Err(reason)) => {
+                Err(io::Error::new(io::ErrorKind::Other, format!("Writing failed: {:?}", reason)))
+            },
+            x => {
+                Err(io::Error::new(io::ErrorKind::Other, format!("Unexpected response: {:?}", x)))
+            }
+        }
+    });
 
     core.run(job)
 }
