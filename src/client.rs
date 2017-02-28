@@ -8,8 +8,7 @@ use tokio_core::io::{Framed, Io};
 use tokio_core::net::TcpStream;
 use tokio_core::io::{Codec, EasyBuf};
 use tokio_proto::TcpClient;
-use tokio_proto::multiplex::{ClientProto, ClientService};
-use tokio_proto::streaming::multiplex::RequestIdSource;
+use tokio_proto::multiplex::{ClientProto, ClientService, RequestIdSource};
 use tokio_service::Service;
 
 use package::Package;
@@ -101,13 +100,13 @@ impl<T: Io + 'static> ClientProto<T> for PackageProto {
 
     type Transport = Framed<T, Separator>;
     type BindTransport = Result<Self::Transport, io::Error>;
-    type RequestIds = Separator;
+    type RequestIdSource = Separator;
 
     fn bind_transport(&self, io: T) -> Self::BindTransport {
         Ok(io.framed(Separator))
     }
 
-    fn requestid_source(&self) -> Self::RequestIds {
+    fn requestid_source(&self) -> Self::RequestIdSource {
         Separator
     }
 }
