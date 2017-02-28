@@ -80,7 +80,7 @@ use self::errors::ErrorKind;
 
 /// TODO: investigate if we could at least encode Cow<'a, str>
 #[derive(Clone, PartialEq, Eq)]
-pub struct UsernamePassword(String, String);
+pub struct UsernamePassword(Cow<'static, str>, Cow<'static, str>);
 
 impl fmt::Debug for UsernamePassword {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -89,6 +89,10 @@ impl fmt::Debug for UsernamePassword {
 }
 
 impl UsernamePassword {
+    pub fn new<S: Into<Cow<'static, str>>>(username: S, password: S) -> UsernamePassword {
+        UsernamePassword(username.into(), password.into())
+    }
+
     fn decode<R: ReadBytesExt>(buf: &mut R) -> io::Result<Self> {
         use std::string;
 
@@ -106,7 +110,7 @@ impl UsernamePassword {
         buf.read_exact(&mut password[..])?;
         let password = String::from_utf8(password).map_err(convert_utf8_err)?;
 
-        Ok(UsernamePassword(username, password))
+        Ok(UsernamePassword(Cow::Owned(username), Cow::Owned(password)))
     }
 
     fn encode<W: WriteBytesExt>(&self, buf: &mut W) -> io::Result<usize> {
