@@ -147,11 +147,7 @@ impl WriteEventsBuilder {
     }
 
     pub fn build_package(&mut self, authentication: Option<UsernamePassword>, correlation_id: Option<Uuid>) -> Package {
-        Package {
-            authentication: authentication,
-            correlation_id: correlation_id.unwrap_or_else(|| Uuid::new_v4()),
-            message: self.build_command().into()
-        }
+        build_package(self.build_message(), authentication, correlation_id)
     }
 }
 

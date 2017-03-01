@@ -22,6 +22,32 @@ use clap::{Arg, App, SubCommand};
 
 use es_proto::{EventStoreClient, Package, Message, Builder, ExpectedVersion, StreamVersion, UsernamePassword};
 
+#[derive(Debug)]
+enum ReadMode {
+    ForwardOnce{ skip: usize, count: usize },
+    Backward{ skip: usize, count: usize }
+}
+
+impl ReadMode {
+    fn into_request(self, stream_id: &str) -> Message {
+        use ReadMode::*;
+        match self {
+            ForwardOnce { skip, count } => {
+                if count != 1 {
+                    unimplemented!();
+                }
+                Builder::read_event()
+                    .stream_id(stream_id.to_owned())
+                    .event_number(StreamVersion::from_opt(skip as u32).expect("Stream version overflow"))
+                    .resolve_link_tos(true)
+                    .require_master(false)
+                    .build_message()
+            },
+            Backward { .. } => unimplemented!()
+        }
+    }
+}
+
 fn main() {
 
     let matches = App::new("testclient")
@@ -78,6 +104,34 @@ fn main() {
                                 .long("json")
                                 .takes_value(false)
                                 .help("Flags the data and metadata (when given) as json values")))
+        .subcommand(SubCommand::with_name("read")
+                        .about("Read event(s) of a stream")
+                        .arg(Arg::with_name("stream_id")
+                                .value_name("STREAM-ID")
+                                .required(true)
+                                .index(1)
+                                .help("Stream id to read from, or $all for every stream"))
+                        .arg(Arg::with_name("count")
+                             .value_name("N")
+                             .short("c")
+                             .long("count")
+                             .takes_value(true)
+                             .help("Number of events to read, 'all' or N > 0, defaults to 1"))
+                        .arg(Arg::with_name("skip")
+                             .value_name("SKIP")
+                             .short("s")
+                             .long("skip")
+                             .takes_value(true)
+                             .help("The event number to start from, defaults to 0"))
+                        .arg(Arg::with_name("mode")
+                             .value_name("MODE")
+                             .short("m")
+                             .long("mode")
+                             .takes_value(true)
+                             .possible_values(&["forward-forever", "forward-once", "backward"])
+                             .help("'forward-once' reads up until the current latest,
+ 'forward-forever' stays and awaits for new messages until count has been reached,
+ 'backward' goes to up to first event")))
         .get_matches();
 
     let addr = {
@@ -90,7 +144,6 @@ fn main() {
     let res = if let Some(matches) = matches.subcommand_matches("ping") {
         ping(addr, verbose)
     } else if let Some(w) = matches.subcommand_matches("write") {
-
         let mut builder = Builder::write_events();
         builder.stream_id(w.value_of("stream_id").unwrap().to_owned())
             .expected_version(match w.value_of("expected_version").unwrap() {
@@ -118,6 +171,22 @@ fn main() {
         }
 
         write(addr, verbose, builder.build_package(None, None))
+    } else if let Some(r) = matches.subcommand_matches("read") {
+        let stream_id = r.value_of("stream_id").unwrap();
+        let count: usize = match r.value_of("count").unwrap_or("1") {
+            "all" => usize::max_value(),
+            s => s.parse().expect("Parsing count failed"),
+        };
+
+        let skip: usize = r.value_of("skip").unwrap_or("0").parse().expect("Parsing skip failed");
+        let mode = match r.value_of("mode") {
+            None | Some("forward-once") => ReadMode::ForwardOnce{skip, count},
+            Some("forward-forever") => unimplemented!(),
+            Some("backward") => ReadMode::Backward{skip, count},
+            _ => unreachable!(),
+        };
+
+        read(addr, verbose, stream_id, mode)
     } else {
         println!("Subcommand is required.\n\n{}", matches.usage());
         process::exit(1);
@@ -186,12 +255,37 @@ fn write(addr: SocketAddr, verbose: bool, pkg: Package) -> Result<(), io::Error>
                 Ok(())
             },
             Message::WriteEventsCompleted(Err(reason)) => {
-                Err(io::Error::new(io::ErrorKind::Other, format!("Writing failed: {:?}", reason)))
+                Err(io::Error::new(io::ErrorKind::Other, format!("{}", reason)))
             },
             x => {
                 Err(io::Error::new(io::ErrorKind::Other, format!("Unexpected response: {:?}", x)))
             }
         }
+    });
+
+    core.run(job)
+}
+
+fn read(addr: SocketAddr, verbose: bool, stream_id: &str, mode: ReadMode) -> Result<(), io::Error> {
+    if stream_id == "$all" {
+        unimplemented!();
+    }
+
+    let mut core = Core::new().unwrap();
+    let handle = core.handle();
+
+    let client = EventStoreClient::connect(&addr, &handle);
+    let started = Instant::now();
+
+    let job = client.and_then(|client| {
+        client.call(Package {
+            authentication: None,
+            correlation_id: Uuid::new_v4(),
+            message: mode.into_request(stream_id),
+        })
+    }).and_then(|resp| {
+        println!("{:#?}", resp);
+        Ok(())
     });
 
     core.run(job)
