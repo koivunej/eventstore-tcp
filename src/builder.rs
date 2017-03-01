@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use uuid::Uuid;
 use package::Package;
 use {UsernamePassword, Message};
-use messages::mod_EventStore::mod_Client::mod_Messages::{WriteEvents, NewEvent};
+use messages::mod_EventStore::mod_Client::mod_Messages::{WriteEvents, NewEvent, ReadEvent};
 
 pub struct Builder;
 
@@ -18,6 +18,10 @@ impl Builder {
 
     pub fn write_events() -> WriteEventsBuilder {
         WriteEventsBuilder::new()
+    }
+
+    pub fn read_event() -> ReadEventBuilder {
+        ReadEventBuilder::new()
     }
 }
 
@@ -58,7 +62,7 @@ impl Into<i32> for ExpectedVersion {
         match self {
             Any => -2,
             NewStream => -1,
-            Exact(StreamVersion(x)) => x as i32
+            Exact(ver) => ver.into()
         }
     }
 }
@@ -76,6 +80,12 @@ impl StreamVersion {
         } else {
             None
         }
+    }
+}
+
+impl Into<i32> for StreamVersion {
+    fn into(self) -> i32 {
+        self.0 as i32
     }
 }
 
@@ -215,6 +225,76 @@ impl<'a> NewEventBuilder<'a> {
 
     pub fn cancel(self) -> &'a mut WriteEventsBuilder {
         self.parent
+    }
+}
+
+pub struct ReadEventBuilder {
+    event_stream_id: Option<Cow<'static, str>>,
+    event_number: Option<StreamVersion>,
+    resolve_link_tos: Option<bool>,
+    require_master: Option<bool>,
+}
+
+impl ReadEventBuilder {
+    pub fn new() -> Self {
+        ReadEventBuilder {
+            event_stream_id: None,
+            event_number: None,
+            resolve_link_tos: None,
+            require_master: None,
+        }
+    }
+
+    /// Panics if the id is an empty string
+    pub fn stream_id<S: Into<Cow<'static, str>>>(&mut self, id: S) -> &mut Self {
+        let id = id.into();
+        assert!(id.len() > 0);
+        self.event_stream_id = Some(id);
+        self
+    }
+
+    pub fn event_number(&mut self, ver: StreamVersion) -> &mut Self {
+        self.event_number = Some(ver);
+        self
+    }
+
+    pub fn resolve_link_tos(&mut self, resolve: bool) -> &mut Self {
+        self.resolve_link_tos = Some(resolve);
+        self
+    }
+
+    /// Should the server only handle the request if it is the cluster master. Note that while only
+    /// the master server can write, other cluster members can forward request to the master.
+    ///
+    /// Defaults to `false`.
+    pub fn require_master(&mut self, require: bool) -> &mut Self {
+        self.require_master = Some(require);
+        self
+    }
+
+    pub fn build_command(&mut self) -> ReadEvent<'static> {
+        ReadEvent {
+            event_stream_id: self.event_stream_id.take().unwrap(),
+            event_number: self.event_number.take().unwrap().into(),
+            resolve_link_tos: self.resolve_link_tos.take().unwrap_or(true),
+            require_master: self.require_master.take().unwrap_or(false)
+        }
+    }
+
+    pub fn build_message(&mut self) -> Message {
+        self.build_command().into()
+    }
+
+    pub fn build_package(&mut self, authentication: Option<UsernamePassword>, correlation_id: Option<Uuid>) -> Package {
+        build_package(self.build_message(), authentication, correlation_id)
+    }
+}
+
+fn build_package<M: Into<Message>>(msg: M, authentication: Option<UsernamePassword>, correlation_id: Option<Uuid>) -> Package {
+    Package {
+        authentication: authentication,
+        correlation_id: correlation_id.unwrap_or_else(|| Uuid::new_v4()),
+        message: msg.into()
     }
 }
 
