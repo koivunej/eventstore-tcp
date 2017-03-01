@@ -32,8 +32,8 @@ use messages::mod_EventStore::mod_Client::mod_Messages::mod_NotHandled::{NotHand
 mod messages_ext;
 use messages_ext::{WriteEventsExt, WriteEventsCompletedExt, MasterInfoExt};
 
-mod operation_result;
-pub use operation_result::OperationResult;
+mod failures;
+pub use failures::{OperationFailure, ReadEventFailure};
 
 mod package;
 pub use package::Package;
@@ -159,7 +159,7 @@ pub struct WriteEventsCompleted {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Explanation {
-    reason: OperationResult,
+    reason: OperationFailure,
     message: Option<String>
 }
 
@@ -180,7 +180,7 @@ impl fmt::Display for Explanation {
 
 impl Error for Explanation {
     fn description(&self) -> &str {
-        use OperationResult::*;
+        use OperationFailure::*;
         match self.reason {
             PrepareTimeout => "Internal server timeout, should be retried",
             CommitTimeout => "Internal server timeout, should be retried",
