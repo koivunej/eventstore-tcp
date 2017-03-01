@@ -130,8 +130,18 @@ fn main() {
                              .takes_value(true)
                              .possible_values(&["forward-forever", "forward-once", "backward"])
                              .help("'forward-once' reads up until the current latest,
- 'forward-forever' stays and awaits for new messages until count has been reached,
- 'backward' goes to up to first event")))
+'forward-forever' stays and awaits for new messages until count has been reached,
+'backward' goes to up to first event"))
+                        .arg(Arg::with_name("output")
+                             .value_name("OUTPUT_MODE")
+                             .short("o")
+                             .long("output")
+                             .takes_value(true)
+                             .possible_values(&["debug", "utf8_lossy", "json_oneline", "hex"])
+                             .help("'debug' will print the structure with {:?} or {:#?} depending on verbose
+'utf8_lossy' will attempt to decode data as utf8
+'json_oneline' will parse the json and stringify on one line
+'hex' will write data as hexadecimals")))
         .get_matches();
 
     let addr = {
