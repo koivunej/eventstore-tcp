@@ -134,6 +134,9 @@ pub enum Message {
     WriteEvents(WriteEvents<'static>),
     WriteEventsCompleted(Result<WriteEventsCompleted, Explanation>),
 
+    ReadEvent(client_messages::ReadEvent<'static>),
+    ReadEventCompleted(Result<client_messages::ResolvedIndexedEvent<'static>, ReadEventFailure>),
+
     /// Request was not understood
     BadRequest(Option<String>),
 
@@ -263,9 +266,10 @@ impl Message {
             0x82 => parse!(client_messages::WriteEvents, buf.as_slice())?.into(),
             0x83 => parse!(client_messages::WriteEventsCompleted, buf.as_slice())?.into(),
 
+            0xB0 => parse!(client_messages::ReadEvent, buf.as_slice())?.into(),
+            0xB1 => parse!(client_messages::ReadEventCompleted, buf.as_slice())?.into(),
+
             /*
-            0xB0 => { /* readevent */ }
-            0xB1 => { /* readeventcompleted */ }
             0xB2 => { /* readstrmeventsfwd */ }
             0xB3 => { /* readstrmeventsfwdcompleted */ }
             0xB4 => { /* readstrmeventsbackwrd */ }
@@ -326,6 +330,7 @@ impl Message {
     fn encode<W: io::Write>(&self, w: &mut W) -> io::Result<()> {
         use Message::*;
         use quick_protobuf::MessageWrite;
+        use messages_ext::ResolvedIndexedEventExt;
 
         macro_rules! encode {
             ($x: expr, $w: ident) => {
@@ -346,6 +351,10 @@ impl Message {
 
             WriteEventsCompleted(Ok(ref x)) => encode!(x.as_message_write(), w)?,
             WriteEventsCompleted(Err(ref x)) => encode!(x.as_write_events_completed(), w)?,
+
+            ReadEvent(ref re) => encode!(re, w)?,
+            ReadEventCompleted(Ok(ref rie)) => encode!(rie.as_read_event_completed(), w)?,
+            ReadEventCompleted(Err(ref fail)) => encode!(fail.as_read_event_completed(), w)?,
 
             BadRequest(Some(ref info)) => w.write_all(info.as_bytes())?,
             BadRequest(None) => (),
@@ -386,6 +395,9 @@ impl Message {
             WriteEvents(_) => 0x82,
             WriteEventsCompleted(_) => 0x83,
 
+            ReadEvent(_) => 0xB0,
+            ReadEventCompleted(_) => 0xB1,
+
             BadRequest(_) => 0xf0,
             NotHandled(..) => 0xf1,
             Authenticate => 0xf2,
@@ -396,15 +408,38 @@ impl Message {
 }
 
 impl<'a> From<WriteEvents<'a>> for Message {
-    fn from(we: WriteEvents<'a>) -> Message {
+    fn from(we: WriteEvents<'a>) -> Self {
         use messages_ext::WriteEventsExt;
         Message::WriteEvents(we.into_owned())
     }
 }
 
 impl<'a> From<client_messages::WriteEventsCompleted<'a>> for Message {
-    fn from(wec: client_messages::WriteEventsCompleted<'a>) -> Message {
+    fn from(wec: client_messages::WriteEventsCompleted<'a>) -> Self {
         use messages_ext::WriteEventsCompletedExt;
         wec.into_message()
+    }
+}
+
+impl<'a> From<client_messages::ReadEvent<'a>> for Message {
+    fn from(re: client_messages::ReadEvent<'a>) -> Self {
+        use messages_ext::ReadEventExt;
+        Message::ReadEvent(re.into_owned())
+    }
+}
+
+impl<'a> From<client_messages::ReadEventCompleted<'a>> for Message {
+    fn from(rec: client_messages::ReadEventCompleted<'a>) -> Self {
+        use client_messages::mod_ReadEventCompleted::ReadEventResult;
+        use messages_ext::ResolvedIndexedEventExt;
+
+        if rec.result.is_none() {
+            Message::ReadEventCompleted(Err(ReadEventFailure::Error(Some("No result received from the wire, assuming failure".into()))))
+        } else {
+            match rec.result.unwrap() {
+                ReadEventResult::Success => Message::ReadEventCompleted(Ok(rec.event.into_owned())),
+                err => Message::ReadEventCompleted(Err((err, rec.error).into()))
+            }
+        }
     }
 }

@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 use messages::mod_EventStore::mod_Client::mod_Messages as client_messages;
-use messages::mod_EventStore::mod_Client::mod_Messages::OperationResult;
+use messages::mod_EventStore::mod_Client::mod_Messages::{OperationResult, ReadEventCompleted};
 use messages::mod_EventStore::mod_Client::mod_Messages::mod_ReadEventCompleted::ReadEventResult;
 
 /// Like `OperationResult` on the wire but does not have a success value. Explains the reason for
@@ -65,7 +65,7 @@ pub enum ReadEventFailure {
     NotFound,
     NoStream,
     StreamDeleted,
-    Error(Option<String>),
+    Error(Option<Cow<'static, str>>),
     AccessDenied
 }
 
@@ -77,7 +77,7 @@ impl<'a> From<(ReadEventResult, Option<Cow<'a, str>>)> for ReadEventFailure {
             NotFound => ReadEventFailure::NotFound,
             NoStream => ReadEventFailure::NoStream,
             StreamDeleted => ReadEventFailure::StreamDeleted,
-            Error => ReadEventFailure::Error(err.map(Cow::into_owned)),
+            Error => ReadEventFailure::Error(err.map(Cow::into_owned).map(Cow::Owned)),
             AccessDenied => ReadEventFailure::AccessDenied,
         }
     }
@@ -90,8 +90,33 @@ impl Into<(ReadEventResult, Option<Cow<'static, str>>)> for ReadEventFailure {
             NotFound => (ReadEventResult::NotFound, None),
             NoStream => (ReadEventResult::NoStream, None),
             StreamDeleted => (ReadEventResult::StreamDeleted, None),
-            Error(x) => (ReadEventResult::Error, x.map(Cow::Owned)),
+            Error(x) => (ReadEventResult::Error, x),
             AccessDenied => (ReadEventResult::AccessDenied, None),
         }
+    }
+}
+
+impl ReadEventFailure {
+    pub fn as_read_event_completed<'a>(&'a self) -> ReadEventCompleted<'a> {
+        use ReadEventFailure::*;
+        let (res, msg) = match self {
+            &NotFound => (ReadEventResult::NotFound, None),
+            &NoStream => (ReadEventResult::NoStream, None),
+            &StreamDeleted => (ReadEventResult::StreamDeleted, None),
+            &Error(ref x) => (ReadEventResult::Error, match x {
+                &Some(ref cow) => Some(Cow::Borrowed(cow)),
+                &None => None,
+            }),
+            &AccessDenied => (ReadEventResult::AccessDenied, None),
+        };
+        // not sure how event is written here
+        unimplemented!()
+
+        /*
+        ReadEventCompleted {
+            result: res,
+            error: msg,
+        }
+        */
     }
 }

@@ -83,3 +83,88 @@ impl<'a> MasterInfoExt<'a> for client_messages::mod_NotHandled::MasterInfo<'a> {
         }
     }
 }
+
+pub trait ReadEventExt<'a> {
+    fn into_owned(self) -> client_messages::ReadEvent<'static>;
+}
+
+impl<'a> ReadEventExt<'a> for client_messages::ReadEvent<'a> {
+    fn into_owned(self) -> client_messages::ReadEvent<'static> {
+        client_messages::ReadEvent {
+            event_stream_id: Cow::Owned(self.event_stream_id.into_owned()),
+            event_number: self.event_number,
+            resolve_link_tos: self.resolve_link_tos,
+            require_master: self.require_master,
+        }
+    }
+}
+
+pub trait ResolvedIndexedEventExt<'a> {
+    fn into_owned(self) -> client_messages::ResolvedIndexedEvent<'static>;
+
+    fn borrowed<'b>(&'b self) -> client_messages::ResolvedIndexedEvent<'b>;
+
+    fn as_read_event_completed<'b>(&'b self) -> client_messages::ReadEventCompleted<'b>;
+}
+
+impl<'a> ResolvedIndexedEventExt<'a> for client_messages::ResolvedIndexedEvent<'a> {
+    fn into_owned(self) -> client_messages::ResolvedIndexedEvent<'static> {
+        client_messages::ResolvedIndexedEvent {
+            event: self.event.into_owned(),
+            link: self.link.map(EventRecordExt::into_owned),
+        }
+    }
+
+    fn borrowed<'b>(&'b self) -> client_messages::ResolvedIndexedEvent<'b> {
+        client_messages::ResolvedIndexedEvent {
+            event: self.event.borrowed(),
+            link: self.link.as_ref().map(|x| x.borrowed()),
+        }
+    }
+
+    fn as_read_event_completed<'b>(&'b self) -> client_messages::ReadEventCompleted<'b> {
+        client_messages::ReadEventCompleted {
+            result: Some(client_messages::mod_ReadEventCompleted::ReadEventResult::Success),
+            event: self.borrowed(),
+            error: None,
+        }
+    }
+}
+
+pub trait EventRecordExt<'a> {
+    fn into_owned(self) -> client_messages::EventRecord<'static>;
+
+    fn borrowed<'b>(&'b self) -> client_messages::EventRecord<'b>;
+}
+
+impl<'a> EventRecordExt<'a> for client_messages::EventRecord<'a> {
+    fn into_owned(self) -> client_messages::EventRecord<'static> {
+        client_messages::EventRecord {
+            event_stream_id: Cow::Owned(self.event_stream_id.into_owned()),
+            event_number: self.event_number,
+            event_id: Cow::Owned(self.event_id.into_owned()),
+            event_type: Cow::Owned(self.event_type.into_owned()),
+            data_content_type: self.data_content_type,
+            metadata_content_type: self.metadata_content_type,
+            data: Cow::Owned(self.data.into_owned()),
+            metadata: self.metadata.map(|x| Cow::Owned(x.into_owned())),
+            created: self.created,
+            created_epoch: self.created_epoch,
+        }
+    }
+
+    fn borrowed<'b>(&'b self) -> client_messages::EventRecord<'b> {
+        client_messages::EventRecord {
+            event_stream_id: Cow::Borrowed(&*self.event_stream_id),
+            event_number: self.event_number,
+            event_id: Cow::Borrowed(&*self.event_id),
+            event_type: Cow::Borrowed(&*self.event_type),
+            data_content_type: self.data_content_type,
+            metadata_content_type: self.metadata_content_type,
+            data: Cow::Borrowed(&*self.data),
+            metadata: self.metadata.as_ref().map(|x| Cow::Borrowed(&**x)),
+            created: self.created,
+            created_epoch: self.created_epoch,
+        }
+    }
+}
