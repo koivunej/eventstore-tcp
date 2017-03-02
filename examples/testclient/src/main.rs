@@ -6,10 +6,13 @@ extern crate uuid;
 #[macro_use]
 extern crate clap;
 extern crate es_proto;
+extern crate json;
 
 use std::io;
 use std::net::SocketAddr;
 use std::process;
+use std::str;
+
 use uuid::Uuid;
 
 use futures::Future;
@@ -18,7 +21,7 @@ use tokio_service::Service;
 
 use clap::{Arg, App, SubCommand};
 
-use es_proto::{EventStoreClient, Package, Message, Builder, ExpectedVersion, StreamVersion, Direction};
+use es_proto::{EventStoreClient, Package, Message, Builder, ExpectedVersion, StreamVersion, Direction, ReadStreamSuccess};
 
 #[derive(Debug)]
 enum ReadMode {
@@ -49,13 +52,49 @@ impl<'a> From<&'a str> for OutputMode {
 }
 
 impl OutputMode {
-    fn format<Out: io::Write>(&self, verbose: bool, msg: Message, out: &mut Out) -> io::Result<()> {
+    fn format<Out: io::Write, ErrOut: io::Write>(&self, verbose: bool, msg: Message, out: &mut Out, err: &mut ErrOut) -> io::Result<()> {
         match *self {
             OutputMode::Debug => {
                 if verbose {
                     writeln!(out, "{:#?}", msg)
                 } else {
                     writeln!(out, "{:?}", msg)
+                }
+            },
+            OutputMode::JsonOneline => {
+                match msg {
+                    Message::ReadStreamEventsCompleted(_, Ok(ReadStreamSuccess { events, .. })) => {
+
+                        for resolved in events {
+                            let event = resolved.event;
+                            match str::from_utf8(&*event.data) {
+                                Ok(s) => match json::parse(s) {
+                                    Ok(parsed) => {
+                                        parsed.write(out)?;
+                                        writeln!(out, "")?;
+                                    },
+                                    Err(fail) => writeln!(err, "Failed to parse event {}@{}: {}", event.event_stream_id, event.event_number, fail)?
+                                },
+                                Err(e) => writeln!(err, "Event {}@{} is not utf8: {}", event.event_stream_id, event.event_number, e)?,
+                            }
+                        }
+
+                        Ok(())
+                    },
+                    Message::ReadStreamEventsCompleted(_, Err(fail)) => {
+                        if verbose {
+                            write!(err, "{}: {:#?}", "Read failed", fail)
+                        } else {
+                            write!(err, "{}: {:?}", "Read failed", fail)
+                        }
+                    },
+                    x => {
+                        if verbose {
+                            write!(err, "Unexpected message received: {:#?}", x)
+                        } else {
+                            write!(err, "Unexpected message received: {:?}", x)
+                        }
+                    }
                 }
             },
             _ => unimplemented!()
@@ -342,6 +381,7 @@ fn read(addr: SocketAddr, verbose: bool, output: OutputMode, stream_id: &str, mo
 
     let client = EventStoreClient::connect(&addr, &handle);
 
+
     let job = client.and_then(|client| {
         client.call(Package {
             authentication: None,
@@ -350,7 +390,8 @@ fn read(addr: SocketAddr, verbose: bool, output: OutputMode, stream_id: &str, mo
         })
     }).and_then(|resp| {
         let mut stdout = io::stdout();
-        output.format(verbose, resp.message, &mut stdout)
+        let mut stderr = io::stderr();
+        output.format(verbose, resp.message, &mut stdout, &mut stderr)
     });
 
     core.run(job)
