@@ -376,7 +376,7 @@ impl Message {
                     additional_info: additional_info,
                 };
 
-                msg.write_message(&mut quick_protobuf::writer::Writer::new(w)).map_err(convert_qp_err)?
+                encode!(msg, w)?
             },
         })
     }
