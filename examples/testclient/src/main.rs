@@ -26,6 +26,43 @@ enum ReadMode {
     Backward{ skip: usize, count: usize }
 }
 
+#[derive(Debug, Clone)]
+enum OutputMode {
+    Debug,
+    Utf8Lossy,
+    JsonOneline,
+    Hex
+}
+
+impl Copy for OutputMode {}
+
+impl<'a> From<&'a str> for OutputMode {
+    fn from(s: &'a str) -> OutputMode {
+        match s {
+            "debug" => OutputMode::Debug,
+            "utf8_lossy" => OutputMode::Utf8Lossy,
+            "json_oneline" => OutputMode::JsonOneline,
+            "hex" => OutputMode::Hex,
+            _ => panic!("Unsupport mode: {}", s)
+        }
+    }
+}
+
+impl OutputMode {
+    fn format<Out: io::Write>(&self, verbose: bool, msg: Message, out: &mut Out) -> io::Result<()> {
+        match *self {
+            OutputMode::Debug => {
+                if verbose {
+                    writeln!(out, "{:#?}", msg)
+                } else {
+                    writeln!(out, "{:?}", msg)
+                }
+            },
+            _ => unimplemented!()
+        }
+    }
+}
+
 impl ReadMode {
     fn into_request(self, stream_id: &str) -> Message {
         use ReadMode::*;
@@ -213,7 +250,9 @@ fn main() {
             _ => unreachable!(),
         };
 
-        read(addr, verbose, stream_id, mode)
+        let output = r.value_of("output").map(OutputMode::from).unwrap_or(OutputMode::Debug);
+
+        read(addr, verbose, output, stream_id, mode)
     } else {
         println!("Subcommand is required.\n\n{}", matches.usage());
         process::exit(1);
@@ -293,7 +332,7 @@ fn write(addr: SocketAddr, verbose: bool, pkg: Package) -> Result<(), io::Error>
     core.run(job)
 }
 
-fn read(addr: SocketAddr, _: bool, stream_id: &str, mode: ReadMode) -> Result<(), io::Error> {
+fn read(addr: SocketAddr, verbose: bool, output: OutputMode, stream_id: &str, mode: ReadMode) -> Result<(), io::Error> {
     /*if stream_id == "$all" {
         unimplemented!();
     }*/
@@ -310,8 +349,8 @@ fn read(addr: SocketAddr, _: bool, stream_id: &str, mode: ReadMode) -> Result<()
             message: mode.into_request(stream_id),
         })
     }).and_then(|resp| {
-        println!("{:#?}", resp);
-        Ok(())
+        let mut stdout = io::stdout();
+        output.format(verbose, resp.message, &mut stdout)
     });
 
     core.run(job)
