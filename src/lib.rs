@@ -290,7 +290,10 @@ impl<'a> From<(Direction, client_messages::ReadStreamEventsCompleted<'a>)> for M
                 }))
             },
 
-            Some(err) => Message::ReadStreamEventsCompleted(dir, Err((err, completed.error).into())),
+            Some(err) => {
+                // TODO: last_commit_position has readable value which is discarded here
+                Message::ReadStreamEventsCompleted(dir, Err((err, completed.error).into()))
+            },
 
             // TODO: might not be a good idea to use such in-band errors..
             None => Message::ReadStreamEventsCompleted(dir, Err((ReadStreamResult::Error, Some(Cow::Borrowed("No result found in message"))).into())),

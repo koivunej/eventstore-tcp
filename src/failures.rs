@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 use messages::mod_EventStore::mod_Client::mod_Messages as client_messages;
-use messages::mod_EventStore::mod_Client::mod_Messages::{OperationResult, ReadEventCompleted, ReadStreamEventsCompleted};
+use messages::mod_EventStore::mod_Client::mod_Messages::{OperationResult, ReadEventCompleted, ReadStreamEventsCompleted, EventRecord, ResolvedIndexedEvent};
 use messages::mod_EventStore::mod_Client::mod_Messages::mod_ReadEventCompleted::ReadEventResult;
 use messages::mod_EventStore::mod_Client::mod_Messages::mod_ReadStreamEventsCompleted::ReadStreamResult;
 
@@ -101,25 +101,36 @@ impl Into<(ReadEventResult, Option<Cow<'static, str>>)> for ReadEventFailure {
 impl ReadEventFailure {
     pub fn as_read_event_completed<'a>(&'a self) -> ReadEventCompleted<'a> {
         use ReadEventFailure::*;
-        let (res, msg) = match self {
+        let (res, msg): (ReadEventResult, Option<Cow<'a, str>>) = match self {
             &NotFound => (ReadEventResult::NotFound, None),
             &NoStream => (ReadEventResult::NoStream, None),
             &StreamDeleted => (ReadEventResult::StreamDeleted, None),
             &Error(ref x) => (ReadEventResult::Error, match x {
-                &Some(ref cow) => Some(Cow::Borrowed(cow)),
+                &Some(ref cow) => Some(Cow::Borrowed(&*cow)),
                 &None => None,
             }),
             &AccessDenied => (ReadEventResult::AccessDenied, None),
         };
-        // not sure how event is written here
-        unimplemented!()
 
-        /*
         ReadEventCompleted {
-            result: res,
+            result: Some(res),
+            event: ResolvedIndexedEvent {
+                event: EventRecord {
+                    event_stream_id: "".into(),
+                    event_number: -1,
+                    event_id: Cow::Borrowed(&[]),
+                    event_type: "".into(),
+                    data_content_type: 0,
+                    metadata_content_type: 0,
+                    data: Cow::Borrowed(&[]),
+                    metadata: None,
+                    created: None,
+                    created_epoch: None,
+                },
+                link: None,
+            },
             error: msg,
         }
-        */
     }
 
 }
@@ -164,7 +175,7 @@ impl<'a> From<(ReadStreamResult, Option<Cow<'a, str>>)> for ReadStreamFailure {
 impl ReadStreamFailure {
     pub fn as_read_stream_events_completed<'a>(&'a self) -> ReadStreamEventsCompleted<'a> {
         use ReadStreamFailure::*;
-        let (res, msg) = match self {
+        let (res, msg): (ReadStreamResult, Option<Cow<'a, str>>) = match self {
             &NoStream => (ReadStreamResult::NoStream, None),
             &StreamDeleted => (ReadStreamResult::StreamDeleted, None),
             &NotModified => (ReadStreamResult::NotModified, None),
@@ -175,6 +186,14 @@ impl ReadStreamFailure {
             &AccessDenied => (ReadStreamResult::AccessDenied, None),
         };
 
-        unimplemented!()
+        ReadStreamEventsCompleted {
+            events: vec![],
+            result: Some(res),
+            next_event_number: -1,
+            last_event_number: -1,
+            is_end_of_stream: false,
+            last_commit_position: -1, // TODO: this is given out by the server in errors as well
+            error: msg,
+        }
     }
 }
