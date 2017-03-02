@@ -2,10 +2,10 @@
 name = "testclient"
 version = "0.1.0"
 authors = ["Joonas Koivunen <joonas.koivunen@gmail.com>"]
-description = "Test client similar to EventStore.TestClient in EventStore binary distribution"
+description = "EventStore command line client/utility"
 
 [dependencies]
-es-proto = { path = "../../" }
+tokio-eventstore = { path = "../../" }
 uuid = { version = "0.2", features = ["use_std", "v4"] }
 futures = "0.1"
 tokio-core = "0.1"

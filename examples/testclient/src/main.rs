@@ -5,8 +5,8 @@ extern crate uuid;
 
 #[macro_use]
 extern crate clap;
-extern crate es_proto;
 extern crate json;
+extern crate tokio_eventstore;
 
 use std::io;
 use std::net::SocketAddr;
@@ -21,7 +21,7 @@ use tokio_service::Service;
 
 use clap::{Arg, App, SubCommand};
 
-use es_proto::{EventStoreClient, Package, Message, Builder, ExpectedVersion, StreamVersion, Direction, ReadStreamSuccess, ResolvedIndexedEvent};
+use tokio_eventstore::{EventStoreClient, Package, Message, Builder, ExpectedVersion, StreamVersion, Direction, ReadStreamSuccess, ResolvedIndexedEvent};
 
 #[derive(Debug)]
 enum ReadMode {
