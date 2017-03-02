@@ -192,7 +192,7 @@ impl ReadStreamFailure {
             next_event_number: -1,
             last_event_number: -1,
             is_end_of_stream: false,
-            last_commit_position: -1, // TODO: this is given out by the server in errors as well
+            last_commit_position: -1,
             error: msg,
         }
     }
