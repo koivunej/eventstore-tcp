@@ -91,47 +91,50 @@ pub enum Direction {
 
 impl Copy for Direction {}
 
-/*
-impl Direction {
-    pub fn stream_id<S: Into<Cow<'static, str>>>(&self, id: S) -> builder::ReadStreamEvents {
-        builder::Builder::read_stream_events(self).stream_id(id.into())
-    }
-
-    pub fn all(&self) -> Builder::ReadAllEvents {
-        builder::Builder::read_all_events(self).stream_id(id.into())
-    }
-}
-*/
-
+/// Enumeration of currently supported messages. Plan is to include every defined message, trying
+/// to decode responses into `Result` alike messages, such as `ReadEventCompleted`.
 #[derive(Debug, PartialEq)]
 pub enum Message {
+    /// Requests heartbeat from the other side. Unsure if clients or server sends these.
     HeartbeatRequest,
+    /// Response to a heartbeat request.
     HeartbeatResponse,
+    /// Ping request, similar to heartbeat.
     Ping,
+    /// Ping response.
     Pong,
 
+    /// Append to stream request
     WriteEvents(WriteEvents<'static>),
+    /// Append to stream response, which can fail for a number of reasons
     WriteEventsCompleted(Result<WriteEventsCompleted, Explanation>),
 
+    /// Request to read a single event from a stream
     ReadEvent(client_messages::ReadEvent<'static>),
+    /// Response to a single event read
     ReadEventCompleted(Result<client_messages::ResolvedIndexedEvent<'static>, ReadEventFailure>),
 
+    /// Request to read a stream from a point forward or backward
     ReadStreamEvents(Direction, client_messages::ReadStreamEvents<'static>),
+    /// Response to a stream read in given direction
     ReadStreamEventsCompleted(Direction, Result<ReadStreamSuccess, ReadStreamFailure>),
 
     /// Request was not understood
     BadRequest(Option<String>),
 
-    /// Correlated request was not handled
+    /// Correlated request was not handled. This is the likely response to requests where
+    /// `require_master` is `true`, but the connected endpoint is not master and cannot reach it.
     NotHandled(NotHandledReason, Option<MasterInfo<'static>>),
 
-    /// Request to authenticate
+    /// Request to authenticate attached credentials.
     Authenticate,
 
-    /// Positive authentication response
+    /// Positive authentication response. The credentials used to `Authenticate` previously can be
+    /// used in successive requests.
     Authenticated,
 
-    /// Negative authentication response
+    /// Negative authentication response, or response to any sent request for which used
+    /// authentication was not accepted.
     NotAuthenticated
 }
 
