@@ -2,8 +2,8 @@ use std::borrow::Cow;
 
 use uuid::Uuid;
 use package::Package;
-use {UsernamePassword, Message};
-use messages::mod_EventStore::mod_Client::mod_Messages::{WriteEvents, NewEvent, ReadEvent};
+use {UsernamePassword, Message, Direction};
+use messages::mod_EventStore::mod_Client::mod_Messages::{WriteEvents, NewEvent, ReadEvent, ReadStreamEvents};
 
 pub struct Builder;
 
@@ -22,6 +22,10 @@ impl Builder {
 
     pub fn read_event() -> ReadEventBuilder {
         ReadEventBuilder::new()
+    }
+
+    pub fn read_stream_events() -> ReadStreamEventsBuilder {
+        ReadStreamEventsBuilder::new()
     }
 }
 
@@ -283,6 +287,80 @@ impl ReadEventBuilder {
 
     pub fn build_package(&mut self, authentication: Option<UsernamePassword>, correlation_id: Option<Uuid>) -> Package {
         build_package(self.build_message(), authentication, correlation_id)
+    }
+}
+
+pub struct ReadStreamEventsBuilder {
+    direction: Option<Direction>,
+    event_stream_id: Option<Cow<'static, str>>,
+    from_event_number: Option<StreamVersion>,
+    max_count: Option<u8>,
+    resolve_link_tos: Option<bool>,
+    require_master: Option<bool>,
+}
+
+impl ReadStreamEventsBuilder {
+    pub fn new() -> Self {
+        ReadStreamEventsBuilder {
+            direction: None,
+            event_stream_id: None,
+            from_event_number: None,
+            max_count: None,
+            resolve_link_tos: None,
+            require_master: None,
+        }
+    }
+
+    pub fn direction<D: Into<Option<Direction>>>(&mut self, dir: D) -> &mut Self {
+        self.direction = dir.into();
+        self
+    }
+
+    pub fn max_count(&mut self, count: u8) -> &mut Self {
+        // TODO: check ClientAPI, or just use u8?
+        self.max_count = Some(count);
+        self
+    }
+
+    /// Panics if the id is an empty string
+    pub fn stream_id<S: Into<Cow<'static, str>>>(&mut self, id: S) -> &mut Self {
+        let id = id.into();
+        assert!(id.len() > 0);
+        self.event_stream_id = Some(id);
+        self
+    }
+
+    pub fn from_event_number(&mut self, ver: StreamVersion) -> &mut Self {
+        self.from_event_number = Some(ver);
+        self
+    }
+
+    pub fn resolve_link_tos(&mut self, resolve: bool) -> &mut Self {
+        self.resolve_link_tos = Some(resolve);
+        self
+    }
+
+    /// Should the server only handle the request if it is the cluster master. Note that while only
+    /// the master server can write, other cluster members can forward request to the master.
+    ///
+    /// Defaults to `false`.
+    pub fn require_master(&mut self, require: bool) -> &mut Self {
+        self.require_master = Some(require);
+        self
+    }
+
+    pub fn build_command(&mut self) -> ReadStreamEvents<'static> {
+        ReadStreamEvents {
+            event_stream_id: self.event_stream_id.take().expect("event_stream_id not set"),
+            from_event_number: self.from_event_number.expect("from_event_number not set").into(),
+            max_count: self.max_count.unwrap_or(10) as i32,
+            resolve_link_tos: self.resolve_link_tos.unwrap_or(true),
+            require_master: self.require_master.unwrap_or(false)
+        }
+    }
+
+    pub fn build_message(&mut self) -> Message {
+        Message::ReadStreamEvents(self.direction.expect("direction not set"), self.build_command())
     }
 }
 

@@ -1,7 +1,8 @@
 use std::borrow::Cow;
 use messages::mod_EventStore::mod_Client::mod_Messages as client_messages;
-use messages::mod_EventStore::mod_Client::mod_Messages::{OperationResult, ReadEventCompleted};
+use messages::mod_EventStore::mod_Client::mod_Messages::{OperationResult, ReadEventCompleted, ReadStreamEventsCompleted};
 use messages::mod_EventStore::mod_Client::mod_Messages::mod_ReadEventCompleted::ReadEventResult;
+use messages::mod_EventStore::mod_Client::mod_Messages::mod_ReadStreamEventsCompleted::ReadStreamResult;
 
 /// Like `OperationResult` on the wire but does not have a success value. Explains the reason for
 /// failure.
@@ -60,6 +61,7 @@ impl Into<OperationResult> for OperationFailure {
     }
 }
 
+/// `ReadEventFailure` maps to non-success of `ReadEventResult`
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ReadEventFailure {
     NotFound,
@@ -118,5 +120,61 @@ impl ReadEventFailure {
             error: msg,
         }
         */
+    }
+
+}
+
+// NOTE: similar to ReadEventFailure, but this has NotModified instead of NotFound
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum ReadStreamFailure {
+    NoStream,
+    StreamDeleted,
+    NotModified,
+    Error(Option<Cow<'static, str>>),
+    AccessDenied,
+}
+
+impl Into<(ReadStreamResult, Option<Cow<'static, str>>)> for ReadStreamFailure {
+    fn into(self) -> (ReadStreamResult, Option<Cow<'static, str>>) {
+        use ReadStreamFailure::*;
+        match self {
+            NoStream => (ReadStreamResult::NoStream, None),
+            StreamDeleted => (ReadStreamResult::StreamDeleted, None),
+            NotModified => (ReadStreamResult::NotModified, None),
+            Error(x) => (ReadStreamResult::Error, x),
+            AccessDenied => (ReadStreamResult::AccessDenied, None),
+        }
+    }
+}
+
+impl<'a> From<(ReadStreamResult, Option<Cow<'a, str>>)> for ReadStreamFailure {
+    fn from((res, err): (ReadStreamResult, Option<Cow<'a, str>>)) -> Self {
+        use self::ReadStreamResult::*;
+        match res {
+            Success => unreachable!(),
+            NoStream => ReadStreamFailure::NoStream,
+            StreamDeleted => ReadStreamFailure::StreamDeleted,
+            NotModified => ReadStreamFailure::NotModified,
+            Error => ReadStreamFailure::Error(err.map(Cow::into_owned).map(Cow::Owned)),
+            AccessDenied => ReadStreamFailure::AccessDenied,
+        }
+    }
+}
+
+impl ReadStreamFailure {
+    pub fn as_read_stream_events_completed<'a>(&'a self) -> ReadStreamEventsCompleted<'a> {
+        use ReadStreamFailure::*;
+        let (res, msg) = match self {
+            &NoStream => (ReadStreamResult::NoStream, None),
+            &StreamDeleted => (ReadStreamResult::StreamDeleted, None),
+            &NotModified => (ReadStreamResult::NotModified, None),
+            &Error(ref x) => (ReadStreamResult::Error, match x {
+                &Some(ref cow) => Some(Cow::Borrowed(cow)),
+                &None => None,
+            }),
+            &AccessDenied => (ReadStreamResult::AccessDenied, None),
+        };
+
+        unimplemented!()
     }
 }

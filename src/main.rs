@@ -20,7 +20,7 @@ use futures::sync::{oneshot, mpsc};
 
 use clap::{Arg, App, SubCommand};
 
-use es_proto::{EventStoreClient, Package, Message, Builder, ExpectedVersion, StreamVersion, UsernamePassword};
+use es_proto::{EventStoreClient, Package, Message, Builder, ExpectedVersion, StreamVersion, UsernamePassword, Direction};
 
 #[derive(Debug)]
 enum ReadMode {
@@ -32,18 +32,36 @@ impl ReadMode {
     fn into_request(self, stream_id: &str) -> Message {
         use ReadMode::*;
         match self {
-            ForwardOnce { skip, count } => {
-                if count != 1 {
-                    unimplemented!();
-                }
+            ForwardOnce { skip, count: 1 } | Backward { skip, count: 1 } => {
+                let ver = StreamVersion::from_opt(skip as u32).expect("Stream version overflow");
                 Builder::read_event()
                     .stream_id(stream_id.to_owned())
-                    .event_number(StreamVersion::from_opt(skip as u32).expect("Stream version overflow"))
+                    .event_number(ver)
                     .resolve_link_tos(true)
                     .require_master(false)
                     .build_message()
             },
-            Backward { .. } => unimplemented!()
+            ForwardOnce { skip, count } => {
+                // TODO: perhaps bad choice of option?
+                // TODO: handle at main
+                let ver = StreamVersion::from_opt(skip as u32).expect("Stream version overflow");
+                Builder::read_stream_events()
+                    .direction(Direction::Forward) // TODO: ReadDirection would be more clear?
+                    .stream_id(stream_id.to_owned())
+                    .from_event_number(ver)
+                    .max_count(count as u8) // TODO: restrict at main
+                    .build_message()
+            },
+            Backward { skip, count } => {
+                // last is -1, -1; TODO: cannot fit usize
+                let ver = StreamVersion::from_opt(skip as u32).expect("Stream version overflow");
+                Builder::read_stream_events()
+                    .direction(Direction::Forward) // TODO: ReadDirection would be more clear?
+                    .stream_id(stream_id.to_owned())
+                    .from_event_number(ver)
+                    .max_count(count as u8) // TODO: restrict at main
+                    .build_message()
+            }
         }
     }
 }
@@ -277,9 +295,9 @@ fn write(addr: SocketAddr, verbose: bool, pkg: Package) -> Result<(), io::Error>
 }
 
 fn read(addr: SocketAddr, verbose: bool, stream_id: &str, mode: ReadMode) -> Result<(), io::Error> {
-    if stream_id == "$all" {
+    /*if stream_id == "$all" {
         unimplemented!();
-    }
+    }*/
 
     let mut core = Core::new().unwrap();
     let handle = core.handle();

@@ -168,3 +168,19 @@ impl<'a> EventRecordExt<'a> for client_messages::EventRecord<'a> {
         }
     }
 }
+
+pub trait ReadStreamEventsExt<'a> {
+    fn into_owned(self) -> client_messages::ReadStreamEvents<'static>;
+}
+
+impl<'a> ReadStreamEventsExt<'a> for client_messages::ReadStreamEvents<'a> {
+    fn into_owned(self) -> client_messages::ReadStreamEvents<'static> {
+        client_messages::ReadStreamEvents {
+            event_stream_id: Cow::Owned(self.event_stream_id.into_owned()),
+            from_event_number: self.from_event_number,
+            max_count: self.max_count,
+            resolve_link_tos: self.resolve_link_tos,
+            require_master: self.require_master,
+        }
+    }
+}

@@ -26,14 +26,14 @@ use tokio_core::io::EasyBuf;
 
 mod messages;
 use messages::mod_EventStore::mod_Client::mod_Messages as client_messages;
-use messages::mod_EventStore::mod_Client::mod_Messages::WriteEvents;
+use messages::mod_EventStore::mod_Client::mod_Messages::{WriteEvents, ResolvedIndexedEvent};
 use messages::mod_EventStore::mod_Client::mod_Messages::mod_NotHandled::{NotHandledReason, MasterInfo};
 
 mod messages_ext;
 use messages_ext::{WriteEventsExt, WriteEventsCompletedExt, MasterInfoExt};
 
 mod failures;
-pub use failures::{OperationFailure, ReadEventFailure};
+pub use failures::{OperationFailure, ReadEventFailure, ReadStreamFailure};
 
 mod package;
 pub use package::Package;
@@ -124,6 +124,30 @@ impl UsernamePassword {
     }
 }
 
+/// The direction in which events are read.
+// TODO: would make a good factory for creating ReadStream and ReadAll
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum Direction {
+    /// Read from first (event 0) to the latest
+    Forward,
+    /// Read from latest (highest event number) to the first (event 0)
+    Backward
+}
+
+impl Copy for Direction {}
+
+/*
+impl Direction {
+    pub fn stream_id<S: Into<Cow<'static, str>>>(&self, id: S) -> builder::ReadStreamEvents {
+        builder::Builder::read_stream_events(self).stream_id(id.into())
+    }
+
+    pub fn all(&self) -> Builder::ReadAllEvents {
+        builder::Builder::read_all_events(self).stream_id(id.into())
+    }
+}
+*/
+
 #[derive(Debug, PartialEq)]
 pub enum Message {
     HeartbeatRequest,
@@ -136,6 +160,9 @@ pub enum Message {
 
     ReadEvent(client_messages::ReadEvent<'static>),
     ReadEventCompleted(Result<client_messages::ResolvedIndexedEvent<'static>, ReadEventFailure>),
+
+    ReadStreamEvents(Direction, client_messages::ReadStreamEvents<'static>),
+    ReadStreamEventsCompleted(Direction, Result<ReadStreamSuccess, ReadStreamFailure>),
 
     /// Request was not understood
     BadRequest(Option<String>),
@@ -231,6 +258,63 @@ impl AsMessageWrite<client_messages::WriteEventsCompleted<'static>> for WriteEve
     }
 }
 
+impl<'a> From<(Direction, client_messages::ReadStreamEvents<'a>)> for Message {
+    fn from((dir, body): (Direction, client_messages::ReadStreamEvents<'a>)) -> Message {
+        use messages_ext::ReadStreamEventsExt;
+        Message::ReadStreamEvents(dir, body.into_owned())
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ReadStreamSuccess {
+    pub events: Vec<ResolvedIndexedEvent<'static>>,
+    pub next_event_number: i32,
+    pub last_event_number: i32,
+    pub end_of_stream: bool,
+    pub last_commit_position: i64,
+}
+
+impl<'a> From<(Direction, client_messages::ReadStreamEventsCompleted<'a>)> for Message {
+    fn from((dir, completed): (Direction, client_messages::ReadStreamEventsCompleted<'a>)) -> Message {
+        use client_messages::mod_ReadStreamEventsCompleted::ReadStreamResult;
+        use messages_ext::ResolvedIndexedEventExt;
+
+        match completed.result {
+            Some(ReadStreamResult::Success) => {
+                Message::ReadStreamEventsCompleted(dir, Ok(ReadStreamSuccess {
+                    events: completed.events.into_iter().map(|x| x.into_owned()).collect(),
+                    next_event_number: completed.next_event_number,
+                    last_event_number: completed.last_event_number,
+                    end_of_stream: completed.is_end_of_stream,
+                    last_commit_position: completed.last_commit_position,
+                }))
+            },
+
+            Some(err) => Message::ReadStreamEventsCompleted(dir, Err((err, completed.error).into())),
+
+            // TODO: might not be a good idea to use such in-band errors..
+            None => Message::ReadStreamEventsCompleted(dir, Err((ReadStreamResult::Error, Some(Cow::Borrowed("No result found in message"))).into())),
+        }
+    }
+}
+
+impl ReadStreamSuccess {
+    pub fn as_read_stream_events_completed<'a>(&'a self) -> client_messages::ReadStreamEventsCompleted<'a> {
+        use client_messages::mod_ReadStreamEventsCompleted::ReadStreamResult;
+        use messages_ext::ResolvedIndexedEventExt;
+
+        client_messages::ReadStreamEventsCompleted {
+            events: self.events.iter().map(|x| x.borrowed()).collect(),
+            result: Some(ReadStreamResult::Success),
+            next_event_number: self.next_event_number,
+            last_event_number: self.last_event_number,
+            is_end_of_stream: self.end_of_stream,
+            last_commit_position: self.last_commit_position,
+            error: None,
+        }
+    }
+}
+
 fn convert_qp_err(e: ::quick_protobuf::errors::Error) -> io::Error {
     use std::io::{Error as IoError, ErrorKind as IoErrorKind};
     use quick_protobuf::errors::{Error, ErrorKind};
@@ -269,11 +353,12 @@ impl Message {
             0xB0 => parse!(client_messages::ReadEvent, buf.as_slice())?.into(),
             0xB1 => parse!(client_messages::ReadEventCompleted, buf.as_slice())?.into(),
 
+            0xB2 => (Direction::Forward, parse!(client_messages::ReadStreamEvents, buf.as_slice())?).into(),
+            0xB3 => (Direction::Forward, parse!(client_messages::ReadStreamEventsCompleted, buf.as_slice())?).into(),
+            0xB4 => (Direction::Backward, parse!(client_messages::ReadStreamEvents, buf.as_slice())?).into(),
+            0xB5 => (Direction::Backward, parse!(client_messages::ReadStreamEventsCompleted, buf.as_slice())?).into(),
+
             /*
-            0xB2 => { /* readstrmeventsfwd */ }
-            0xB3 => { /* readstrmeventsfwdcompleted */ }
-            0xB4 => { /* readstrmeventsbackwrd */ }
-            0xB5 => { /* readstrmeventsbackwrdcompleted */ }
             0xB6 => { /* readalleventsfwd */ }
             0xB7 => { /* readalleventsfwdcompleted */ }
             0xB8 => { /* readalleventsbackwrd */ }
@@ -356,6 +441,10 @@ impl Message {
             ReadEventCompleted(Ok(ref rie)) => encode!(rie.as_read_event_completed(), w)?,
             ReadEventCompleted(Err(ref fail)) => encode!(fail.as_read_event_completed(), w)?,
 
+            ReadStreamEvents(_, ref body) => encode!(body, w)?,
+            ReadStreamEventsCompleted(_, Ok(ref success)) => encode!(success.as_read_stream_events_completed(), w)?,
+            ReadStreamEventsCompleted(_, Err(ref why)) => encode!(why.as_read_stream_events_completed(), w)?,
+
             BadRequest(Some(ref info)) => w.write_all(info.as_bytes())?,
             BadRequest(None) => (),
             NotHandled(ref reason, ref x) => {
@@ -397,6 +486,12 @@ impl Message {
 
             ReadEvent(_) => 0xB0,
             ReadEventCompleted(_) => 0xB1,
+
+            ReadStreamEvents(Direction::Forward, _) => 0xB2,
+            ReadStreamEventsCompleted(Direction::Forward, _) => 0xB3,
+
+            ReadStreamEvents(Direction::Backward, _) => 0xB4,
+            ReadStreamEventsCompleted(Direction::Backward, _) => 0xB5,
 
             BadRequest(_) => 0xf0,
             NotHandled(..) => 0xf1,
