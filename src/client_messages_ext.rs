@@ -3,19 +3,12 @@ use std::borrow::Cow;
 use client_messages::{self, WriteEvents, NewEvent};
 use client_messages::mod_NotHandled::{NotHandledReason, MasterInfo};
 
-use super::{Message, WriteEventsCompleted};
-
 pub trait WriteEventsExt<'a> {
-    fn into_message(self) -> Message;
+    /// Turns this instance to an instance that owns all it's data and thus has `'static` lifetime.
     fn into_owned(self) -> WriteEvents<'static>;
 }
 
 impl<'a> WriteEventsExt<'a> for WriteEvents<'a> {
-    fn into_message(self) -> Message {
-        Message::from(self)
-        //Message::WriteEvents(self.into_owned())
-    }
-
     fn into_owned(self) -> WriteEvents<'static> {
         WriteEvents {
             event_stream_id: Cow::Owned(self.event_stream_id.into_owned()),
@@ -27,6 +20,7 @@ impl<'a> WriteEventsExt<'a> for WriteEvents<'a> {
 }
 
 pub trait NewEventExt<'a> {
+    /// Turns this instance to an instance that owns all it's data and thus has `'static` lifetime.
     fn into_owned(self) -> NewEvent<'static>;
 }
 
@@ -43,30 +37,8 @@ impl<'a> NewEventExt<'a> for NewEvent<'a> {
     }
 }
 
-pub trait WriteEventsCompletedExt<'a> {
-    fn into_message(self) -> Message;
-}
-
-impl<'a> WriteEventsCompletedExt<'a> for client_messages::WriteEventsCompleted<'a> {
-    fn into_message(self) -> Message {
-        use client_messages::OperationResult::*;
-        let res = match self.result.expect("Required field was not present in WroteEventsComplete") {
-            Success => {
-                Ok(WriteEventsCompleted {
-                    // off-by one: Range is [start, end)
-                    event_numbers: self.first_event_number..self.last_event_number + 1,
-                    prepare_position: self.prepare_position,
-                    commit_position: self.commit_position,
-                })
-            }
-            x => Err(x.into()),
-        };
-
-        Message::WriteEventsCompleted(res)
-    }
-}
-
 pub trait MasterInfoExt<'a> {
+    /// Turns this instance to an instance that owns all it's data and thus has `'static` lifetime.
     fn into_owned(self) -> client_messages::mod_NotHandled::MasterInfo<'static>;
 }
 
@@ -84,6 +56,7 @@ impl<'a> MasterInfoExt<'a> for client_messages::mod_NotHandled::MasterInfo<'a> {
 }
 
 pub trait ReadEventExt<'a> {
+    /// Turns this instance to an instance that owns all it's data and thus has `'static` lifetime.
     fn into_owned(self) -> client_messages::ReadEvent<'static>;
 }
 
@@ -99,8 +72,10 @@ impl<'a> ReadEventExt<'a> for client_messages::ReadEvent<'a> {
 }
 
 pub trait ResolvedIndexedEventExt<'a> {
+    /// Turns this instance to an instance that owns all it's data and thus has `'static` lifetime.
     fn into_owned(self) -> client_messages::ResolvedIndexedEvent<'static>;
 
+    /// Creates an instance which borrows the non-copyable data of `self`
     fn borrowed<'b>(&'b self) -> client_messages::ResolvedIndexedEvent<'b>;
 
     fn as_read_event_completed<'b>(&'b self) -> client_messages::ReadEventCompleted<'b>;
@@ -131,8 +106,10 @@ impl<'a> ResolvedIndexedEventExt<'a> for client_messages::ResolvedIndexedEvent<'
 }
 
 pub trait EventRecordExt<'a> {
+    /// Turns this instance to an instance that owns all it's data and thus has `'static` lifetime.
     fn into_owned(self) -> client_messages::EventRecord<'static>;
 
+    /// Creates an instance which borrows the non-copyable data of `self`
     fn borrowed<'b>(&'b self) -> client_messages::EventRecord<'b>;
 }
 
@@ -169,6 +146,7 @@ impl<'a> EventRecordExt<'a> for client_messages::EventRecord<'a> {
 }
 
 pub trait ReadStreamEventsExt<'a> {
+    /// Turns this instance to an instance that owns all it's data and thus has `'static` lifetime.
     fn into_owned(self) -> client_messages::ReadStreamEvents<'static>;
 }
 

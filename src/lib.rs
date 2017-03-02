@@ -419,17 +419,34 @@ impl<'a> From<WriteEvents<'a>> for Message {
     }
 }
 
-impl<'a> From<client_messages::WriteEventsCompleted<'a>> for Message {
-    fn from(wec: client_messages::WriteEventsCompleted<'a>) -> Self {
-        use client_messages_ext::WriteEventsCompletedExt;
-        wec.into_message()
-    }
-}
-
 impl<'a> From<client_messages::ReadEvent<'a>> for Message {
     fn from(re: client_messages::ReadEvent<'a>) -> Self {
         use client_messages_ext::ReadEventExt;
         Message::ReadEvent(re.into_owned())
+    }
+}
+
+// these two are problematic and would probably be best served by using tryfrom
+// but as it's not yet stable, just use From with panics.
+
+impl<'a> From<client_messages::WriteEventsCompleted<'a>> for Message {
+    fn from(wec: client_messages::WriteEventsCompleted<'a>) -> Self {
+        use client_messages::OperationResult::*;
+
+        let res = match wec.result {
+            Some(Success) => {
+                Ok(WriteEventsCompleted {
+                    // off-by one: Range is [start, end)
+                    event_numbers: wec.first_event_number..wec.last_event_number + 1,
+                    prepare_position: wec.prepare_position,
+                    commit_position: wec.commit_position,
+                })
+            }
+            Some(other) => Err(other.into()),
+            None => panic!("OperationResult was not found in the received message"),
+        };
+
+        Message::WriteEventsCompleted(res)
     }
 }
 
@@ -438,13 +455,12 @@ impl<'a> From<client_messages::ReadEventCompleted<'a>> for Message {
         use client_messages::mod_ReadEventCompleted::ReadEventResult;
         use client_messages_ext::ResolvedIndexedEventExt;
 
-        if rec.result.is_none() {
-            Message::ReadEventCompleted(Err(ReadEventFailure::Error(Some("No result received from the wire, assuming failure".into()))))
-        } else {
-            match rec.result.unwrap() {
-                ReadEventResult::Success => Message::ReadEventCompleted(Ok(rec.event.into_owned())),
-                err => Message::ReadEventCompleted(Err((err, rec.error).into()))
-            }
-        }
+        let res = match rec.result {
+            Some(ReadEventResult::Success) => Ok(rec.event.into_owned()),
+            Some(other) => Err((other, rec.error).into()),
+            None => panic!("ReadEventResult was not found in the received message"),
+        };
+
+        Message::ReadEventCompleted(res)
     }
 }
