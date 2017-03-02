@@ -1,8 +1,9 @@
 extern crate futures;
 extern crate tokio_core;
-extern crate tokio_proto;
 extern crate tokio_service;
 extern crate uuid;
+
+#[macro_use]
 extern crate clap;
 extern crate es_proto;
 
@@ -68,9 +69,10 @@ impl ReadMode {
 
 fn main() {
 
-    let matches = App::new("testclient")
-        .version("0.1.0")
-        .about("Test client similar to EventStore.TestClient in EventStore binary distribution")
+    let matches = App::new(crate_name!())
+        .version(crate_version!())
+        .about(crate_description!())
+        .author(crate_authors!("\n"))
         .arg(Arg::with_name("hostname")
                 .short("h")
                 .long("host")
