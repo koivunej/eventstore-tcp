@@ -16,11 +16,9 @@ extern crate tokio_service;
 #[cfg(test)]
 extern crate rustc_serialize;
 
-use std::fmt;
 use std::io;
 use std::ops::{Deref, Range};
 use std::borrow::Cow;
-use std::error::Error;
 use tokio_core::io::EasyBuf;
 
 mod client_messages;
@@ -105,7 +103,7 @@ pub enum Message {
     /// Append to stream request
     WriteEvents(WriteEvents<'static>),
     /// Append to stream response, which can fail for a number of reasons
-    WriteEventsCompleted(Result<WriteEventsCompleted, Explanation>),
+    WriteEventsCompleted(Result<WriteEventsCompleted, OperationFailure>),
 
     /// Request to read a single event from a stream
     ReadEvent(client_messages::ReadEvent<'static>),
@@ -143,61 +141,12 @@ pub struct WriteEventsCompleted {
     pub commit_position: Option<i64>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Explanation {
-    reason: OperationFailure,
-    message: Option<String>
-}
-
-impl Explanation {
-    fn new(or: client_messages::OperationResult, msg: Option<String>) -> Explanation {
-        Explanation { reason: or.into(), message: msg }
-    }
-}
-
-impl fmt::Display for Explanation {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        match self.message {
-            Some(ref s) => write!(fmt, "{}: {}", self.description(), s),
-            None => write!(fmt, "{}", self.description())
-        }
-    }
-}
-
-impl Error for Explanation {
-    fn description(&self) -> &str {
-        use OperationFailure::*;
-        match self.reason {
-            PrepareTimeout => "Internal server timeout, should be retried",
-            CommitTimeout => "Internal server timeout, should be retried",
-            ForwardTimeout => "Server timed out while awaiting response to forwarded request, should be retried",
-            WrongExpectedVersion => "Stream version was not expected, optimistic locking failure",
-            StreamDeleted => "Stream had been deleted",
-            InvalidTransaction => "Transaction had been rolled back",
-            AccessDenied => "Access to stream was denied"
-        }
-    }
-}
-
 trait AsMessageWrite<M: quick_protobuf::MessageWrite> {
     fn as_message_write(&self) -> M;
 
     fn encode<W: io::Write>(&self, out: &mut W) -> io::Result<()> {
         let conv = self.as_message_write();
         conv.write_message(&mut quick_protobuf::writer::Writer::new(out)).map_err(convert_qp_err)
-    }
-}
-
-impl Explanation {
-    fn as_write_events_completed<'a>(&'a self) -> client_messages::WriteEventsCompleted<'a> {
-        client_messages::WriteEventsCompleted {
-            result: Some(self.reason.into()),
-            message: self.message.as_ref().map(|s| Cow::Borrowed(s.as_str())),
-            first_event_number: -1,
-            last_event_number: -1,
-            prepare_position: None,
-            commit_position: None,
-        }
     }
 }
 

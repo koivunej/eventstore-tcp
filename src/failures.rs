@@ -1,5 +1,7 @@
+use std::fmt;
+use std::error::Error;
 use std::borrow::Cow;
-use client_messages::{OperationResult, ReadEventCompleted, ReadStreamEventsCompleted, EventRecord, ResolvedIndexedEvent};
+use client_messages::{OperationResult, WriteEventsCompleted, ReadEventCompleted, ReadStreamEventsCompleted, EventRecord, ResolvedIndexedEvent};
 use client_messages::mod_ReadEventCompleted::ReadEventResult;
 use client_messages::mod_ReadStreamEventsCompleted::ReadStreamResult;
 
@@ -16,6 +18,8 @@ pub enum OperationFailure {
     AccessDenied,
 }
 
+impl Copy for OperationFailure {}
+
 impl OperationFailure {
     pub fn is_transient(&self) -> bool {
         use OperationFailure::*;
@@ -24,9 +28,18 @@ impl OperationFailure {
             _ => false
         }
     }
-}
 
-impl Copy for OperationFailure {}
+    pub fn as_write_events_completed<'a>(&'a self) -> WriteEventsCompleted<'a> {
+        WriteEventsCompleted {
+            result: Some(self.clone().into()),
+            message: None,
+            first_event_number: -1,
+            last_event_number: -1,
+            prepare_position: None,
+            commit_position: None,
+        }
+    }
+}
 
 impl From<OperationResult> for OperationFailure {
     fn from(or: OperationResult) -> Self {
@@ -56,6 +69,27 @@ impl Into<OperationResult> for OperationFailure {
             StreamDeleted => OperationResult::StreamDeleted,
             InvalidTransaction => OperationResult::InvalidTransaction,
             AccessDenied => OperationResult::AccessDenied
+        }
+    }
+}
+
+impl fmt::Display for OperationFailure {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "{}", self.description())
+    }
+}
+
+impl Error for OperationFailure {
+    fn description(&self) -> &str {
+        use OperationFailure::*;
+        match *self {
+            PrepareTimeout => "Internal server timeout, should be retried",
+            CommitTimeout => "Internal server timeout, should be retried",
+            ForwardTimeout => "Server timed out while awaiting response to forwarded request, should be retried",
+            WrongExpectedVersion => "Stream version was not expected, optimistic locking failure",
+            StreamDeleted => "Stream had been deleted",
+            InvalidTransaction => "Transaction had been rolled back",
+            AccessDenied => "Access to stream was denied"
         }
     }
 }

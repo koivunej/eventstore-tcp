@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use client_messages::{self, WriteEvents, NewEvent};
 use client_messages::mod_NotHandled::{NotHandledReason, MasterInfo};
 
-use super::{Message, WriteEventsCompleted, Explanation};
+use super::{Message, WriteEventsCompleted};
 
 pub trait WriteEventsExt<'a> {
     fn into_message(self) -> Message;
@@ -59,7 +59,7 @@ impl<'a> WriteEventsCompletedExt<'a> for client_messages::WriteEventsCompleted<'
                     commit_position: self.commit_position,
                 })
             }
-            x => Err(Explanation::new(x, self.message.map(|x| x.into_owned()))),
+            x => Err(x.into()),
         };
 
         Message::WriteEventsCompleted(res)
