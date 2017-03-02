@@ -228,9 +228,32 @@ impl<'a> NewEventBuilder<'a> {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum EventNumber {
+    First,
+    Exact(StreamVersion),
+    Last,
+}
+
+impl From<StreamVersion> for EventNumber {
+    fn from(ver: StreamVersion) -> Self {
+        EventNumber::Exact(ver)
+    }
+}
+
+impl Into<i32> for EventNumber {
+    fn into(self) -> i32 {
+        match self {
+            EventNumber::First => 0,
+            EventNumber::Exact(x) => x.into(),
+            EventNumber::Last => -1
+        }
+    }
+}
+
 pub struct ReadEventBuilder {
     event_stream_id: Option<Cow<'static, str>>,
-    event_number: Option<StreamVersion>,
+    event_number: Option<EventNumber>,
     resolve_link_tos: Option<bool>,
     require_master: Option<bool>,
 }
@@ -253,8 +276,8 @@ impl ReadEventBuilder {
         self
     }
 
-    pub fn event_number(&mut self, ver: StreamVersion) -> &mut Self {
-        self.event_number = Some(ver);
+    pub fn event_number<N: Into<EventNumber>>(&mut self, number: N) -> &mut Self {
+        self.event_number = Some(number.into());
         self
     }
 
@@ -293,7 +316,7 @@ impl ReadEventBuilder {
 pub struct ReadStreamEventsBuilder {
     direction: Option<ReadDirection>,
     event_stream_id: Option<Cow<'static, str>>,
-    from_event_number: Option<StreamVersion>,
+    from_event_number: Option<EventNumber>,
     max_count: Option<u8>,
     resolve_link_tos: Option<bool>,
     require_master: Option<bool>,
@@ -330,8 +353,8 @@ impl ReadStreamEventsBuilder {
         self
     }
 
-    pub fn from_event_number(&mut self, ver: StreamVersion) -> &mut Self {
-        self.from_event_number = Some(ver);
+    pub fn from_event_number<N: Into<EventNumber>>(&mut self, n: N) -> &mut Self {
+        self.from_event_number = Some(n.into());
         self
     }
 
@@ -352,7 +375,7 @@ impl ReadStreamEventsBuilder {
     pub fn build_command(&mut self) -> ReadStreamEvents<'static> {
         ReadStreamEvents {
             event_stream_id: self.event_stream_id.take().expect("event_stream_id not set"),
-            from_event_number: self.from_event_number.expect("from_event_number not set").into(),
+            from_event_number: self.from_event_number.take().expect("from_event_number not set").into(),
             max_count: self.max_count.unwrap_or(10) as i32,
             resolve_link_tos: self.resolve_link_tos.unwrap_or(true),
             require_master: self.require_master.unwrap_or(false)

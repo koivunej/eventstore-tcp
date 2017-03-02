@@ -39,7 +39,7 @@ mod client;
 pub use client::EventStoreClient;
 
 pub mod builder;
-pub use builder::{Builder, ExpectedVersion, StreamVersion};
+pub use builder::{Builder, ExpectedVersion, StreamVersion, EventNumber};
 
 mod auth;
 pub use auth::UsernamePassword;

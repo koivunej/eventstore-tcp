@@ -21,12 +21,39 @@ use tokio_service::Service;
 
 use clap::{Arg, App, SubCommand};
 
-use tokio_eventstore::{EventStoreClient, Package, Message, Builder, ExpectedVersion, StreamVersion, ReadDirection, ReadStreamSuccess, ResolvedIndexedEvent};
+use tokio_eventstore::{EventStoreClient, Package, Message, Builder, ExpectedVersion, StreamVersion, EventNumber, ReadDirection, ReadStreamSuccess, ResolvedIndexedEvent};
+
+#[derive(Debug, Clone)]
+enum Position {
+    First,
+    Exact(StreamVersion),
+    Last
+}
+
+impl<'a> From<&'a str> for Position {
+    fn from(s: &'a str) -> Self {
+        match s {
+            "first" => Position::First,
+            "last" => Position::Last,
+            x => Position::Exact(StreamVersion::from_opt(x.parse::<u32>().expect("Failed to parse position as u32")).expect("Position overflow"))
+        }
+    }
+}
+
+impl<'a> Into<EventNumber> for Position {
+    fn into(self) -> EventNumber {
+        match self {
+            Position::First => EventNumber::First,
+            Position::Exact(x) => EventNumber::Exact(x),
+            Position::Last => EventNumber::Last,
+        }
+    }
+}
 
 #[derive(Debug)]
 enum ReadMode {
-    ForwardOnce{ skip: usize, count: usize },
-    Backward{ skip: usize, count: usize }
+    ForwardOnce { position: Position, count: u8 },
+    Backward { position: Position, count: u8 }
 }
 
 #[derive(Debug, Clone)]
@@ -153,16 +180,16 @@ impl OutputMode {
             }
             Message::ReadStreamEventsCompleted(_, Err(fail)) => {
                 if verbose {
-                    write!(err, "{}: {:#?}", "Read failed", fail)
+                    writeln!(err, "{}: {:#?}", "Read failed", fail)
                 } else {
-                    write!(err, "{}: {:?}", "Read failed", fail)
+                    writeln!(err, "{}: {:?}", "Read failed", fail)
                 }
             },
             x => {
                 if verbose {
-                    write!(err, "Unexpected message received: {:#?}", x)
+                    writeln!(err, "Unexpected message received: {:#?}", x)
                 } else {
-                    write!(err, "Unexpected message received: {:?}", x)
+                    writeln!(err, "Unexpected message received: {:?}", x)
                 }
             }
         }
@@ -173,34 +200,30 @@ impl ReadMode {
     fn into_request(self, stream_id: &str) -> Message {
         use ReadMode::*;
         match self {
-            ForwardOnce { skip, count: 1 } | Backward { skip, count: 1 } => {
-                let ver = StreamVersion::from_opt(skip as u32).expect("Stream version overflow");
+            ForwardOnce { position, count: 1 } | Backward { position, count: 1 } => {
                 Builder::read_event()
                     .stream_id(stream_id.to_owned())
-                    .event_number(ver)
+                    .event_number(position)
                     .resolve_link_tos(true)
                     .require_master(false)
                     .build_message()
             },
-            ForwardOnce { skip, count } => {
+            ForwardOnce { position, count } => {
                 // TODO: perhaps bad choice of option?
                 // TODO: handle at main
-                let ver = StreamVersion::from_opt(skip as u32).expect("Stream version overflow");
                 Builder::read_stream_events()
                     .direction(ReadDirection::Forward)
                     .stream_id(stream_id.to_owned())
-                    .from_event_number(ver)
-                    .max_count(count as u8) // TODO: restrict at main
+                    .from_event_number(position)
+                    .max_count(count)
                     .build_message()
             },
-            Backward { skip, count } => {
-                // last is -1, -1; TODO: cannot fit usize
-                let ver = StreamVersion::from_opt(skip as u32).expect("Stream version overflow");
+            Backward { position, count } => {
                 Builder::read_stream_events()
-                    .direction(ReadDirection::Forward)
+                    .direction(ReadDirection::Backward)
                     .stream_id(stream_id.to_owned())
-                    .from_event_number(ver)
-                    .max_count(count as u8) // TODO: restrict at main
+                    .from_event_number(position)
+                    .max_count(count)
                     .build_message()
             }
         }
@@ -277,12 +300,12 @@ fn main() {
                              .long("count")
                              .takes_value(true)
                              .help("Number of events to read, 'all' or N > 0, defaults to 1"))
-                        .arg(Arg::with_name("skip")
-                             .value_name("SKIP")
-                             .short("s")
-                             .long("skip")
+                        .arg(Arg::with_name("position")
+                             .value_name("POS")
+                             .short("p")
+                             .long("position")
                              .takes_value(true)
-                             .help("The event number to start from, defaults to 0"))
+                             .help("The event number to start from, first, last or N > 0, defaults to 0"))
                         .arg(Arg::with_name("mode")
                              .value_name("MODE")
                              .short("m")
@@ -343,16 +366,18 @@ fn main() {
         write(addr, verbose, builder.build_package(None, None))
     } else if let Some(r) = matches.subcommand_matches("read") {
         let stream_id = r.value_of("stream_id").unwrap();
-        let count: usize = match r.value_of("count").unwrap_or("1") {
-            "all" => usize::max_value(),
-            s => s.parse().expect("Parsing count failed"),
+        let count = match r.value_of("count").unwrap_or("1") {
+            "all" => None,
+            s => Some(s.parse().expect("Parsing count failed")),
         };
 
-        let skip: usize = r.value_of("skip").unwrap_or("0").parse().expect("Parsing skip failed");
+        let position: Position = r.value_of("position").unwrap_or("first").into();
         let mode = match r.value_of("mode") {
-            None | Some("forward-once") => ReadMode::ForwardOnce{skip, count},
+            None | Some("forward-once") =>
+                ReadMode::ForwardOnce{ position, count: count.unwrap_or(u8::max_value()) },
+            Some("backward") =>
+                ReadMode::Backward{ position, count: count.unwrap_or(u8::max_value()) },
             Some("forward-forever") => unimplemented!(),
-            Some("backward") => ReadMode::Backward{skip, count},
             _ => unreachable!(),
         };
 
