@@ -9,7 +9,6 @@ extern crate es_proto;
 extern crate json;
 
 use std::io;
-use std::borrow::Cow;
 use std::net::SocketAddr;
 use std::process;
 use std::str;
@@ -22,7 +21,7 @@ use tokio_service::Service;
 
 use clap::{Arg, App, SubCommand};
 
-use es_proto::{EventStoreClient, Package, Message, Builder, ExpectedVersion, StreamVersion, Direction, ReadStreamSuccess};
+use es_proto::{EventStoreClient, Package, Message, Builder, ExpectedVersion, StreamVersion, Direction, ReadStreamSuccess, ResolvedIndexedEvent};
 
 #[derive(Debug)]
 enum ReadMode {
@@ -53,132 +52,119 @@ impl<'a> From<&'a str> for OutputMode {
 }
 
 impl OutputMode {
-    fn format<Out: io::Write, ErrOut: io::Write>(&self, verbose: bool, msg: Message, out: &mut Out, err: &mut ErrOut) -> io::Result<()> {
+
+    fn format_events<'a, Out: io::Write, ErrOut: io::Write>(&self, verbose: bool, events: Vec<ResolvedIndexedEvent<'a>>, out: &mut Out, err: &mut ErrOut) -> io::Result<()> {
         match *self {
             OutputMode::Debug => {
                 if verbose {
-                    writeln!(out, "{:#?}", msg)
+                    writeln!(out, "{:#?}", events)
                 } else {
-                    writeln!(out, "{:?}", msg)
+                    writeln!(out, "{:?}", events)
                 }
             },
             OutputMode::JsonOneline => {
-                match msg {
-                    Message::ReadStreamEventsCompleted(_, Ok(ReadStreamSuccess { events, .. })) => {
-                        for resolved in events {
-                            let event = resolved.event;
+                for resolved in events {
+                    let event = resolved.event;
 
-                            let data = event.data;
-                            let metadata = event.metadata;
+                    let data = event.data;
+                    let metadata = event.metadata;
 
-                            let as_str = str::from_utf8(&*data)
-                                .and_then(|data| {
-                                    match metadata {
-                                        Some(ref meta) => {
-                                            str::from_utf8(&*meta)
-                                                .map(move |metadata| (data, metadata))
-                                        },
-                                        None => Ok((data, ""))
-                                    }
-                            });
-
-                            match as_str {
-                                Ok((data, metadata)) => {
-                                    let parsed = json::parse(data)
-                                        .and_then(|data| {
-                                            if metadata.len() == 0 {
-                                                Ok((data, json::JsonValue::new_object()))
-                                            } else {
-                                                json::parse(metadata)
-                                                    .map(move |metadata| (data, metadata))
-                                            }
-                                        });
-
-                                    match parsed {
-                                        Ok((data, metadata)) => {
-                                            let mut obj = json::object::Object::new();
-                                            obj.insert("data", data);
-                                            obj.insert("metadata", metadata);
-                                            json::JsonValue::from(obj).write(out)?;
-                                            writeln!(out, "")?;
-                                        },
-                                        Err(fail) => {
-                                            writeln!(
-                                                err,
-                                                "Failed to parse event {}@{}: {}",
-                                                event.event_stream_id,
-                                                event.event_number,
-                                                fail)?
-                                        }
-                                    }
+                    let as_str = str::from_utf8(&*data)
+                        .and_then(|data| {
+                            match metadata {
+                                Some(ref meta) => {
+                                    str::from_utf8(&*meta)
+                                        .map(move |metadata| (data, metadata))
                                 },
-                                Err(e) => {
+                                None => Ok((data, ""))
+                            }
+                    });
+
+                    match as_str {
+                        Ok((data, metadata)) => {
+                            let parsed = json::parse(data)
+                                .and_then(|data| {
+                                    if metadata.len() == 0 {
+                                        Ok((data, json::JsonValue::new_object()))
+                                    } else {
+                                        json::parse(metadata)
+                                            .map(move |metadata| (data, metadata))
+                                    }
+                                });
+
+                            match parsed {
+                                Ok((data, metadata)) => {
+                                    let mut obj = json::object::Object::new();
+                                    obj.insert("data", data);
+                                    obj.insert("metadata", metadata);
+                                    json::JsonValue::from(obj).write(out)?;
+                                    writeln!(out, "")?;
+                                },
+                                Err(fail) => {
                                     writeln!(
                                         err,
-                                        "Event {}@{} and it's metadata is not utf8: {}",
+                                        "Failed to parse event {}@{}: {}",
                                         event.event_stream_id,
                                         event.event_number,
-                                        e)?
+                                        fail)?
                                 }
                             }
-                        }
-
-                        Ok(())
-                    },
-                    Message::ReadStreamEventsCompleted(_, Err(fail)) => {
-                        if verbose {
-                            write!(err, "{}: {:#?}", "Read failed", fail)
-                        } else {
-                            write!(err, "{}: {:?}", "Read failed", fail)
-                        }
-                    },
-                    x => {
-                        if verbose {
-                            write!(err, "Unexpected message received: {:#?}", x)
-                        } else {
-                            write!(err, "Unexpected message received: {:?}", x)
+                        },
+                        Err(e) => {
+                            writeln!(
+                                err,
+                                "Event {}@{} and it's metadata is not utf8: {}",
+                                event.event_stream_id,
+                                event.event_number,
+                                e)?
                         }
                     }
                 }
+                Ok(())
             },
             OutputMode::Hex => {
-                match msg {
-                    Message::ReadStreamEventsCompleted(_, Ok(ReadStreamSuccess { events, .. })) => {
-                        for resolved in events {
-                            let event = resolved.event;
+                for resolved in events {
+                    let event = resolved.event;
 
-                            for b in event.data.iter() {
-                                write!(out, "{:02x}", b)?;
-                            }
+                    for b in event.data.iter() {
+                        write!(out, "{:02x}", b)?;
+                    }
 
-                            if let Some(meta) = event.metadata {
-                                write!(out, " ")?;
-                                for b in meta.iter() {
-                                    write!(out, "{:02x}", b)?;
-                                }
-                            }
-
-                            writeln!(out, "")?;
-                        }
-                        Ok(())
-                    },
-                    Message::ReadStreamEventsCompleted(_, Err(fail)) => {
-                        if verbose {
-                            write!(err, "{}: {:#?}", "Read failed", fail)
-                        } else {
-                            write!(err, "{}: {:?}", "Read failed", fail)
-                        }
-                    },
-                    x => {
-                        if verbose {
-                            write!(err, "Unexpected message received: {:#?}", x)
-                        } else {
-                            write!(err, "Unexpected message received: {:?}", x)
+                    if let Some(meta) = event.metadata {
+                        write!(out, " ")?;
+                        for b in meta.iter() {
+                            write!(out, "{:02x}", b)?;
                         }
                     }
+
+                    writeln!(out, "")?;
+                }
+                Ok(())
+            }
+            _ => unimplemented!()
+        }
+    }
+
+    fn format<Out: io::Write, ErrOut: io::Write>(&self, verbose: bool, msg: Message, out: &mut Out, err: &mut ErrOut) -> io::Result<()> {
+
+        match msg {
+            Message::ReadStreamEventsCompleted(_, Ok(ReadStreamSuccess { events, .. })) => {
+                self.format_events(verbose, events, out, err)
+            }
+            Message::ReadStreamEventsCompleted(_, Err(fail)) => {
+                if verbose {
+                    write!(err, "{}: {:#?}", "Read failed", fail)
+                } else {
+                    write!(err, "{}: {:?}", "Read failed", fail)
                 }
             },
-            _ => unimplemented!()
+            x => {
+                if verbose {
+                    write!(err, "Unexpected message received: {:#?}", x)
+                } else {
+                    write!(err, "Unexpected message received: {:?}", x)
+                }
+            }
         }
     }
 }

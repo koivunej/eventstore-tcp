@@ -26,7 +26,7 @@ use tokio_core::io::EasyBuf;
 
 mod messages;
 use messages::mod_EventStore::mod_Client::mod_Messages as client_messages;
-use messages::mod_EventStore::mod_Client::mod_Messages::{WriteEvents, ResolvedIndexedEvent};
+pub use messages::mod_EventStore::mod_Client::mod_Messages::{WriteEvents, ResolvedIndexedEvent};
 use messages::mod_EventStore::mod_Client::mod_Messages::mod_NotHandled::{NotHandledReason, MasterInfo};
 
 mod messages_ext;
