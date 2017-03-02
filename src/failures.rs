@@ -1,8 +1,7 @@
 use std::borrow::Cow;
-use messages::mod_EventStore::mod_Client::mod_Messages as client_messages;
-use messages::mod_EventStore::mod_Client::mod_Messages::{OperationResult, ReadEventCompleted, ReadStreamEventsCompleted, EventRecord, ResolvedIndexedEvent};
-use messages::mod_EventStore::mod_Client::mod_Messages::mod_ReadEventCompleted::ReadEventResult;
-use messages::mod_EventStore::mod_Client::mod_Messages::mod_ReadStreamEventsCompleted::ReadStreamResult;
+use client_messages::{OperationResult, ReadEventCompleted, ReadStreamEventsCompleted, EventRecord, ResolvedIndexedEvent};
+use client_messages::mod_ReadEventCompleted::ReadEventResult;
+use client_messages::mod_ReadStreamEventsCompleted::ReadStreamResult;
 
 /// Like `OperationResult` on the wire but does not have a success value. Explains the reason for
 /// failure.

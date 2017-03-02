@@ -1,8 +1,7 @@
 use std::borrow::Cow;
 
-use messages::mod_EventStore::mod_Client::mod_Messages as client_messages;
-use messages::mod_EventStore::mod_Client::mod_Messages::{WriteEvents, NewEvent};
-use messages::mod_EventStore::mod_Client::mod_Messages::mod_NotHandled::{NotHandledReason, MasterInfo};
+use client_messages::{self, WriteEvents, NewEvent};
+use client_messages::mod_NotHandled::{NotHandledReason, MasterInfo};
 
 use super::{Message, WriteEventsCompleted, Explanation};
 

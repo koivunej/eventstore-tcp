@@ -23,13 +23,11 @@ use std::borrow::Cow;
 use std::error::Error;
 use tokio_core::io::EasyBuf;
 
-mod messages;
-use messages::mod_EventStore::mod_Client::mod_Messages as client_messages;
-pub use messages::mod_EventStore::mod_Client::mod_Messages::{WriteEvents, ResolvedIndexedEvent};
-use messages::mod_EventStore::mod_Client::mod_Messages::mod_NotHandled::{NotHandledReason, MasterInfo};
+mod client_messages;
+pub use client_messages::{WriteEvents, ResolvedIndexedEvent};
+use client_messages::mod_NotHandled::{NotHandledReason, MasterInfo};
 
-mod messages_ext;
-use messages_ext::{WriteEventsExt, WriteEventsCompletedExt, MasterInfoExt};
+mod client_messages_ext;
 
 mod failures;
 pub use failures::{OperationFailure, ReadEventFailure, ReadStreamFailure};
@@ -218,7 +216,7 @@ impl AsMessageWrite<client_messages::WriteEventsCompleted<'static>> for WriteEve
 
 impl<'a> From<(Direction, client_messages::ReadStreamEvents<'a>)> for Message {
     fn from((dir, body): (Direction, client_messages::ReadStreamEvents<'a>)) -> Message {
-        use messages_ext::ReadStreamEventsExt;
+        use client_messages_ext::ReadStreamEventsExt;
         Message::ReadStreamEvents(dir, body.into_owned())
     }
 }
@@ -235,7 +233,7 @@ pub struct ReadStreamSuccess {
 impl<'a> From<(Direction, client_messages::ReadStreamEventsCompleted<'a>)> for Message {
     fn from((dir, completed): (Direction, client_messages::ReadStreamEventsCompleted<'a>)) -> Message {
         use client_messages::mod_ReadStreamEventsCompleted::ReadStreamResult;
-        use messages_ext::ResolvedIndexedEventExt;
+        use client_messages_ext::ResolvedIndexedEventExt;
 
         match completed.result {
             Some(ReadStreamResult::Success) => {
@@ -262,7 +260,7 @@ impl<'a> From<(Direction, client_messages::ReadStreamEventsCompleted<'a>)> for M
 impl ReadStreamSuccess {
     pub fn as_read_stream_events_completed<'a>(&'a self) -> client_messages::ReadStreamEventsCompleted<'a> {
         use client_messages::mod_ReadStreamEventsCompleted::ReadStreamResult;
-        use messages_ext::ResolvedIndexedEventExt;
+        use client_messages_ext::ResolvedIndexedEventExt;
 
         client_messages::ReadStreamEventsCompleted {
             events: self.events.iter().map(|x| x.borrowed()).collect(),
@@ -290,6 +288,8 @@ fn convert_qp_err(e: ::quick_protobuf::errors::Error) -> io::Error {
 
 impl Message {
     fn decode(discriminator: u8, buf: &mut EasyBuf) -> io::Result<Message> {
+        use client_messages_ext::MasterInfoExt;
+
         macro_rules! parse {
             ($x:ty, $buf:expr) => {
                 {
@@ -376,7 +376,7 @@ impl Message {
     fn encode<W: io::Write>(&self, w: &mut W) -> io::Result<()> {
         use Message::*;
         use quick_protobuf::MessageWrite;
-        use messages_ext::ResolvedIndexedEventExt;
+        use client_messages_ext::ResolvedIndexedEventExt;
 
         macro_rules! encode {
             ($x: expr, $w: ident) => {
@@ -465,21 +465,21 @@ impl Message {
 
 impl<'a> From<WriteEvents<'a>> for Message {
     fn from(we: WriteEvents<'a>) -> Self {
-        use messages_ext::WriteEventsExt;
+        use client_messages_ext::WriteEventsExt;
         Message::WriteEvents(we.into_owned())
     }
 }
 
 impl<'a> From<client_messages::WriteEventsCompleted<'a>> for Message {
     fn from(wec: client_messages::WriteEventsCompleted<'a>) -> Self {
-        use messages_ext::WriteEventsCompletedExt;
+        use client_messages_ext::WriteEventsCompletedExt;
         wec.into_message()
     }
 }
 
 impl<'a> From<client_messages::ReadEvent<'a>> for Message {
     fn from(re: client_messages::ReadEvent<'a>) -> Self {
-        use messages_ext::ReadEventExt;
+        use client_messages_ext::ReadEventExt;
         Message::ReadEvent(re.into_owned())
     }
 }
@@ -487,7 +487,7 @@ impl<'a> From<client_messages::ReadEvent<'a>> for Message {
 impl<'a> From<client_messages::ReadEventCompleted<'a>> for Message {
     fn from(rec: client_messages::ReadEventCompleted<'a>) -> Self {
         use client_messages::mod_ReadEventCompleted::ReadEventResult;
-        use messages_ext::ResolvedIndexedEventExt;
+        use client_messages_ext::ResolvedIndexedEventExt;
 
         if rec.result.is_none() {
             Message::ReadEventCompleted(Err(ReadEventFailure::Error(Some("No result received from the wire, assuming failure".into()))))

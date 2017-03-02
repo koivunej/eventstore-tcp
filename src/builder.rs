@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use uuid::Uuid;
 use package::Package;
 use {UsernamePassword, Message, Direction};
-use messages::mod_EventStore::mod_Client::mod_Messages::{WriteEvents, NewEvent, ReadEvent, ReadStreamEvents};
+use client_messages::{WriteEvents, NewEvent, ReadEvent, ReadStreamEvents};
 
 pub struct Builder;
 

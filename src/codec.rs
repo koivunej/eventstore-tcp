@@ -136,7 +136,7 @@ mod tests {
     use tokio_core::io::Codec;
     use uuid::Uuid;
     use super::{PackageCodec};
-    use package::{self, Package};
+    use package::Package;
     use errors;
     use {Message, WriteEventsCompleted};
 
@@ -216,18 +216,6 @@ mod tests {
                               }))
                           });
     }
-
-    /*#[test]
-    fn decode_wec2() {
-        use protobuf;
-        use std::io;;
-        use pb_client_messages::WriteEventsCompleted as PBWEC;
-        let input = "0800181e20272884d6bc563084d6bc56".to_string().from_hex().unwrap();
-        println!("{:?}", input);
-        let mut cursor = io::Cursor::new(input);
-        let parsed = protobuf::parse_from_reader::<PBWEC>(&mut cursor).unwrap();
-        println!("{:?}", parsed);
-    }*/
 
     #[test]
     fn encode_write_events_completed() {
