@@ -15,7 +15,6 @@ futures = "0.1"
 tokio-core = "0.1"
 tokio-service = "0.1"
 tokio-proto = { git = "https://github.com/koivunej/tokio-proto", branch = "generic-requestid" }
-clap = "2.20"
 
 [dev-dependencies]
 rustc-serialize = "*"
