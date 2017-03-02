@@ -9,19 +9,16 @@ extern crate es_proto;
 
 use std::io;
 use std::net::SocketAddr;
-use std::thread;
 use std::process;
 use uuid::Uuid;
 
-use futures::{Future, IntoFuture, Stream, Sink};
-use futures::future::{BoxFuture, Either};
-use tokio_core::reactor::{Core, Handle};
+use futures::Future;
+use tokio_core::reactor::Core;
 use tokio_service::Service;
-use futures::sync::{oneshot, mpsc};
 
 use clap::{Arg, App, SubCommand};
 
-use es_proto::{EventStoreClient, Package, Message, Builder, ExpectedVersion, StreamVersion, UsernamePassword, Direction};
+use es_proto::{EventStoreClient, Package, Message, Builder, ExpectedVersion, StreamVersion, Direction};
 
 #[derive(Debug)]
 enum ReadMode {
@@ -171,7 +168,7 @@ fn main() {
 
     let verbose = matches.is_present("verbose");
 
-    let res = if let Some(matches) = matches.subcommand_matches("ping") {
+    let res = if let Some(_) = matches.subcommand_matches("ping") {
         ping(addr, verbose)
     } else if let Some(w) = matches.subcommand_matches("write") {
         let mut builder = Builder::write_events();
@@ -296,7 +293,7 @@ fn write(addr: SocketAddr, verbose: bool, pkg: Package) -> Result<(), io::Error>
     core.run(job)
 }
 
-fn read(addr: SocketAddr, verbose: bool, stream_id: &str, mode: ReadMode) -> Result<(), io::Error> {
+fn read(addr: SocketAddr, _: bool, stream_id: &str, mode: ReadMode) -> Result<(), io::Error> {
     /*if stream_id == "$all" {
         unimplemented!();
     }*/
@@ -305,7 +302,6 @@ fn read(addr: SocketAddr, verbose: bool, stream_id: &str, mode: ReadMode) -> Res
     let handle = core.handle();
 
     let client = EventStoreClient::connect(&addr, &handle);
-    let started = Instant::now();
 
     let job = client.and_then(|client| {
         client.call(Package {
