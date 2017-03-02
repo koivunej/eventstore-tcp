@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use uuid::Uuid;
 use package::Package;
-use {UsernamePassword, Message, Direction};
+use {UsernamePassword, Message, ReadDirection};
 use client_messages::{WriteEvents, NewEvent, ReadEvent, ReadStreamEvents};
 
 pub struct Builder;
@@ -291,7 +291,7 @@ impl ReadEventBuilder {
 }
 
 pub struct ReadStreamEventsBuilder {
-    direction: Option<Direction>,
+    direction: Option<ReadDirection>,
     event_stream_id: Option<Cow<'static, str>>,
     from_event_number: Option<StreamVersion>,
     max_count: Option<u8>,
@@ -311,7 +311,7 @@ impl ReadStreamEventsBuilder {
         }
     }
 
-    pub fn direction<D: Into<Option<Direction>>>(&mut self, dir: D) -> &mut Self {
+    pub fn direction<D: Into<Option<ReadDirection>>>(&mut self, dir: D) -> &mut Self {
         self.direction = dir.into();
         self
     }

@@ -21,7 +21,7 @@ use tokio_service::Service;
 
 use clap::{Arg, App, SubCommand};
 
-use tokio_eventstore::{EventStoreClient, Package, Message, Builder, ExpectedVersion, StreamVersion, Direction, ReadStreamSuccess, ResolvedIndexedEvent};
+use tokio_eventstore::{EventStoreClient, Package, Message, Builder, ExpectedVersion, StreamVersion, ReadDirection, ReadStreamSuccess, ResolvedIndexedEvent};
 
 #[derive(Debug)]
 enum ReadMode {
@@ -187,7 +187,7 @@ impl ReadMode {
                 // TODO: handle at main
                 let ver = StreamVersion::from_opt(skip as u32).expect("Stream version overflow");
                 Builder::read_stream_events()
-                    .direction(Direction::Forward) // TODO: ReadDirection would be more clear?
+                    .direction(ReadDirection::Forward)
                     .stream_id(stream_id.to_owned())
                     .from_event_number(ver)
                     .max_count(count as u8) // TODO: restrict at main
@@ -197,7 +197,7 @@ impl ReadMode {
                 // last is -1, -1; TODO: cannot fit usize
                 let ver = StreamVersion::from_opt(skip as u32).expect("Stream version overflow");
                 Builder::read_stream_events()
-                    .direction(Direction::Forward) // TODO: ReadDirection would be more clear?
+                    .direction(ReadDirection::Forward)
                     .stream_id(stream_id.to_owned())
                     .from_event_number(ver)
                     .max_count(count as u8) // TODO: restrict at main

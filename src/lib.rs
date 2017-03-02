@@ -80,14 +80,14 @@ use self::errors::ErrorKind;
 
 /// The direction in which events are read.
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum Direction {
+pub enum ReadDirection {
     /// Read from first (event 0) to the latest
     Forward,
     /// Read from latest (highest event number) to the first (event 0)
     Backward
 }
 
-impl Copy for Direction {}
+impl Copy for ReadDirection {}
 
 /// Enumeration of currently supported messages. Plan is to include every defined message, trying
 /// to decode responses into `Result` alike messages, such as `ReadEventCompleted`.
@@ -113,9 +113,9 @@ pub enum Message {
     ReadEventCompleted(Result<client_messages::ResolvedIndexedEvent<'static>, ReadEventFailure>),
 
     /// Request to read a stream from a point forward or backward
-    ReadStreamEvents(Direction, client_messages::ReadStreamEvents<'static>),
+    ReadStreamEvents(ReadDirection, client_messages::ReadStreamEvents<'static>),
     /// Response to a stream read in given direction
-    ReadStreamEventsCompleted(Direction, Result<ReadStreamSuccess, ReadStreamFailure>),
+    ReadStreamEventsCompleted(ReadDirection, Result<ReadStreamSuccess, ReadStreamFailure>),
 
     /// Request was not understood
     BadRequest(Option<String>),
@@ -214,8 +214,8 @@ impl AsMessageWrite<client_messages::WriteEventsCompleted<'static>> for WriteEve
     }
 }
 
-impl<'a> From<(Direction, client_messages::ReadStreamEvents<'a>)> for Message {
-    fn from((dir, body): (Direction, client_messages::ReadStreamEvents<'a>)) -> Message {
+impl<'a> From<(ReadDirection, client_messages::ReadStreamEvents<'a>)> for Message {
+    fn from((dir, body): (ReadDirection, client_messages::ReadStreamEvents<'a>)) -> Message {
         use client_messages_ext::ReadStreamEventsExt;
         Message::ReadStreamEvents(dir, body.into_owned())
     }
@@ -230,8 +230,8 @@ pub struct ReadStreamSuccess {
     pub last_commit_position: i64,
 }
 
-impl<'a> From<(Direction, client_messages::ReadStreamEventsCompleted<'a>)> for Message {
-    fn from((dir, completed): (Direction, client_messages::ReadStreamEventsCompleted<'a>)) -> Message {
+impl<'a> From<(ReadDirection, client_messages::ReadStreamEventsCompleted<'a>)> for Message {
+    fn from((dir, completed): (ReadDirection, client_messages::ReadStreamEventsCompleted<'a>)) -> Message {
         use client_messages::mod_ReadStreamEventsCompleted::ReadStreamResult;
         use client_messages_ext::ResolvedIndexedEventExt;
 
@@ -314,10 +314,10 @@ impl Message {
             0xB0 => parse!(client_messages::ReadEvent, buf.as_slice())?.into(),
             0xB1 => parse!(client_messages::ReadEventCompleted, buf.as_slice())?.into(),
 
-            0xB2 => (Direction::Forward, parse!(client_messages::ReadStreamEvents, buf.as_slice())?).into(),
-            0xB3 => (Direction::Forward, parse!(client_messages::ReadStreamEventsCompleted, buf.as_slice())?).into(),
-            0xB4 => (Direction::Backward, parse!(client_messages::ReadStreamEvents, buf.as_slice())?).into(),
-            0xB5 => (Direction::Backward, parse!(client_messages::ReadStreamEventsCompleted, buf.as_slice())?).into(),
+            0xB2 => (ReadDirection::Forward, parse!(client_messages::ReadStreamEvents, buf.as_slice())?).into(),
+            0xB3 => (ReadDirection::Forward, parse!(client_messages::ReadStreamEventsCompleted, buf.as_slice())?).into(),
+            0xB4 => (ReadDirection::Backward, parse!(client_messages::ReadStreamEvents, buf.as_slice())?).into(),
+            0xB5 => (ReadDirection::Backward, parse!(client_messages::ReadStreamEventsCompleted, buf.as_slice())?).into(),
 
             /*
             0xB6 => { /* readalleventsfwd */ }
@@ -448,11 +448,11 @@ impl Message {
             ReadEvent(_) => 0xB0,
             ReadEventCompleted(_) => 0xB1,
 
-            ReadStreamEvents(Direction::Forward, _) => 0xB2,
-            ReadStreamEventsCompleted(Direction::Forward, _) => 0xB3,
+            ReadStreamEvents(ReadDirection::Forward, _) => 0xB2,
+            ReadStreamEventsCompleted(ReadDirection::Forward, _) => 0xB3,
 
-            ReadStreamEvents(Direction::Backward, _) => 0xB4,
-            ReadStreamEventsCompleted(Direction::Backward, _) => 0xB5,
+            ReadStreamEvents(ReadDirection::Backward, _) => 0xB4,
+            ReadStreamEventsCompleted(ReadDirection::Backward, _) => 0xB5,
 
             BadRequest(_) => 0xf0,
             NotHandled(..) => 0xf1,
