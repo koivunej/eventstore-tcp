@@ -1,5 +1,5 @@
 [package]
-name = "tokio-eventstore"
+name = "eventstore-tcp"
 version = "0.1.0"
 authors = ["Joonas Koivunen <joonas.koivunen@gmail.com>"]
 

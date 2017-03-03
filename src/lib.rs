@@ -21,51 +21,57 @@
 //!
 //! Example of sending a `Ping` message and receiving back a `Pong` response:
 //!
-//! ```rust,no_run
+//! ```no_run
 //! extern crate futures;
 //! extern crate tokio_core;
 //! extern crate tokio_proto;
 //! extern crate tokio_service;
-//! extern crate uuid;
+//! extern crate eventstore_tcp;
 //!
 //! use std::net::SocketAddr;
 //! use futures::Future;
 //! use tokio_core::reactor::Core;
 //! use tokio_service::Service;
 //!
-//! use eventstore::{EventStoreClient, Builder, Message};
+//! use eventstore_tcp::{EventStoreClient, Builder, Message, StreamVersion, ContentType};
 //!
-//! # fn example() {
-//! let addr = "127.0.0.1:1113".parse::<SocketAddr>().unwrap();
+//! fn main() {
+//!     let addr = "127.0.0.1:1113".parse::<SocketAddr>().unwrap();
+//!     let mut core = Core::new().unwrap();
 //!
-//! let mut core = Core::new().unwrap();
+//!     // connecting the client returns a future for an EventStoreClient
+//!     // which implements tokio_service::Service
+//!     let client = EventStoreClient::connect(&addr, &core.handle());
 //!
-//! // connecting the client returns a future for an EventStoreClient
-//! // which implements tokio_service::Service
-//! let client = EventStoreClient::connect(&addr, &core.handle());
+//!     let value = client.and_then(|client| {
+//!         // once the connection is made and EventStoreClient (`client`)
+//!         // is created, send a WriteEvents request:
+//!         client.call(Builder::write_events()
+//!             .stream_id("my_stream-1")
+//!             .expected_version(StreamVersion::from(42))
+//!             .new_event()
+//!                 .event_type("meaning_of_life")
+//!                 .data("{ 'meaning': 42 }".as_bytes())
+//!                 .data_content_type(ContentType::Json)
+//!             .done()
+//!             .build_package(None, None))
 //!
-//! let value = client.and_then(|client| {
-//!     // once the connection is made and EventStoreClient (`client`)
-//!     // is created, send a Ping request:
+//!         // call returns a future representing the response
+//!     }).and_then(|resp| {
+//!         match resp.message {
+//!             Message::WriteEventsCompleted(Ok(_)) => println!("Event was written successfully"),
+//!             Message::WriteEventsCompleted(Err(fail)) => println!("Event writing failed: {:?}", fail),
+//!             unexpected => println!("Unexpected response: {:#?}", unexpected),
+//!         };
 //!
-//!     client.call(Builder::ping().build_package(None, None))
+//!         Ok(())
+//!     });
 //!
-//!     // call returns a future representing the response for a Ping request
-//! }).and_then(|resp| {
-//!     // resp is now the package the server sent in response to the Ping
-//!
-//!     match resp.message {
-//!         Message::Pong => println!("Pong received!"),
-//!         unexpected => println!("Unexpected response: {:#?}", unexpected),
-//!     };
-//!
-//!     Ok(())
-//! });
-//!
-//! core.run(value).unwrap();
-//! # }
-//!
+//!     core.run(value).unwrap();
+//! }
 //! ```
+//!
+//! More examples can be found in the aspiring command line tool under `examples/testclient`.
 #![deny(missing_docs)]
 
 #[macro_use]
@@ -106,7 +112,7 @@ mod client;
 pub use client::EventStoreClient;
 
 pub mod builder;
-pub use builder::{Builder, ExpectedVersion, StreamVersion, EventNumber};
+pub use builder::{Builder, ExpectedVersion, StreamVersion, EventNumber, ContentType};
 
 mod auth;
 pub use auth::UsernamePassword;
@@ -183,7 +189,7 @@ pub enum Message {
     /// Response to a stream read in given direction
     ReadStreamEventsCompleted(ReadDirection, Result<ReadStreamSuccess, ReadStreamFailure>),
 
-    /// Request was not understood
+    /// Request was not understood. Please open an issue!
     BadRequest(Option<String>),
 
     /// Correlated request was not handled. This is the likely response to requests where

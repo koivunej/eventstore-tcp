@@ -216,22 +216,22 @@ impl Into<i32> for ContentType {
 /// # Example
 ///
 /// ```rust
-/// use eventstore::Builder;
-/// # use eventstore::Package;
+/// use eventstore_tcp::{Builder, ExpectedVersion, StreamVersion, ContentType};
+/// # use eventstore_tcp::Package;
 ///
 /// # fn example() -> Package {
 /// let package = Builder::write_events()
 ///     .stream_id("my_stream-1")
-///     .expected_version(ExpectedVersion::Exact(StreamVersion::from(42)))
+///     .expected_version(StreamVersion::from(42))
 ///     .new_event()
 ///         .event_type("meaning_of_life")
 ///         .data("{ 'meaning': 42 }".as_bytes())
-///         .data_content_type(true)
+///         .data_content_type(ContentType::Json)
 ///     .done()
 ///     .new_event()
 ///         .event_type("meaning_of_life")
 ///         .data("{ 'meaning': 47 }".as_bytes())
-///         .data_content_type(true)
+///         .data_content_type(ContentType::Json)
 ///     .done()
 ///     .require_master(false) // default
 ///     .build_package(None, None);
@@ -265,8 +265,8 @@ impl WriteEventsBuilder {
     }
 
     /// Sets the expected version of the stream as an optimistic locking mechanism.
-    pub fn expected_version(&mut self, ver: ExpectedVersion) -> &mut Self {
-        self.expected_version = Some(ver);
+    pub fn expected_version<V: Into<ExpectedVersion>>(&mut self, version: V) -> &mut Self {
+        self.expected_version = Some(version.into());
         self
     }
 
@@ -408,13 +408,13 @@ impl<'a> NewEventBuilder<'a> {
 /// # Example
 ///
 /// ```rust
-/// use eventstore::Builder;
-/// # use eventstore::Package;
+/// use eventstore_tcp::{Builder, StreamVersion};
+/// # use eventstore_tcp::Package;
 ///
 /// # fn example() -> Package {
 /// let package = Builder::read_event()
 ///     .stream_id("my_stream-1")
-///     .event_number(42)
+///     .event_number(StreamVersion::from(42))
 ///     .resolve_link_tos(true) // default
 ///     .require_master(false)  // default
 ///     .build_package(None, None);
@@ -496,14 +496,14 @@ impl ReadEventBuilder {
 /// # Example
 ///
 /// ```rust
-/// use eventstore::{Builder, ReadDirection};
-/// # use eventstore::Package;
+/// use eventstore_tcp::{Builder, ReadDirection, StreamVersion};
+/// # use eventstore_tcp::Package;
 ///
 /// # fn example() -> Package {
-/// let package = Builder::read_stream()
+/// let package = Builder::read_stream_events()
 ///     .direction(ReadDirection::Forward)
 ///     .stream_id("my_stream-1")
-///     .from_event_number(42)
+///     .from_event_number(StreamVersion::from(42))
 ///     .max_count(10)
 ///     .resolve_link_tos(true) // default
 ///     .require_master(false)  // default
@@ -626,7 +626,7 @@ fn build_new_event_for_write_events() {
         .new_event()
             .event_type("foo")
             .data(vec![0u8])
-            .data_content_type(false)
+            .data_content_type(ContentType::Bytes)
         .done()
         .build_package(None, None);
 }

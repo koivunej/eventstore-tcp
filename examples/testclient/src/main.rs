@@ -6,7 +6,7 @@ extern crate uuid;
 #[macro_use]
 extern crate clap;
 extern crate json;
-extern crate tokio_eventstore;
+extern crate eventstore_tcp;
 
 use std::io;
 use std::net::SocketAddr;
@@ -21,7 +21,7 @@ use tokio_service::Service;
 
 use clap::{Arg, App, SubCommand};
 
-use tokio_eventstore::{EventStoreClient, Package, Message, Builder, ExpectedVersion, StreamVersion, EventNumber, ReadDirection, ReadStreamSuccess, ResolvedIndexedEvent};
+use eventstore_tcp::{EventStoreClient, Package, Message, Builder, ExpectedVersion, StreamVersion, EventNumber, ContentType, ReadDirection, ReadStreamSuccess, ResolvedIndexedEvent};
 
 #[derive(Debug, Clone)]
 enum Position {
@@ -464,10 +464,6 @@ fn write(addr: SocketAddr, verbose: bool, pkg: Package) -> Result<(), io::Error>
 }
 
 fn read(addr: SocketAddr, verbose: bool, output: OutputMode, stream_id: &str, mode: ReadMode) -> Result<(), io::Error> {
-    /*if stream_id == "$all" {
-        unimplemented!();
-    }*/
-
     let mut core = Core::new().unwrap();
     let handle = core.handle();
 
@@ -494,48 +490,3 @@ use std::time::Duration;
 fn print_elapsed(subject: &str, d: Duration) {
     println!("{} {}.{:06}ms", subject, d.as_secs() * 1000 + d.subsec_nanos() as u64 / 1_000_000, d.subsec_nanos() % 1_000_000);
 }
-
-/*
-fn nice(addr: &SocketAddr, handle: &Handle) {
-    let client = EventStoreClient::connect(&addr, &handle);
-    client.and_then(|client| {
-
-    });
-}*/
-
-/*
-struct Client {
-    tx: mpsc::Sender<(Package, oneshot::Sender<Result<Package, io::Error>>)>,
-}
-
-impl Client {
-    fn new(addr: &SocketAddr, handle: &Handle) -> Client {
-        let (tx, rx) = mpsc::channel::<(Package, oneshot::Sender<Result<Package, io::Error>>)>(4);
-        let client = EventStoreClient::connect(addr, handle);
-        let task = client.and_then(move |client| {
-            rx.for_each(move |(pkg, tx)| {
-                client.call(pkg).then(|res| {
-                    let ret = match res {
-                        Ok(_) => Ok(()),
-                        Err(_) => Err(())
-                    };
-                    tx.complete(res);
-                    ret
-                })
-            }).map_err(|_| io::Error::new(io::ErrorKind::Other, "dunno?"))
-        });
-        handle.spawn(task.then(|res| match res { Ok(_) => Ok(()), Err(_) => Err(()) }));
-        Client { tx: tx }
-    }
-
-    fn call(&self, msg: Message) -> MessageFuture {
-        let (tx, rx) = oneshot::channel();
-
-        self.tx.send(());
-    }
-}*/
-
-// connecting
-// ready
-// heartbeat
-// disconnected
