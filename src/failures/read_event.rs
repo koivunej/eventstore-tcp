@@ -5,10 +5,15 @@ use client_messages::mod_ReadEventCompleted::ReadEventResult;
 /// `ReadEventFailure` maps to non-success of `ReadEventResult`
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ReadEventFailure {
+    /// Event of requested number was not found (scavenged or never existed)
     NotFound,
+    /// No such stream
     NoStream,
+    /// Stream has been deleted
     StreamDeleted,
+    /// Other error
     Error(Option<Cow<'static, str>>),
+    /// Access was denied (no credentials provided or insufficient permissions)
     AccessDenied
 }
 
@@ -40,6 +45,8 @@ impl Into<(ReadEventResult, Option<Cow<'static, str>>)> for ReadEventFailure {
 }
 
 impl ReadEventFailure {
+    // TODO: this needs to become as_message_write()
+    #[doc(hidden)]
     pub fn as_read_event_completed<'a>(&'a self) -> ReadEventCompleted<'a> {
         use ReadEventFailure::*;
         let (res, msg): (ReadEventResult, Option<Cow<'a, str>>) = match self {
@@ -73,7 +80,4 @@ impl ReadEventFailure {
             error: msg,
         }
     }
-
 }
-
-

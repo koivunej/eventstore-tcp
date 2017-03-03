@@ -1,5 +1,72 @@
-//#![feature(plugin)]
-// #![plugin(protobuf_macros)]
+//! Tokio-based [EventStore](https://geteventstore.com/) client library in it's early stages.
+//! Currently the most interesting API is the `tokio_service::service::Service` implemented by
+//! `client::Client`, which allows sending values of `Package` to get back a `Future` of a response
+//! `Package`. `Package` is the name for a frame in the protocol. See it's documentation for more
+//! information.
+//!
+//! You can build values of `Package` using `builder::Builder` and it's functions. Actual payloads
+//! are described as `Message` enum.
+//!
+//! The protocol is multiplexed so you can have multiple (hard limit is 128 currently) calls going
+//! at any point in time. Current implementation is based on `tokio_proto::multiplex`, at the
+//! moment using a custom fork. It does not yet support `tokio_proto::streaming::multiplex` which is
+//! needed to support subscriptions.
+//!
+//! # Panics
+//!
+//!   * members of `builder` module can panic in a number of places (documented)
+//!   * panics when decoding missing protobuf `required` values
+//!
+//! # Simplest example
+//!
+//! Example of sending a `Ping` message and receiving back a `Pong` response:
+//!
+//! ```rust,no_run
+//! extern crate futures;
+//! extern crate tokio_core;
+//! extern crate tokio_proto;
+//! extern crate tokio_service;
+//! extern crate uuid;
+//!
+//! use std::net::SocketAddr;
+//! use futures::Future;
+//! use tokio_core::reactor::Core;
+//! use tokio_service::Service;
+//!
+//! use eventstore::{EventStoreClient, Builder, Message};
+//!
+//! # fn example() {
+//! let addr = "127.0.0.1:1113".parse::<SocketAddr>().unwrap();
+//!
+//! let mut core = Core::new().unwrap();
+//!
+//! // connecting the client returns a future for an EventStoreClient
+//! // which implements tokio_service::Service
+//! let client = EventStoreClient::connect(&addr, &core.handle());
+//!
+//! let value = client.and_then(|client| {
+//!     // once the connection is made and EventStoreClient (`client`)
+//!     // is created, send a Ping request:
+//!
+//!     client.call(Builder::ping().build_package(None, None))
+//!
+//!     // call returns a future representing the response for a Ping request
+//! }).and_then(|resp| {
+//!     // resp is now the package the server sent in response to the Ping
+//!
+//!     match resp.message {
+//!         Message::Pong => println!("Pong received!"),
+//!         unexpected => println!("Unexpected response: {:#?}", unexpected),
+//!     };
+//!
+//!     Ok(())
+//! });
+//!
+//! core.run(value).unwrap();
+//! # }
+//!
+//! ```
+#![deny(missing_docs)]
 
 #[macro_use]
 extern crate bitflags;
@@ -23,7 +90,7 @@ use tokio_core::io::EasyBuf;
 
 mod client_messages;
 pub use client_messages::{WriteEvents, ResolvedIndexedEvent};
-use client_messages::mod_NotHandled::{NotHandledReason, MasterInfo};
+pub use client_messages::mod_NotHandled::{NotHandledReason, MasterInfo};
 
 mod client_messages_ext;
 
@@ -44,7 +111,7 @@ pub use builder::{Builder, ExpectedVersion, StreamVersion, EventNumber};
 mod auth;
 pub use auth::UsernamePassword;
 
-pub mod errors {
+mod errors {
     use std::str;
     use std::io;
 
@@ -87,7 +154,7 @@ pub enum ReadDirection {
 
 impl Copy for ReadDirection {}
 
-/// Enumeration of currently supported messages. Plan is to include every defined message, trying
+/// Enumeration of currently supported messages. The plan is to include every defined message while trying
 /// to decode responses into `Result` alike messages, such as `ReadEventCompleted`.
 #[derive(Debug, PartialEq)]
 pub enum Message {
@@ -135,13 +202,21 @@ pub enum Message {
     NotAuthenticated
 }
 
+/// Successful response to `Message::WriteEvents`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WriteEventsCompleted {
+    /// The event number range assigned to the written events
     pub event_numbers: Range<i32>,
-    pub prepare_position: Option<i64>,
-    pub commit_position: Option<i64>,
+
+    /// Not public: missing type for positive i64
+    prepare_position: Option<i64>,
+
+    /// Not public: missing type for positive i64
+    commit_position: Option<i64>,
 }
 
+/// Trait allows converting values to wire structs that borrow data from the implementing type.
+/// Does not work as well as hoped if there is some data to borrow.
 trait AsMessageWrite<M: quick_protobuf::MessageWrite> {
     fn as_message_write(&self) -> M;
 
@@ -171,13 +246,22 @@ impl<'a> From<(ReadDirection, client_messages::ReadStreamEvents<'a>)> for Messag
     }
 }
 
+/// Successful response to a `Message::ReadStreamEvents`.
 #[derive(Debug, PartialEq, Clone)]
 pub struct ReadStreamSuccess {
+    /// The actual events returned by the server. Subject to `resolve_link_tos` setting on the read
+    /// request.
     pub events: Vec<ResolvedIndexedEvent<'static>>,
-    pub next_event_number: i32,
-    pub last_event_number: i32,
+    /// Event number of the first event
+    pub next_event_number: StreamVersion,
+    /// Event number of the last event
+    pub last_event_number: StreamVersion,
+    /// Has the end of the stream been reached (or could more events be read immediatedly)
     pub end_of_stream: bool,
-    pub last_commit_position: i64,
+
+    /// Last commit position of the last event. Not public as there is currently no type for an
+    /// positive i64 (0 < x < i64). Also, not sure how to explain the use of this property.
+    last_commit_position: i64,
 }
 
 impl<'a> From<(ReadDirection, client_messages::ReadStreamEventsCompleted<'a>)> for Message {
@@ -187,10 +271,11 @@ impl<'a> From<(ReadDirection, client_messages::ReadStreamEventsCompleted<'a>)> f
 
         match completed.result {
             Some(ReadStreamResult::Success) => {
+                // FIXME: this can panic as well
                 Message::ReadStreamEventsCompleted(dir, Ok(ReadStreamSuccess {
                     events: completed.events.into_iter().map(|x| x.into_owned()).collect(),
-                    next_event_number: completed.next_event_number,
-                    last_event_number: completed.last_event_number,
+                    next_event_number: StreamVersion::from_i32(completed.next_event_number),
+                    last_event_number: StreamVersion::from_i32(completed.last_event_number),
                     end_of_stream: completed.is_end_of_stream,
                     last_commit_position: completed.last_commit_position,
                 }))
@@ -201,13 +286,14 @@ impl<'a> From<(ReadDirection, client_messages::ReadStreamEventsCompleted<'a>)> f
                 Message::ReadStreamEventsCompleted(dir, Err((err, completed.error).into()))
             },
 
-            // TODO: might not be a good idea to use such in-band errors..
-            None => Message::ReadStreamEventsCompleted(dir, Err((ReadStreamResult::Error, Some(Cow::Borrowed("No result found in message"))).into())),
+            // FIXME: might not be a good idea to use such in-band errors..
+            None => panic!("No result found from ReadStreamEventsCompleted"),
         }
     }
 }
 
 impl ReadStreamSuccess {
+    #[doc(hidden)]
     pub fn as_read_stream_events_completed<'a>(&'a self) -> client_messages::ReadStreamEventsCompleted<'a> {
         use client_messages::mod_ReadStreamEventsCompleted::ReadStreamResult;
         use client_messages_ext::ResolvedIndexedEventExt;
@@ -215,8 +301,8 @@ impl ReadStreamSuccess {
         client_messages::ReadStreamEventsCompleted {
             events: self.events.iter().map(|x| x.borrowed()).collect(),
             result: Some(ReadStreamResult::Success),
-            next_event_number: self.next_event_number,
-            last_event_number: self.last_event_number,
+            next_event_number: self.next_event_number.into(),
+            last_event_number: self.last_event_number.into(),
             is_end_of_stream: self.end_of_stream,
             last_commit_position: self.last_commit_position,
             error: None,
@@ -228,6 +314,7 @@ fn convert_qp_err(e: ::quick_protobuf::errors::Error) -> io::Error {
     use std::io::{Error as IoError, ErrorKind as IoErrorKind};
     use quick_protobuf::errors::{Error, ErrorKind};
 
+    // FIXME: not probably needed anymore?
     match e {
         Error(ErrorKind::Io(e), _) => e,
         Error(ErrorKind::Utf8(e), _) => IoError::new(IoErrorKind::InvalidData, e.utf8_error()),
@@ -346,7 +433,7 @@ impl Message {
             WriteEvents(ref x) => encode!(x, w)?,
 
             WriteEventsCompleted(Ok(ref x)) => encode!(x.as_message_write(), w)?,
-            WriteEventsCompleted(Err(ref x)) => encode!(x.as_write_events_completed(), w)?,
+            WriteEventsCompleted(Err(ref x)) => encode!(x.as_message_write(), w)?,
 
             ReadEvent(ref re) => encode!(re, w)?,
             ReadEventCompleted(Ok(ref rie)) => encode!(rie.as_read_event_completed(), w)?,
@@ -434,6 +521,7 @@ impl<'a> From<client_messages::WriteEventsCompleted<'a>> for Message {
     fn from(wec: client_messages::WriteEventsCompleted<'a>) -> Self {
         use client_messages::OperationResult::*;
 
+        // FIXME: can panic
         let res = match wec.result {
             Some(Success) => {
                 Ok(WriteEventsCompleted {
@@ -456,6 +544,7 @@ impl<'a> From<client_messages::ReadEventCompleted<'a>> for Message {
         use client_messages::mod_ReadEventCompleted::ReadEventResult;
         use client_messages_ext::ResolvedIndexedEventExt;
 
+        // FIXME: can panic
         let res = match rec.result {
             Some(ReadEventResult::Success) => Ok(rec.event.into_owned()),
             Some(other) => Err((other, rec.error).into()),

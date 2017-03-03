@@ -6,6 +6,7 @@
 #![allow(dead_code)]
 #![allow(unknown_lints)]
 #![allow(clippy)]
+#![allow(missing_docs)]
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
 use std::io::Write;

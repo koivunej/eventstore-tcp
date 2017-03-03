@@ -16,11 +16,16 @@ use codec::PackageCodec;
 
 use uuid::Uuid;
 
+/// `tokio_service::Service` implementation of the client.
 pub struct EventStoreClient {
     inner: ClientService<TcpStream, PackageProto>,
 }
 
 impl EventStoreClient {
+    /// Connect to an EventStore database listening at given `addr` using the given
+    /// `tokio::reactor::Core`s `handle`.
+    /// Returns a future representing the client which can be used to send and receive `Package`
+    /// values.
     pub fn connect(addr: &SocketAddr, handle: &Handle) -> Box<Future<Item = Self, Error = io::Error>> {
         let ret = TcpClient::new(PackageProto)
             .connect(addr, handle)

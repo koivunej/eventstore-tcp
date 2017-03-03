@@ -3,12 +3,19 @@ use client_messages::ReadStreamEventsCompleted;
 use client_messages::mod_ReadStreamEventsCompleted::ReadStreamResult;
 
 // NOTE: similar to ReadEventFailure, but this has NotModified instead of NotFound
+/// Non-success projection of the `ReadStreamResult` enum on the wire representing
+/// a failed `ReadStreamCompleted` request.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ReadStreamFailure {
+    /// Stream was not found
     NoStream,
+    /// Stream has been deleted
     StreamDeleted,
+    /// No new events to read
     NotModified,
+    /// Other error
     Error(Option<Cow<'static, str>>),
+    /// Access was denied (no credentials provided or insufficient permissions)
     AccessDenied,
 }
 
@@ -40,6 +47,7 @@ impl<'a> From<(ReadStreamResult, Option<Cow<'a, str>>)> for ReadStreamFailure {
 }
 
 impl ReadStreamFailure {
+    #[doc(hidden)]
     pub fn as_read_stream_events_completed<'a>(&'a self) -> ReadStreamEventsCompleted<'a> {
         use ReadStreamFailure::*;
         let (res, msg): (ReadStreamResult, Option<Cow<'a, str>>) = match self {

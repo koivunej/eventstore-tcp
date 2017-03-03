@@ -3,6 +3,8 @@ use std::fmt;
 use std::io;
 use byteorder::{ReadBytesExt, WriteBytesExt};
 
+/// Username and password authentication token embedded in requests as there is no concept of
+/// session in the TCP protocol, every request must be authenticated.
 #[derive(Clone, PartialEq, Eq)]
 pub struct UsernamePassword(Cow<'static, str>, Cow<'static, str>);
 
@@ -13,10 +15,12 @@ impl fmt::Debug for UsernamePassword {
 }
 
 impl UsernamePassword {
+    /// Create a new value
     pub fn new<S: Into<Cow<'static, str>>>(username: S, password: S) -> UsernamePassword {
         UsernamePassword(username.into(), password.into())
     }
 
+    #[doc(hidden)]
     pub fn decode<R: ReadBytesExt>(buf: &mut R) -> io::Result<Self> {
         use std::string;
 
@@ -37,6 +41,7 @@ impl UsernamePassword {
         Ok(UsernamePassword(Cow::Owned(username), Cow::Owned(password)))
     }
 
+    #[doc(hidden)]
     pub fn encode<W: WriteBytesExt>(&self, buf: &mut W) -> io::Result<usize> {
         // TODO: new that disallows too long strings
         buf.write_u8(self.0.len() as u8)?;
@@ -47,4 +52,3 @@ impl UsernamePassword {
         Ok(1 + self.0.len() + 1 + self.1.len())
     }
 }
-
