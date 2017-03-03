@@ -28,7 +28,7 @@ use client_messages::mod_NotHandled::{NotHandledReason, MasterInfo};
 mod client_messages_ext;
 
 mod failures;
-pub use failures::{OperationFailure, ReadEventFailure, ReadStreamFailure};
+pub use failures::{WriteEventsFailure, ReadEventFailure, ReadStreamFailure};
 
 mod package;
 pub use package::Package;
@@ -95,6 +95,7 @@ pub enum Message {
     HeartbeatRequest,
     /// Response to a heartbeat request.
     HeartbeatResponse,
+
     /// Ping request, similar to heartbeat.
     Ping,
     /// Ping response.
@@ -103,7 +104,7 @@ pub enum Message {
     /// Append to stream request
     WriteEvents(WriteEvents<'static>),
     /// Append to stream response, which can fail for a number of reasons
-    WriteEventsCompleted(Result<WriteEventsCompleted, OperationFailure>),
+    WriteEventsCompleted(Result<WriteEventsCompleted, WriteEventsFailure>),
 
     /// Request to read a single event from a stream
     ReadEvent(client_messages::ReadEvent<'static>),
