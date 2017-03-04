@@ -12,14 +12,13 @@ use std::io;
 use std::net::SocketAddr;
 use std::process;
 use std::str;
-
-use uuid::Uuid;
+use std::time::Duration;
 
 use futures::Future;
 use tokio_core::reactor::Core;
 use tokio_service::Service;
 
-use clap::{Arg, App, SubCommand};
+use clap::{Arg, App, SubCommand, ArgMatches};
 
 use eventstore_tcp::{EventStoreClient, Package, Message, Builder, ExpectedVersion, StreamVersion, EventNumber, ContentType, ReadDirection, ReadStreamSuccess, ResolvedIndexedEvent};
 
@@ -59,7 +58,6 @@ enum ReadMode {
 #[derive(Debug, Clone)]
 enum OutputMode {
     Debug,
-    Utf8Lossy,
     JsonOneline,
     Hex
 }
@@ -70,7 +68,6 @@ impl<'a> From<&'a str> for OutputMode {
     fn from(s: &'a str) -> OutputMode {
         match s {
             "debug" => OutputMode::Debug,
-            "utf8_lossy" => OutputMode::Utf8Lossy,
             "json_oneline" => OutputMode::JsonOneline,
             "hex" => OutputMode::Hex,
             _ => panic!("Unsupport mode: {}", s)
@@ -168,13 +165,22 @@ impl OutputMode {
                 }
                 Ok(())
             }
-            _ => unimplemented!()
         }
     }
 
     fn format<Out: io::Write, ErrOut: io::Write>(&self, verbose: bool, msg: Message, out: &mut Out, err: &mut ErrOut) -> io::Result<()> {
 
         match msg {
+            Message::ReadEventCompleted(Ok(rie)) => {
+                self.format_events(verbose, vec![rie], out, err)
+            }
+            Message::ReadEventCompleted(Err(fail)) => {
+                if verbose {
+                    writeln!(err, "{}: {:#?}", "Read failed", fail)
+                } else {
+                    writeln!(err, "{}: {:?}", "Read failed", fail)
+                }
+            }
             Message::ReadStreamEventsCompleted(_, Ok(ReadStreamSuccess { events, .. })) => {
                 self.format_events(verbose, events, out, err)
             }
@@ -184,7 +190,7 @@ impl OutputMode {
                 } else {
                     writeln!(err, "{}: {:?}", "Read failed", fail)
                 }
-            },
+            }
             x => {
                 if verbose {
                     writeln!(err, "Unexpected message received: {:#?}", x)
@@ -197,7 +203,7 @@ impl OutputMode {
 }
 
 impl ReadMode {
-    fn into_request(self, stream_id: &str) -> Message {
+    fn into_request(self, stream_id: &str) -> Package {
         use ReadMode::*;
         match self {
             ForwardOnce { position, count: 1 } | Backward { position, count: 1 } => {
@@ -206,17 +212,15 @@ impl ReadMode {
                     .event_number(position)
                     .resolve_link_tos(true)
                     .require_master(false)
-                    .build_message()
+                    .build_package(None, None)
             },
             ForwardOnce { position, count } => {
-                // TODO: perhaps bad choice of option?
-                // TODO: handle at main
                 Builder::read_stream_events()
                     .direction(ReadDirection::Forward)
                     .stream_id(stream_id.to_owned())
                     .from_event_number(position)
                     .max_count(count)
-                    .build_message()
+                    .build_package(None, None)
             },
             Backward { position, count } => {
                 Builder::read_stream_events()
@@ -224,7 +228,7 @@ impl ReadMode {
                     .stream_id(stream_id.to_owned())
                     .from_event_number(position)
                     .max_count(count)
-                    .build_message()
+                    .build_package(None, None)
             }
         }
     }
@@ -320,16 +324,18 @@ fn main() {
                              .short("o")
                              .long("output")
                              .takes_value(true)
-                             .possible_values(&["debug", "utf8_lossy", "json_oneline", "hex"])
+                             .possible_values(&["debug", "json_oneline", "hex"])
                              .help("'debug' will print the structure with {:?} or {:#?} depending on verbose
-'utf8_lossy' will attempt to decode data as utf8
 'json_oneline' will parse the json and stringify on one line
 'hex' will write data as hexadecimals")))
         .get_matches();
 
     let addr = {
-        let s = format!("{}:{}", matches.value_of("hostname").unwrap_or("127.0.0.1"), matches.value_of("port").unwrap_or("1113"));
-        s.parse::<SocketAddr>().expect("Failed to parse host:port as SocketAddr")
+        let s = format!("{}:{}",
+                        matches.value_of("hostname").unwrap_or("127.0.0.1"),
+                        matches.value_of("port").unwrap_or("1113"));
+        s.parse::<SocketAddr>()
+            .expect("Failed to parse host:port as SocketAddr. Hostname resolution is not yet implemented.")
     };
 
     let verbose = matches.is_present("verbose");
@@ -337,33 +343,7 @@ fn main() {
     let res = if let Some(_) = matches.subcommand_matches("ping") {
         ping(addr, verbose)
     } else if let Some(w) = matches.subcommand_matches("write") {
-        let mut builder = Builder::write_events();
-        builder.stream_id(w.value_of("stream_id").unwrap().to_owned())
-            .expected_version(match w.value_of("expected_version").unwrap() {
-                "any" => ExpectedVersion::Any,
-                "created" => ExpectedVersion::NewStream,
-                n => ExpectedVersion::Exact(StreamVersion::from_opt(n.parse().unwrap()).expect("Stream version out of bounds"))
-            })
-            .require_master(w.is_present("require_master"));
-
-        {
-            let mut event = builder.new_event();
-
-            event = event.data(w.value_of("data").unwrap().as_bytes().iter().cloned().collect::<Vec<_>>())
-                .data_content_type(w.is_present("json"))
-                .event_type(w.value_of("type").unwrap().to_owned());
-
-            event = if let Some(x) = w.value_of("metadata") {
-                event.metadata(x.as_bytes().iter().cloned().collect::<Vec<_>>())
-                    .metadata_content_type(w.is_present("json"))
-            } else {
-                event
-            };
-
-            event.done();
-        }
-
-        write(addr, verbose, builder.build_package(None, None))
+        write(addr, verbose, prepare_write(w))
     } else if let Some(r) = matches.subcommand_matches("read") {
         let stream_id = r.value_of("stream_id").unwrap();
         let count = match r.value_of("count").unwrap_or("1") {
@@ -374,9 +354,9 @@ fn main() {
         let position: Position = r.value_of("position").unwrap_or("first").into();
         let mode = match r.value_of("mode") {
             None | Some("forward-once") =>
-                ReadMode::ForwardOnce{ position, count: count.unwrap_or(u8::max_value()) },
+                ReadMode::ForwardOnce{ position, count: count.unwrap_or(10) },
             Some("backward") =>
-                ReadMode::Backward{ position, count: count.unwrap_or(u8::max_value()) },
+                ReadMode::Backward{ position, count: count.unwrap_or(10) },
             Some("forward-forever") => unimplemented!(),
             _ => unreachable!(),
         };
@@ -433,6 +413,38 @@ fn ping(addr: SocketAddr, verbose: bool) -> Result<(), io::Error> {
     core.run(job)
 }
 
+fn prepare_write<'a>(args: &ArgMatches<'a>) -> Package {
+    let content_type = if args.is_present("json") { ContentType::Json } else { ContentType::Bytes };
+    let mut builder = Builder::write_events();
+    builder.stream_id(args.value_of("stream_id").unwrap().to_owned())
+        .expected_version(match args.value_of("expected_version").unwrap() {
+            "any" => ExpectedVersion::Any,
+            "created" => ExpectedVersion::NewStream,
+            n => ExpectedVersion::Exact(StreamVersion::from(n.parse().unwrap()))
+        })
+        .require_master(args.is_present("require_master"));
+
+    {
+        // some weaknesses with the moving methods
+        let mut event = builder.new_event();
+
+        event = event.data(args.value_of("data").unwrap().as_bytes().iter().cloned().collect::<Vec<_>>())
+            .data_content_type(content_type)
+            .event_type(args.value_of("type").unwrap().to_owned());
+
+        event = if let Some(x) = args.value_of("metadata") {
+            event.metadata(x.as_bytes().iter().cloned().collect::<Vec<_>>())
+                .metadata_content_type(content_type)
+        } else {
+            event
+        };
+
+        event.done();
+    }
+
+    builder.build_package(None, None)
+}
+
 fn write(addr: SocketAddr, verbose: bool, pkg: Package) -> Result<(), io::Error> {
     let mut core = Core::new().unwrap();
     let handle = core.handle();
@@ -468,14 +480,8 @@ fn read(addr: SocketAddr, verbose: bool, output: OutputMode, stream_id: &str, mo
     let handle = core.handle();
 
     let client = EventStoreClient::connect(&addr, &handle);
-
-
     let job = client.and_then(|client| {
-        client.call(Package {
-            authentication: None,
-            correlation_id: Uuid::new_v4(),
-            message: mode.into_request(stream_id),
-        })
+        client.call(mode.into_request(stream_id))
     }).and_then(|resp| {
         let mut stdout = io::stdout();
         let mut stderr = io::stderr();
@@ -484,8 +490,6 @@ fn read(addr: SocketAddr, verbose: bool, output: OutputMode, stream_id: &str, mo
 
     core.run(job)
 }
-
-use std::time::Duration;
 
 fn print_elapsed(subject: &str, d: Duration) {
     println!("{} {}.{:06}ms", subject, d.as_secs() * 1000 + d.subsec_nanos() as u64 / 1_000_000, d.subsec_nanos() % 1_000_000);
