@@ -59,8 +59,10 @@
 //!         // call returns a future representing the response
 //!     }).and_then(|resp| {
 //!         match resp.message {
-//!             Message::WriteEventsCompleted(Ok(_)) => println!("Event was written successfully"),
-//!             Message::WriteEventsCompleted(Err(fail)) => println!("Event writing failed: {:?}", fail),
+//!             Message::WriteEventsCompleted(Ok(_)) =>
+//!                 println!("Event was written successfully"),
+//!             Message::WriteEventsCompleted(Err(fail)) =>
+//!                 println!("Event writing failed: {:?}", fail),
 //!             unexpected => println!("Unexpected response: {:#?}", unexpected),
 //!         };
 //!
