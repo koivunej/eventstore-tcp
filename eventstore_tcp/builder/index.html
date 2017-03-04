@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `builder` mod in crate `eventstore_tcp`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, builder">
+
+    <title>eventstore_tcp::builder - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>eventstore_tcp</a></p><script>window.sidebarCurrent = {name: 'builder', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content mod">
+<h1 class='fqn'><span class='in-band'>Module <a href='../index.html'>eventstore_tcp</a>::<wbr><a class='mod' href=''>builder</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/eventstore_tcp/builder.rs.html#1-647' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>Builders to help building requests.</p>
+
+<p>Every top-level builder exposes at least method <code>build_package</code> which will return a
+ready-to-send <code>Package</code> but will panic if one or more of the required properties is not set.
+Currently the builders are implemented so that it should support chaining.</p>
+
+<p>On <code>build_package</code> the contents are not cloned but are moved into the returned <code>Package</code>
+which is not apparent from the use of <code>&amp;mut self</code>.</p>
+
+<p><code>UsernamePassword</code> can be used to authenticate specific requests. Specifying credentials for
+every request is currently the only supported way to authenticate.</p>
+
+<p>Any <code>Option&lt;Uuid&gt;</code> can always be left unset, in which case <code>Uuid::new_v4()</code> (random Uuid) is
+generated.</p>
+</div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.Builder.html'
+                                  title='struct eventstore_tcp::builder::Builder'>Builder</a></td>
+                           <td class='docblock-short'>
+                                <p>Factory factory for creating builders.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.NewEventBuilder.html'
+                                  title='struct eventstore_tcp::builder::NewEventBuilder'>NewEventBuilder</a></td>
+                           <td class='docblock-short'>
+                                <p>Builder for specifying an event when using <code>WriteEventsBuilder</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.ReadEventBuilder.html'
+                                  title='struct eventstore_tcp::builder::ReadEventBuilder'>ReadEventBuilder</a></td>
+                           <td class='docblock-short'>
+                                <p>Builder for a single event read request <code>ReadEvent</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.ReadStreamEventsBuilder.html'
+                                  title='struct eventstore_tcp::builder::ReadStreamEventsBuilder'>ReadStreamEventsBuilder</a></td>
+                           <td class='docblock-short'>
+                                <p>Builds a package for reading multiple events from a stream in either <code>ReadDirection</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.SimpleBuilder.html'
+                                  title='struct eventstore_tcp::builder::SimpleBuilder'>SimpleBuilder</a></td>
+                           <td class='docblock-short'>
+                                <p>Builder for messages without any additional contents.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.StreamVersion.html'
+                                  title='struct eventstore_tcp::builder::StreamVersion'>StreamVersion</a></td>
+                           <td class='docblock-short'>
+                                <p><code>StreamVersion</code> represents the valid values for a stream version which is the same as the
+event number of the latest event. As such, values are non-negative integers up to
+<code>i32::max_value</code>. Negative values of <code>i32</code> have special meaning in the protocol, and are
+restricted from used with this type.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.WriteEventsBuilder.html'
+                                  title='struct eventstore_tcp::builder::WriteEventsBuilder'>WriteEventsBuilder</a></td>
+                           <td class='docblock-short'>
+                                <p>Builder for <code>WriteEvents</code> which allows writing multiple events to a stream.</p>
+                           </td>
+                       </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='enum' href='enum.ContentType.html'
+                                  title='enum eventstore_tcp::builder::ContentType'>ContentType</a></td>
+                           <td class='docblock-short'>
+                                <p>Content type of the event <code>data</code> or <code>metadata</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='enum' href='enum.EventNumber.html'
+                                  title='enum eventstore_tcp::builder::EventNumber'>EventNumber</a></td>
+                           <td class='docblock-short'>
+                                <p><code>EventNumber</code> is similar to <code>StreamVersion</code> and <code>ExpectedVersion</code> but is used when specifying a
+position to read from in the stream. Allows specifying the first or last (when reading
+backwards) event in addition to exact event number.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='enum' href='enum.ExpectedVersion.html'
+                                  title='enum eventstore_tcp::builder::ExpectedVersion'>ExpectedVersion</a></td>
+                           <td class='docblock-short'>
+                                <p><code>ExpectedVersion</code> represents the different modes of optimistic locking when writing to a stream
+using <code>WriteEventsBuilder</code>.</p>
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "eventstore_tcp";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>
