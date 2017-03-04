@@ -227,11 +227,6 @@ pub struct WriteEventsCompleted {
 /// Does not work as well as hoped if there is some data to borrow.
 trait AsMessageWrite<M: quick_protobuf::MessageWrite> {
     fn as_message_write(&self) -> M;
-
-    fn encode<W: io::Write>(&self, out: &mut W) -> io::Result<()> {
-        let conv = self.as_message_write();
-        conv.write_message(&mut quick_protobuf::writer::Writer::new(out)).map_err(convert_qp_err)
-    }
 }
 
 impl AsMessageWrite<client_messages::WriteEventsCompleted<'static>> for WriteEventsCompleted {
@@ -326,19 +321,6 @@ impl ReadStreamSuccess {
     }
 }
 
-fn convert_qp_err(e: ::quick_protobuf::errors::Error) -> io::Error {
-    use std::io::{Error as IoError, ErrorKind as IoErrorKind};
-    use quick_protobuf::errors::{Error, ErrorKind};
-
-    // TODO: investigate why this is still needed
-    match e {
-        Error(ErrorKind::Io(e), _) => e,
-        Error(ErrorKind::Utf8(e), _) => IoError::new(IoErrorKind::InvalidData, e.utf8_error()),
-        Error(ErrorKind::StrUtf8(e), _) => IoError::new(IoErrorKind::InvalidData, e),
-        x => IoError::new(IoErrorKind::Other, x)
-    }
-}
-
 impl Message {
     fn decode(discriminator: u8, buf: &mut EasyBuf) -> io::Result<Message> {
         use client_messages_ext::MasterInfoExt;
@@ -347,7 +329,7 @@ impl Message {
             ($x:ty, $buf:expr) => {
                 {
                     let mut reader = ::quick_protobuf::reader::BytesReader::from_bytes($buf);
-                    let res = <$x>::from_reader(&mut reader, $buf).map_err(convert_qp_err);
+                    let res: Result<$x, io::Error> = <$x>::from_reader(&mut reader, $buf).map_err(|x| x.into());
                     assert!(reader.is_eof());
                     res
                 }
@@ -432,8 +414,13 @@ impl Message {
         use client_messages_ext::ResolvedIndexedEventExt;
 
         macro_rules! encode {
-            ($x: expr, $w: ident) => {
-                $x.write_message(&mut quick_protobuf::writer::Writer::new($w)).map_err(convert_qp_err)
+            ($x: expr, $w: expr) => {
+                {
+                    let mut writer = quick_protobuf::writer::Writer::new($w);
+                    let result: Result<(), io::Error> = $x.write_message(&mut writer)
+                        .map_err(|x| x.into());
+                    result
+                }
             }
         }
 
@@ -466,11 +453,8 @@ impl Message {
                 let additional_info = match x {
                     &Some(ref info) => {
                         let mut buf = Vec::new();
-                        info.write_message(&mut quick_protobuf::writer::Writer::new(&mut buf))
-                            .map(move |_| buf)
-                            .map(Cow::Owned)
-                            .map(Option::Some)
-                            .map_err(convert_qp_err)?
+                        encode!(info, &mut buf)?;
+                        Some(Cow::Owned(buf))
                     },
                     &None => None
                 };
