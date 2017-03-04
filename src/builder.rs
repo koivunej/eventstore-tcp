@@ -18,7 +18,7 @@ use std::borrow::Cow;
 use uuid::Uuid;
 use package::Package;
 use {UsernamePassword, Message, ReadDirection, ExpectedVersion, EventNumber, LogPosition, ContentType};
-use client_messages::{WriteEvents, NewEvent, ReadEvent, ReadStreamEvents};
+use client_messages::{WriteEvents, NewEvent, ReadEvent, ReadStreamEvents, ReadAllEvents};
 
 /// Factory factory for creating builders.
 pub struct Builder;
@@ -50,6 +50,12 @@ impl Builder {
     /// forwards or backwards.
     pub fn read_stream_events() -> ReadStreamEventsBuilder {
         ReadStreamEventsBuilder::new()
+    }
+
+    /// Builder for `ReadAllEevents` which allows reading off a stream of all events in the
+    /// database.
+    pub fn read_all_events() -> ReadAllEventsBuilder {
+        ReadAllEventsBuilder::new()
     }
 }
 
@@ -464,6 +470,85 @@ impl ReadStreamEventsBuilder {
     /// and `from_event_number` is specified.
     pub fn build_package(&mut self, authentication: Option<UsernamePassword>, correlation_id: Option<Uuid>) -> Package {
         build_package(self.build_message(), authentication, correlation_id)
+    }
+}
+
+/// Builder for `ReadAllEvents`.
+pub struct ReadAllEventsBuilder {
+    direction: Option<ReadDirection>,
+    commit_position: Option<LogPosition>,
+    prepare_position: Option<LogPosition>,
+    max_count: Option<u8>,
+    resolve_link_tos: Option<bool>,
+    require_master: Option<bool>,
+}
+
+impl ReadAllEventsBuilder {
+    fn new() -> Self {
+        ReadAllEventsBuilder {
+            direction: None,
+            commit_position: None,
+            prepare_position: None,
+            max_count: None,
+            resolve_link_tos: None,
+            require_master: None,
+        }
+    }
+
+    /// Set the read direction (required).
+    pub fn direction<D: Into<ReadDirection>>(&mut self, dir: D) -> &mut Self {
+        self.direction = Some(dir.into());
+        self
+    }
+
+    /// Sets the positions to read from. These are easiest to acquire from previous ReadAllSuccess
+    /// responses, likely persisted somewhere between reads.
+    pub fn positions<N: Into<LogPosition>, M: Into<LogPosition>>(&mut self, commit: N, prepare: M) -> &mut Self {
+        self.commit_position = Some(commit.into());
+        self.prepare_position = Some(prepare.into());
+        self
+    }
+
+    /// Sets the maximum number of events to read (required). Panics if argument is zero.
+    /// `u8` is used as larger batches should be paged. At the moment maximum buffer requirement
+    /// even for 255 events is 255*16MiB > 4000MB.
+    pub fn max_count(&mut self, count: u8) -> &mut Self {
+        assert!(count > 0);
+        // TODO: check ClientAPI, or just use u8?
+        self.max_count = Some(count);
+        self
+    }
+
+    /// Whether or not the server should resolve links found in the stream to events of other
+    /// streams. Defaults to `true`.
+    pub fn resolve_link_tos(&mut self, resolve: bool) -> &mut Self {
+        self.resolve_link_tos = Some(resolve);
+        self
+    }
+
+    /// Should the server only handle the request if it is the cluster master. Master server is the
+    /// only one which can accept writes, so reading from other members than master can result in
+    /// some specific event not yet being replicated and thus not found.
+    ///
+    /// Defaults to `false`.
+    pub fn require_master(&mut self, require: bool) -> &mut Self {
+        self.require_master = Some(require);
+        self
+    }
+
+    /// Build a package. Will panic if required values are not set.
+    /// Values of this builder will be moved into the package.
+    pub fn build_package(&mut self, authentication: Option<UsernamePassword>, correlation_id: Option<Uuid>) -> Package {
+        let msg = Message::ReadAllEvents(
+            self.direction.take().expect("direction"),
+            ReadAllEvents {
+                commit_position: self.commit_position.expect("position").into(),
+                prepare_position: self.prepare_position.unwrap().into(),
+                max_count: self.max_count.expect("max_count") as i32,
+                resolve_link_tos: self.resolve_link_tos.unwrap_or(true),
+                require_master: self.require_master.unwrap_or(true)
+            });
+        build_package(msg, authentication, correlation_id)
     }
 }
 
