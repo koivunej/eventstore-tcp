@@ -21,7 +21,12 @@ Please see the [documentation](https://koivunej.github.io/eventstore-tcp/eventst
 
 The repository also includes an aspiring command line client under `examples/testclient`.
 
-This crate is not yet available on crates.io as it depends on a custom fork of [tokio-proto](https://github.com/koivunej/tokio-proto/tree/generic-requestid).
+This crate is not yet available on crates.io as it depends on a custom fork of [tokio-proto](https://github.com/koivunej/tokio-proto/tree/generic-requestid) but you can try it out by adding this to your `Cargo.toml`:
+
+```
+[dependencies]
+eventstore-tcp = { git = "https://github.com/koivunej/eventstore-tcp.git" }
+```
 
 # Unimplemented features
 
