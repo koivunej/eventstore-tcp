@@ -30,7 +30,7 @@ eventstore-tcp = { git = "https://github.com/koivunej/eventstore-tcp.git" }
 
 # Unimplemented features
 
- 1. read events from `$all` stream
+ 1. ~~read events from `$all` stream~~
  2. deleting a stream
  3. volatile subscriptions:
    * refactoring to use `tokio_proto::streaming::multiplex` instead of `tokio_proto::multiplex`
