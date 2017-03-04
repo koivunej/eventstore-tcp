@@ -71,9 +71,8 @@ Then download the latest EventStore tar.gz and execute it with `./run-node.sh --
 
 # Rebuilding the `client_messages`
 
- 1. Obtain [ClientMessageDTOs.proto](https://github.com/EventStore/EventStore/blob/master/src/Protos/ClientAPI/ClientMessageDtos.proto) or (raw link)[https://raw.githubusercontent.com/EventStore/EventStore/master/src/Protos/ClientAPI/ClientMessageDtos.proto]
+ 1. Obtain [ClientMessageDTOs.proto](https://github.com/EventStore/EventStore/blob/master/src/Protos/ClientAPI/ClientMessageDtos.proto) or [raw link](https://raw.githubusercontent.com/EventStore/EventStore/master/src/Protos/ClientAPI/ClientMessageDtos.proto)
  2. Checkout latest `quick-protobuf`: `git clone https://github.com/tafia/quick-protobuf`
  3. `cd quick-protobuf/codegen`
- 4. `cargo run $es_proto_checkout/ClientMessageDTOs.proto`
- 5. `mv $es_proto_checkout/{ClientMessageDTOs,src/messages}.rs`
+ 4. `cargo run --single-mod --output $es_tcp_checkout/src/client_messages.rs ClientMessageDTOs.proto`
 
