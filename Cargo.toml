@@ -17,7 +17,7 @@ quick-protobuf = "0.4"
 futures = "0.1"
 tokio-core = "0.1"
 tokio-service = "0.1"
-tokio-proto = { git = "https://github.com/koivunej/tokio-proto", branch = "generic-requestid" }
+tokio-proto = { path = "tokio-proto" }
 
 [dev-dependencies]
 rustc-serialize = "*"

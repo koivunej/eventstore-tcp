@@ -1,0 +1,4 @@
+[submodule "tokio-proto"]
+	path = tokio-proto
+	url = https://github.com/koivunej/tokio-proto.git
+	branch = generic-requestid
