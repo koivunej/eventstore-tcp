@@ -97,13 +97,14 @@ use std::borrow::Cow;
 use tokio_core::io::EasyBuf;
 
 mod client_messages;
-pub use client_messages::{WriteEvents, ResolvedIndexedEvent};
+pub use client_messages::{WriteEvents, ResolvedIndexedEvent, ReadAllEvents};
+use client_messages::ReadAllEventsCompleted;
 pub use client_messages::mod_NotHandled::{NotHandledReason, MasterInfo};
 
 mod client_messages_ext;
 
 mod failures;
-pub use failures::{WriteEventsFailure, ReadEventFailure, ReadStreamFailure};
+pub use failures::{WriteEventsFailure, ReadEventFailure, ReadStreamFailure, ReadAllFailure};
 
 mod package;
 pub use package::Package;
@@ -190,6 +191,11 @@ pub enum Message {
     ReadStreamEvents(ReadDirection, client_messages::ReadStreamEvents<'static>),
     /// Response to a stream read in given direction
     ReadStreamEventsCompleted(ReadDirection, Result<ReadStreamSuccess, ReadStreamFailure>),
+
+    /// Request to read a stream of all events from a position forward or backward
+    ReadAllEvents(ReadDirection, client_messages::ReadAllEvents),
+    /// Response to a read all in given direction
+    ReadAllEventsCompleted(ReadDirection, Result<ReadAllSuccess, ReadAllFailure>),
 
     /// Request was not understood. Please open an issue!
     BadRequest(Option<String>),
@@ -305,7 +311,7 @@ impl<'a> From<(ReadDirection, client_messages::ReadStreamEventsCompleted<'a>)> f
 
 impl ReadStreamSuccess {
     #[doc(hidden)]
-    pub fn as_read_stream_events_completed<'a>(&'a self) -> client_messages::ReadStreamEventsCompleted<'a> {
+    pub fn as_message_write<'a>(&'a self) -> client_messages::ReadStreamEventsCompleted<'a> {
         use client_messages::mod_ReadStreamEventsCompleted::ReadStreamResult;
         use client_messages_ext::ResolvedIndexedEventExt;
 
@@ -316,6 +322,181 @@ impl ReadStreamSuccess {
             last_event_number: self.last_event_number.into(),
             is_end_of_stream: self.end_of_stream,
             last_commit_position: self.last_commit_position,
+            error: None,
+        }
+    }
+}
+
+/// Global unique position in the EventStore, used when reading all events.
+/// Range -1..i64::max_value()
+#[derive(Debug, Clone, Eq, PartialOrd, Ord)]
+pub enum LogPosition {
+    /// The first event ever
+    First,
+    /// Exact position
+    Exact(u64),
+    /// The last event written to the database at the moment
+    Last,
+}
+
+impl Copy for LogPosition {}
+
+impl PartialEq<LogPosition> for LogPosition {
+    fn eq(&self, other: &LogPosition) -> bool {
+        let left: i64 = (*self).into();
+        let right: i64 = (*other).into();
+        left == right
+    }
+}
+
+impl From<i64> for LogPosition {
+    fn from(val: i64) -> LogPosition {
+        match LogPosition::from_i64_opt(val) {
+            Some(x) => x,
+            None => panic!("LogPosition undeflow: {}", val),
+        }
+    }
+}
+
+impl Into<i64> for LogPosition {
+    fn into(self) -> i64 {
+        match self {
+            LogPosition::First => 0,
+            LogPosition::Exact(x) => x as i64,
+            LogPosition::Last => -1,
+        }
+    }
+}
+
+impl LogPosition {
+    /// Wraps the value into LogPosition or None, if it is larger than i64
+    pub fn from_opt(pos: u64) -> Option<LogPosition> {
+        match pos {
+            0 => Some(LogPosition::First),
+            pos => {
+                if pos < i64::max_value() as u64 {
+                    Some(LogPosition::Exact(pos))
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
+    #[doc(hidden)]
+    pub fn from_i64_opt(pos: i64) -> Option<LogPosition> {
+        match pos {
+            0 => Some(LogPosition::First),
+            -1 => Some(LogPosition::Last),
+            pos => {
+                if pos > 0 {
+                    Some(LogPosition::Exact(pos as u64))
+                } else {
+                    None
+                }
+            }
+        }
+    }
+}
+
+impl From<(ReadDirection, ReadAllEvents)> for Message {
+    fn from((dir, rae): (ReadDirection, ReadAllEvents)) -> Message {
+        Message::ReadAllEvents(dir, rae)
+    }
+}
+
+/// Successful response to `Message::ReadAllEvents`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReadAllSuccess {
+    commit_position: LogPosition,
+    prepare_position: LogPosition,
+    /// The read events, with position metadata
+    pub events: Vec<ResolvedEvent<'static>>,
+    next_commit_position: Option<LogPosition>,
+    next_prepare_position: Option<LogPosition>,
+}
+
+/// Read event in `ReadAllSuccess` response
+#[derive(Debug, Clone, PartialEq)]
+pub struct ResolvedEvent<'a> {
+    /// The read event
+    pub event: client_messages::EventRecord<'a>,
+    /// Possible linking event
+    pub link: Option<client_messages::EventRecord<'a>>,
+    /// Position where this events transaction is commited
+    pub commit_position: LogPosition,
+    /// Position where this event is stored
+    pub prepare_position: LogPosition,
+}
+
+impl<'a> From<client_messages::ResolvedEvent<'a>> for ResolvedEvent<'a> {
+    fn from(e: client_messages::ResolvedEvent<'a>) -> ResolvedEvent<'a> {
+        ResolvedEvent {
+            event: e.event.into(),
+            link: e.link.into(),
+            commit_position: e.commit_position.into(),
+            prepare_position: e.prepare_position.into()
+        }
+    }
+}
+
+impl<'a> ResolvedEvent<'a> {
+    fn into_owned(self) -> ResolvedEvent<'static> {
+        use client_messages_ext::EventRecordExt;
+        ResolvedEvent {
+            event: self.event.into_owned(),
+            link: self.link.map(|link| link.into_owned()),
+            commit_position: self.commit_position,
+            prepare_position: self.prepare_position,
+        }
+    }
+
+    fn borrowed<'b>(&'b self) -> client_messages::ResolvedEvent<'b> {
+        use client_messages_ext::EventRecordExt;
+        client_messages::ResolvedEvent {
+            event: self.event.borrowed(),
+            link: self.link.as_ref().map(|x| x.borrowed()),
+            commit_position: self.commit_position.into(),
+            prepare_position: self.prepare_position.into(),
+        }
+    }
+}
+
+impl<'a> From<(ReadDirection, ReadAllEventsCompleted<'a>)> for Message {
+    fn from((dir, resp): (ReadDirection, ReadAllEventsCompleted<'a>)) -> Message {
+        use client_messages::mod_ReadAllEventsCompleted::ReadAllResult;
+
+        let res = match resp.result {
+            ReadAllResult::Success => {
+                Ok(ReadAllSuccess {
+                    commit_position: resp.commit_position.into(),
+                    prepare_position: resp.prepare_position.into(),
+                    events: resp.events.into_iter().map(|x| {
+                        let er: ResolvedEvent<'a> = x.into();
+                        er.into_owned()
+                    }).collect(),
+                    next_commit_position: LogPosition::from_i64_opt(resp.next_commit_position),
+                    next_prepare_position: LogPosition::from_i64_opt(resp.next_prepare_position),
+                })
+            },
+            fail => Err((fail, resp.error).into()),
+        };
+
+        Message::ReadAllEventsCompleted(dir, res)
+    }
+}
+
+impl ReadAllSuccess {
+    fn as_message_write<'a>(&'a self) -> client_messages::ReadAllEventsCompleted<'a> {
+        use client_messages::mod_ReadAllEventsCompleted::ReadAllResult;
+
+        client_messages::ReadAllEventsCompleted {
+            commit_position: self.commit_position.into(),
+            prepare_position: self.prepare_position.into(),
+            events: self.events.iter().map(|x| x.borrowed()).collect(),
+            next_commit_position: self.next_commit_position.map(|x| x.into()).unwrap_or(-1),
+            next_prepare_position: self.next_prepare_position.map(|x| x.into()).unwrap_or(-1),
+            result: ReadAllResult::Success,
             error: None,
         }
     }
@@ -354,12 +535,10 @@ impl Message {
             0xB4 => (ReadDirection::Backward, parse!(client_messages::ReadStreamEvents, buf.as_slice())?).into(),
             0xB5 => (ReadDirection::Backward, parse!(client_messages::ReadStreamEventsCompleted, buf.as_slice())?).into(),
 
-            /*
-            0xB6 => { /* readalleventsfwd */ }
-            0xB7 => { /* readalleventsfwdcompleted */ }
-            0xB8 => { /* readalleventsbackwrd */ }
-            0xB9 => { /* readalleventsbackwrdcompleted */ }
-            */
+            0xB6 => (ReadDirection::Forward, parse!(client_messages::ReadAllEvents, buf.as_slice())?).into(),
+            0xB7 => (ReadDirection::Forward, parse!(client_messages::ReadAllEventsCompleted, buf.as_slice())?).into(),
+            0xB8 => (ReadDirection::Backward, parse!(client_messages::ReadAllEvents, buf.as_slice())?).into(),
+            0xB9 => (ReadDirection::Backward, parse!(client_messages::ReadAllEventsCompleted, buf.as_slice())?).into(),
 
             0xF0 => {
                 let info = if buf.len() > 0 {
@@ -440,11 +619,15 @@ impl Message {
 
             ReadEvent(ref re) => encode!(re, w)?,
             ReadEventCompleted(Ok(ref rie)) => encode!(rie.as_read_event_completed(), w)?,
-            ReadEventCompleted(Err(ref fail)) => encode!(fail.as_read_event_completed(), w)?,
+            ReadEventCompleted(Err(ref fail)) => encode!(fail.as_message_write(), w)?,
 
             ReadStreamEvents(_, ref body) => encode!(body, w)?,
-            ReadStreamEventsCompleted(_, Ok(ref success)) => encode!(success.as_read_stream_events_completed(), w)?,
-            ReadStreamEventsCompleted(_, Err(ref why)) => encode!(why.as_read_stream_events_completed(), w)?,
+            ReadStreamEventsCompleted(_, Ok(ref success)) => encode!(success.as_message_write(), w)?,
+            ReadStreamEventsCompleted(_, Err(ref why)) => encode!(why.as_message_write(), w)?,
+
+            ReadAllEvents(_, ref body) => encode!(body, w)?,
+            ReadAllEventsCompleted(_, Ok(ref success)) => encode!(success.as_message_write(), w)?,
+            ReadAllEventsCompleted(_, Err(ref why)) => encode!(why.as_message_write(), w)?,
 
             BadRequest(Some(ref info)) => w.write_all(info.as_bytes())?,
             BadRequest(None) => (),
@@ -490,6 +673,12 @@ impl Message {
 
             ReadStreamEvents(ReadDirection::Backward, _) => 0xB4,
             ReadStreamEventsCompleted(ReadDirection::Backward, _) => 0xB5,
+
+            ReadAllEvents(ReadDirection::Forward, _) => 0xB6,
+            ReadAllEventsCompleted(ReadDirection::Forward, _) => 0xB7,
+
+            ReadAllEvents(ReadDirection::Backward, _) => 0xB8,
+            ReadAllEventsCompleted(ReadDirection::Backward, _) => 0xB9,
 
             BadRequest(_) => 0xf0,
             NotHandled(..) => 0xf1,

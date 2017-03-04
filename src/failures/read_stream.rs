@@ -49,7 +49,7 @@ impl<'a> From<(ReadStreamResult, Option<Cow<'a, str>>)> for ReadStreamFailure {
 
 impl ReadStreamFailure {
     #[doc(hidden)]
-    pub fn as_read_stream_events_completed<'a>(&'a self) -> ReadStreamEventsCompleted<'a> {
+    pub fn as_message_write<'a>(&'a self) -> ReadStreamEventsCompleted<'a> {
         use ReadStreamFailure::*;
         let (res, msg): (ReadStreamResult, Option<Cow<'a, str>>) = match self {
             &NoStream => (ReadStreamResult::NoStream, None),

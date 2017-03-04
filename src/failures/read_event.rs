@@ -47,7 +47,7 @@ impl Into<(ReadEventResult, Option<Cow<'static, str>>)> for ReadEventFailure {
 impl ReadEventFailure {
     // TODO: this needs to become as_message_write()
     #[doc(hidden)]
-    pub fn as_read_event_completed<'a>(&'a self) -> ReadEventCompleted<'a> {
+    pub fn as_message_write<'a>(&'a self) -> ReadEventCompleted<'a> {
         use ReadEventFailure::*;
         let (res, msg): (ReadEventResult, Option<Cow<'a, str>>) = match self {
             &NotFound => (ReadEventResult::NotFound, None),

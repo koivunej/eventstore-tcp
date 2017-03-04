@@ -161,3 +161,29 @@ impl<'a> ReadStreamEventsExt<'a> for client_messages::ReadStreamEvents<'a> {
         }
     }
 }
+
+pub trait ResolvedEventExt<'a> {
+    fn into_owned(self) -> client_messages::ResolvedEvent<'static>;
+
+    fn borrowed<'b>(&'b self) -> client_messages::ResolvedEvent<'b>;
+}
+
+impl<'a> ResolvedEventExt<'a> for client_messages::ResolvedEvent<'a> {
+    fn into_owned(self) -> client_messages::ResolvedEvent<'static> {
+        client_messages::ResolvedEvent {
+            event: self.event.into_owned(),
+            link: self.link.map(|x| x.into_owned()),
+            commit_position: self.commit_position,
+            prepare_position: self.prepare_position,
+        }
+    }
+
+    fn borrowed<'b>(&'b self) -> client_messages::ResolvedEvent<'b> {
+        client_messages::ResolvedEvent {
+            event: self.event.borrowed(),
+            link: self.link.as_ref().map(|x| x.borrowed()),
+            commit_position: self.commit_position,
+            prepare_position: self.prepare_position,
+        }
+    }
+}
