@@ -19,7 +19,7 @@
 //!
 //! # Simplest example
 //!
-//! Example of sending a `Ping` message and receiving back a `Pong` response:
+//! Example of writing to the database and simple handling of the response.
 //!
 //! ```no_run
 //! extern crate futures;
@@ -258,8 +258,10 @@ pub struct ReadStreamSuccess {
     /// The actual events returned by the server. Subject to `resolve_link_tos` setting on the read
     /// request.
     pub events: Vec<ResolvedIndexedEvent<'static>>,
-    /// Event number of the first event
-    pub next_event_number: StreamVersion,
+    /// `EventNumber` for a query for the next page in the same direction, `None` if start has been
+    /// reached when reading backwards. When reading forwards, this will never be `None` as new
+    /// events might have appeared while receiving this response.
+    pub next_page: Option<EventNumber>,
     /// Event number of the last event
     pub last_event_number: StreamVersion,
     /// Has the end of the stream been reached (or could more events be read immediatedly)
@@ -277,10 +279,17 @@ impl<'a> From<(ReadDirection, client_messages::ReadStreamEventsCompleted<'a>)> f
 
         match completed.result {
             Some(ReadStreamResult::Success) => {
-                // FIXME: this can panic as well
+                let next_page = if dir == ReadDirection::Backward && completed.next_event_number < 0 {
+                    None
+                } else {
+                    EventNumber::from_i32_opt(completed.next_event_number)
+                };
+
+                // TODO: from_i32 can still panic but haven't found a legitimate situation
+
                 Message::ReadStreamEventsCompleted(dir, Ok(ReadStreamSuccess {
                     events: completed.events.into_iter().map(|x| x.into_owned()).collect(),
-                    next_event_number: StreamVersion::from_i32(completed.next_event_number),
+                    next_page: next_page,
                     last_event_number: StreamVersion::from_i32(completed.last_event_number),
                     end_of_stream: completed.is_end_of_stream,
                     last_commit_position: completed.last_commit_position,
@@ -292,7 +301,6 @@ impl<'a> From<(ReadDirection, client_messages::ReadStreamEventsCompleted<'a>)> f
                 Message::ReadStreamEventsCompleted(dir, Err((err, completed.error).into()))
             },
 
-            // FIXME: might not be a good idea to use such in-band errors..
             None => panic!("No result found from ReadStreamEventsCompleted"),
         }
     }
@@ -307,7 +315,7 @@ impl ReadStreamSuccess {
         client_messages::ReadStreamEventsCompleted {
             events: self.events.iter().map(|x| x.borrowed()).collect(),
             result: Some(ReadStreamResult::Success),
-            next_event_number: self.next_event_number.into(),
+            next_event_number: self.next_page.map(|x| x.into()).unwrap_or(-1),
             last_event_number: self.last_event_number.into(),
             is_end_of_stream: self.end_of_stream,
             last_commit_position: self.last_commit_position,
@@ -320,7 +328,7 @@ fn convert_qp_err(e: ::quick_protobuf::errors::Error) -> io::Error {
     use std::io::{Error as IoError, ErrorKind as IoErrorKind};
     use quick_protobuf::errors::{Error, ErrorKind};
 
-    // FIXME: not probably needed anymore?
+    // TODO: investigate why this is still needed
     match e {
         Error(ErrorKind::Io(e), _) => e,
         Error(ErrorKind::Utf8(e), _) => IoError::new(IoErrorKind::InvalidData, e.utf8_error()),

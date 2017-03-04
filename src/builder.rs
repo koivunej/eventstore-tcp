@@ -153,7 +153,7 @@ impl Into<i32> for StreamVersion {
 
 /// `EventNumber` is similar to `StreamVersion` and `ExpectedVersion` but is used when specifying a
 /// position to read from in the stream. Allows specifying the first or last (when reading
-/// backwards) event in addition to exact event.
+/// backwards) event in addition to exact event number.
 #[derive(Debug, Clone, Eq)]
 pub enum EventNumber {
     /// The first event in a stream
@@ -187,6 +187,21 @@ impl Into<i32> for EventNumber {
             EventNumber::First => 0,
             EventNumber::Exact(x) => x.into(),
             EventNumber::Last => -1
+        }
+    }
+}
+
+impl EventNumber {
+    #[doc(hidden)]
+    pub fn from_i32_opt(val: i32) -> Option<Self> {
+        match val {
+            0 => Some(EventNumber::First),
+            -1 => Some(EventNumber::Last),
+            x if x > 0 => Some(EventNumber::Exact(StreamVersion::from_i32(x))),
+            invalid => {
+                println!("invalid event number: {}", invalid);
+                None
+            }
         }
     }
 }

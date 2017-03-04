@@ -11,7 +11,8 @@ pub enum ReadStreamFailure {
     NoStream,
     /// Stream has been deleted
     StreamDeleted,
-    /// No new events to read
+    /// Unknown when this happens: it is not retuned when reading past the last event in a stream
+    /// forwards.
     NotModified,
     /// Other error
     Error(Option<Cow<'static, str>>),
