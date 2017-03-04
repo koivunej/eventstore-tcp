@@ -9,6 +9,7 @@ extern crate json;
 extern crate eventstore_tcp;
 
 use std::io;
+use std::env;
 use std::net::SocketAddr;
 use std::process;
 use std::str;
@@ -20,13 +21,44 @@ use tokio_service::Service;
 
 use clap::{Arg, App, SubCommand, ArgMatches};
 
-use eventstore_tcp::{EventStoreClient, Package, Message, Builder, ExpectedVersion, StreamVersion, EventNumber, ContentType, ReadDirection, ReadStreamSuccess, ResolvedIndexedEvent};
+use eventstore_tcp::{EventStoreClient, Package, Message, Builder, ExpectedVersion, StreamVersion, EventNumber, ContentType, ReadDirection, ReadStreamSuccess, EventRecord, LogPosition, UsernamePassword, ReadAllSuccess};
 
 #[derive(Debug, Clone)]
 enum Position {
     First,
     Exact(StreamVersion),
+    Log(LogPosition, LogPosition),
     Last
+}
+
+fn env_credentials() -> Option<UsernamePassword> {
+    let username = env::var("ES_USERNAME");
+    let password = env::var("ES_PASSWORD");
+
+    match (username, password) {
+        (Ok(u), Ok(p)) => Some(UsernamePassword::new(u, p)),
+        _ => None
+    }
+}
+
+impl Position {
+    fn into_log_position(self) -> (LogPosition, LogPosition) {
+        match self {
+            Position::Log(a, b) => (a, b),
+            Position::First => (LogPosition::First, LogPosition::First),
+            Position::Last => (LogPosition::Last, LogPosition::Last),
+            Position::Exact(v) => panic!("Invalid position for $all, it needs to be u64,u64, first or last, not: {:?}", v)
+        }
+    }
+
+    fn into_event_number(self) -> EventNumber {
+        match self {
+            Position::First => EventNumber::First,
+            Position::Exact(x) => EventNumber::Exact(x),
+            Position::Last => EventNumber::Last,
+            Position::Log(commit, prepare) => panic!("Invalid position for non-$all stream read: {:?}", (commit, prepare)),
+        }
+    }
 }
 
 impl<'a> From<&'a str> for Position {
@@ -34,17 +66,23 @@ impl<'a> From<&'a str> for Position {
         match s {
             "first" => Position::First,
             "last" => Position::Last,
-            x => Position::Exact(StreamVersion::from_opt(x.parse::<u32>().expect("Failed to parse position as u32")).expect("Position overflow"))
-        }
-    }
-}
+            x => {
+                let mut parts = s.split(",");
+                match (parts.next(), parts.next()) {
+                    (Some(a), Some(b)) => {
+                        let commit = LogPosition::from(a.parse::<i64>().unwrap());
+                        let prepare = LogPosition::from(b.parse::<i64>().unwrap());
 
-impl<'a> Into<EventNumber> for Position {
-    fn into(self) -> EventNumber {
-        match self {
-            Position::First => EventNumber::First,
-            Position::Exact(x) => EventNumber::Exact(x),
-            Position::Last => EventNumber::Last,
+                        Position::Log(commit, prepare)
+                    },
+                    _ => {
+                        Position::Exact(
+                            StreamVersion::from_opt(
+                                x.parse::<u32>().expect("Failed to parse position as u32"))
+                            .expect("Position overflow"))
+                    }
+                }
+            }
         }
     }
 }
@@ -77,7 +115,7 @@ impl<'a> From<&'a str> for OutputMode {
 
 impl OutputMode {
 
-    fn format_events<'a, Out: io::Write, ErrOut: io::Write>(&self, verbose: bool, events: Vec<ResolvedIndexedEvent<'a>>, out: &mut Out, err: &mut ErrOut) -> io::Result<()> {
+    fn format_events<'a, Out: io::Write, ErrOut: io::Write>(&self, verbose: bool, events: Vec<EventRecord<'a>>, out: &mut Out, err: &mut ErrOut) -> io::Result<()> {
         match *self {
             OutputMode::Debug => {
                 if verbose {
@@ -87,8 +125,7 @@ impl OutputMode {
                 }
             },
             OutputMode::JsonOneline => {
-                for resolved in events {
-                    let event = resolved.event;
+                for event in events {
 
                     let data = event.data;
                     let metadata = event.metadata;
@@ -147,9 +184,7 @@ impl OutputMode {
                 Ok(())
             },
             OutputMode::Hex => {
-                for resolved in events {
-                    let event = resolved.event;
-
+                for event in events {
                     for b in event.data.iter() {
                         write!(out, "{:02x}", b)?;
                     }
@@ -172,7 +207,7 @@ impl OutputMode {
 
         match msg {
             Message::ReadEventCompleted(Ok(rie)) => {
-                self.format_events(verbose, vec![rie], out, err)
+                self.format_events(verbose, vec![rie].into_iter().map(|x| x.event).collect(), out, err)
             }
             Message::ReadEventCompleted(Err(fail)) => {
                 if verbose {
@@ -182,9 +217,19 @@ impl OutputMode {
                 }
             }
             Message::ReadStreamEventsCompleted(_, Ok(ReadStreamSuccess { events, .. })) => {
-                self.format_events(verbose, events, out, err)
+                self.format_events(verbose, events.into_iter().map(|x| x.event).collect(), out, err)
             }
             Message::ReadStreamEventsCompleted(_, Err(fail)) => {
+                if verbose {
+                    writeln!(err, "{}: {:#?}", "Read failed", fail)
+                } else {
+                    writeln!(err, "{}: {:?}", "Read failed", fail)
+                }
+            }
+            Message::ReadAllEventsCompleted(_, Ok(ReadAllSuccess { events, .. })) => {
+                self.format_events(verbose, events.into_iter().map(|x| x.event).collect(), out, err)
+            }
+            Message::ReadAllEventsCompleted(_, Err(fail)) => {
                 if verbose {
                     writeln!(err, "{}: {:#?}", "Read failed", fail)
                 } else {
@@ -205,37 +250,43 @@ impl OutputMode {
 impl ReadMode {
     fn into_request(self, stream_id: &str) -> Package {
         use ReadMode::*;
+
+        let dir = match self {
+            ForwardOnce { .. } => ReadDirection::Forward,
+            Backward { .. } => ReadDirection::Backward,
+        };
+
         match self {
             ForwardOnce { position, count: 1 } | Backward { position, count: 1 } => {
                 Builder::read_event()
                     .stream_id(stream_id.to_owned())
-                    .event_number(position)
+                    .event_number(position.into_event_number())
                     .resolve_link_tos(true)
                     .require_master(false)
-                    .build_package(None, None)
+                    .build_package(env_credentials(), None)
             },
-            ForwardOnce { position, count } => {
-                Builder::read_stream_events()
-                    .direction(ReadDirection::Forward)
-                    .stream_id(stream_id.to_owned())
-                    .from_event_number(position)
-                    .max_count(count)
-                    .build_package(None, None)
+            ForwardOnce { position, count } | Backward { position, count } => {
+                if stream_id == "$all" {
+                    let (commit, prepare) = position.into_log_position();
+                    Builder::read_all_events()
+                        .direction(dir)
+                        .positions(commit, prepare)
+                        .max_count(count)
+                        .build_package(env_credentials(), None)
+                } else {
+                    Builder::read_stream_events()
+                        .direction(dir)
+                        .stream_id(stream_id.to_owned())
+                        .from_event_number(position.into_event_number())
+                        .max_count(count)
+                        .build_package(env_credentials(), None)
+                }
             },
-            Backward { position, count } => {
-                Builder::read_stream_events()
-                    .direction(ReadDirection::Backward)
-                    .stream_id(stream_id.to_owned())
-                    .from_event_number(position)
-                    .max_count(count)
-                    .build_package(None, None)
-            }
         }
     }
 }
 
 fn main() {
-
     let matches = App::new(crate_name!())
         .version(crate_version!())
         .about(crate_description!())
@@ -387,7 +438,7 @@ fn ping(addr: SocketAddr, verbose: bool) -> Result<(), io::Error> {
         .map(|client| (client, Instant::now()))
         .and_then(|(client, connected)| {
 
-            let f = client.call(Builder::ping().build_package(None, None));
+            let f = client.call(Builder::ping().build_package(env_credentials(), None));
             let send_began = Instant::now();
 
             f.map(move |resp| (resp, connected, send_began))
@@ -442,7 +493,7 @@ fn prepare_write<'a>(args: &ArgMatches<'a>) -> Package {
         event.done();
     }
 
-    builder.build_package(None, None)
+    builder.build_package(env_credentials(), None)
 }
 
 fn write(addr: SocketAddr, verbose: bool, pkg: Package) -> Result<(), io::Error> {

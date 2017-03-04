@@ -97,7 +97,7 @@ use std::borrow::Cow;
 use tokio_core::io::EasyBuf;
 
 mod client_messages;
-pub use client_messages::{WriteEvents, ResolvedIndexedEvent, ReadAllEvents};
+pub use client_messages::{WriteEvents, ResolvedIndexedEvent, EventRecord, ReadAllEvents};
 use client_messages::ReadAllEventsCompleted;
 pub use client_messages::mod_NotHandled::{NotHandledReason, MasterInfo};
 
