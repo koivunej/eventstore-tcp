@@ -1,9 +1,12 @@
 [package]
 name = "eventstore-tcp"
 description = "Tokio-based EventStore client API in Rust"
+keywords = ["tokio", "eventstore", "tcp", "client"]
 repository = "https://github.com/koivunej/eventstore-tcp"
 version = "0.1.0"
 authors = ["Joonas Koivunen <joonas.koivunen@gmail.com>"]
+license = "MIT"
+
 
 [dependencies]
 bitflags = "0.7"
