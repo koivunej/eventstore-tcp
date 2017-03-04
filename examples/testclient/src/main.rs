@@ -21,7 +21,59 @@ use tokio_service::Service;
 
 use clap::{Arg, App, SubCommand, ArgMatches};
 
-use eventstore_tcp::{EventStoreClient, Package, Message, Builder, ExpectedVersion, StreamVersion, EventNumber, ContentType, ReadDirection, ReadStreamSuccess, EventRecord, LogPosition, UsernamePassword, ReadAllSuccess};
+use eventstore_tcp::{EventStoreClient, Package, Message, Builder, ExpectedVersion, StreamVersion, EventNumber, ContentType, ReadDirection, ReadStreamSuccess, EventRecord, LogPosition, UsernamePassword, ReadAllSuccess, ReadEventFailure, ReadStreamFailure, ReadAllFailure};
+
+#[derive(Debug)]
+enum ByteParsingError {
+    Utf8(str::Utf8Error),
+    Json(json::Error)
+}
+
+impl From<str::Utf8Error> for ByteParsingError {
+    fn from(e: str::Utf8Error) -> Self { ByteParsingError::Utf8(e) }
+}
+
+impl From<json::Error> for ByteParsingError {
+    fn from(e: json::Error) -> Self { ByteParsingError::Json(e) }
+}
+
+struct JsonWrapper<'a, 'b: 'a>(&'a EventRecord<'b>);
+
+impl<'a, 'b: 'a> JsonWrapper<'b, 'a> {
+    fn parse_bytes(bytes: &'a [u8]) -> Result<json::JsonValue, ByteParsingError> {
+        str::from_utf8(bytes)
+            .map_err(ByteParsingError::from)
+            .and_then(|s| if s.len() > 0 { Ok(json::parse(s)?) } else { Ok(json::JsonValue::new_object()) })
+    }
+
+    fn as_json(&self) -> Result<json::JsonValue, ByteParsingError> {
+        let ref event = self.0;
+
+        let (data, metadata) = Self::parse_bytes(&*event.data)
+            .and_then(|data|
+                event.metadata.as_ref()
+                  .map(|x| Self::parse_bytes(x))
+                  .unwrap_or(Ok("".to_string().into()))
+                  .map(move |metadata| (data, metadata)))?;
+
+        let mut obj = json::object::Object::new();
+        obj.insert("data", data);
+        obj.insert("metadata", metadata);
+
+        Ok(obj.into())
+    }
+}
+
+#[derive(Debug)]
+enum ReadFailure {
+    Event(ReadEventFailure),
+    Stream(ReadStreamFailure),
+    All(ReadAllFailure)
+}
+
+impl From<ReadEventFailure> for ReadFailure { fn from(e: ReadEventFailure) -> Self { ReadFailure::Event(e) } }
+impl From<ReadStreamFailure> for ReadFailure { fn from(e: ReadStreamFailure) -> Self { ReadFailure::Stream(e) } }
+impl From<ReadAllFailure> for ReadFailure { fn from(e: ReadAllFailure) -> Self { ReadFailure::All(e) } }
 
 #[derive(Debug, Clone)]
 enum Position {
@@ -115,91 +167,62 @@ impl<'a> From<&'a str> for OutputMode {
 
 impl OutputMode {
 
-    fn format_events<'a, Out: io::Write, ErrOut: io::Write>(&self, verbose: bool, events: Vec<EventRecord<'a>>, out: &mut Out, err: &mut ErrOut) -> io::Result<()> {
+    fn format_event<'a, Out: io::Write, ErrOut: io::Write>(&self, verbose: bool, event: EventRecord<'a>, out: &mut Out, err: &mut ErrOut) -> io::Result<()> {
         match *self {
             OutputMode::Debug => {
                 if verbose {
-                    writeln!(out, "{:#?}", events)
+                    writeln!(out, "{:#?}", event)
                 } else {
-                    writeln!(out, "{:?}", events)
+                    writeln!(out, "{:?}", event)
                 }
             },
             OutputMode::JsonOneline => {
-                for event in events {
-
-                    let data = event.data;
-                    let metadata = event.metadata;
-
-                    let as_str = str::from_utf8(&*data)
-                        .and_then(|data| {
-                            match metadata {
-                                Some(ref meta) => {
-                                    str::from_utf8(&*meta)
-                                        .map(move |metadata| (data, metadata))
-                                },
-                                None => Ok((data, ""))
-                            }
-                    });
-
-                    match as_str {
-                        Ok((data, metadata)) => {
-                            let parsed = json::parse(data)
-                                .and_then(|data| {
-                                    if metadata.len() == 0 {
-                                        Ok((data, json::JsonValue::new_object()))
-                                    } else {
-                                        json::parse(metadata)
-                                            .map(move |metadata| (data, metadata))
-                                    }
-                                });
-
-                            match parsed {
-                                Ok((data, metadata)) => {
-                                    let mut obj = json::object::Object::new();
-                                    obj.insert("data", data);
-                                    obj.insert("metadata", metadata);
-                                    json::JsonValue::from(obj).write(out)?;
-                                    writeln!(out, "")?;
-                                },
-                                Err(fail) => {
-                                    writeln!(
-                                        err,
-                                        "Failed to parse event {}@{}: {}",
-                                        event.event_stream_id,
-                                        event.event_number,
-                                        fail)?
-                                }
-                            }
-                        },
-                        Err(e) => {
-                            writeln!(
-                                err,
-                                "Event {}@{} and it's metadata is not utf8: {}",
-                                event.event_stream_id,
-                                event.event_number,
-                                e)?
-                        }
+                match JsonWrapper(&event).as_json() {
+                    Ok(obj) => {
+                        obj.write(out)?;
+                        writeln!(out, "")?;
+                    },
+                    Err(fail) => {
+                        writeln!(
+                            err,
+                            "Failed to parse event {}@{}: {:?}",
+                            event.event_stream_id,
+                            event.event_number,
+                            fail)?
                     }
                 }
                 Ok(())
             },
             OutputMode::Hex => {
-                for event in events {
-                    for b in event.data.iter() {
+                for b in event.data.iter() {
+                    write!(out, "{:02x}", b)?;
+                }
+
+                if let Some(meta) = event.metadata {
+                    write!(out, " ")?;
+                    for b in meta.iter() {
                         write!(out, "{:02x}", b)?;
                     }
-
-                    if let Some(meta) = event.metadata {
-                        write!(out, " ")?;
-                        for b in meta.iter() {
-                            write!(out, "{:02x}", b)?;
-                        }
-                    }
-
-                    writeln!(out, "")?;
                 }
+
+                writeln!(out, "")?;
                 Ok(())
             }
+        }
+    }
+
+    fn format_events<'a, Out: io::Write, ErrOut: io::Write>(&self, verbose: bool, events: Vec<EventRecord<'a>>, out: &mut Out, err: &mut ErrOut) -> io::Result<()> {
+        for event in events {
+            self.format_event(verbose, event, out, err)?;
+        }
+        Ok(())
+    }
+
+    fn format_fail<Out: io::Write, ErrOut: io::Write>(&self, verbose: bool, fail: ReadFailure, _: &mut Out, err: &mut ErrOut) -> io::Result<()> {
+        if verbose {
+            writeln!(err, "{}: {:#?}", "Read failed", fail)
+        } else {
+            writeln!(err, "{}: {:?}", "Read failed", fail)
         }
     }
 
@@ -209,32 +232,20 @@ impl OutputMode {
             Message::ReadEventCompleted(Ok(rie)) => {
                 self.format_events(verbose, vec![rie].into_iter().map(|x| x.event).collect(), out, err)
             }
-            Message::ReadEventCompleted(Err(fail)) => {
-                if verbose {
-                    writeln!(err, "{}: {:#?}", "Read failed", fail)
-                } else {
-                    writeln!(err, "{}: {:?}", "Read failed", fail)
-                }
-            }
             Message::ReadStreamEventsCompleted(_, Ok(ReadStreamSuccess { events, .. })) => {
                 self.format_events(verbose, events.into_iter().map(|x| x.event).collect(), out, err)
-            }
-            Message::ReadStreamEventsCompleted(_, Err(fail)) => {
-                if verbose {
-                    writeln!(err, "{}: {:#?}", "Read failed", fail)
-                } else {
-                    writeln!(err, "{}: {:?}", "Read failed", fail)
-                }
             }
             Message::ReadAllEventsCompleted(_, Ok(ReadAllSuccess { events, .. })) => {
                 self.format_events(verbose, events.into_iter().map(|x| x.event).collect(), out, err)
             }
+            Message::ReadEventCompleted(Err(fail)) => {
+                self.format_fail(verbose, fail.into(), out, err)
+            }
+            Message::ReadStreamEventsCompleted(_, Err(fail)) => {
+                self.format_fail(verbose, fail.into(), out, err)
+            }
             Message::ReadAllEventsCompleted(_, Err(fail)) => {
-                if verbose {
-                    writeln!(err, "{}: {:#?}", "Read failed", fail)
-                } else {
-                    writeln!(err, "{}: {:?}", "Read failed", fail)
-                }
+                self.format_fail(verbose, fail.into(), out, err)
             }
             x => {
                 if verbose {
