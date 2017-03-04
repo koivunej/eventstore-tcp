@@ -15,11 +15,13 @@ There exists already a crate for that: [http_event_store](https://crates.io/crat
 The TCP protocol is multiplexed, custom framed with the payloads specified as protobuf messages.
 Some of the payloads are exposed by the current version of this API.
 
-## Examples
+## Examples and usage
 
-Please see the documentation (hopefully soon at docs.rs).
+Please see the [documentation](https://koivunej.github.io/eventstore-tcp/eventstore_tcp/index.html).
 
 The repository also includes an aspiring command line client under `examples/testclient`.
+
+This crate is not yet available on crates.io as it depends on a custom fork of [tokio-proto](https://github.com/koivunej/tokio-proto/tree/generic-requestid).
 
 # Unimplemented features
 
