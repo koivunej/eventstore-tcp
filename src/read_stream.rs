@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use client_messages::ReadStreamEventsCompleted;
+use client_messages::{self, ReadStreamEventsCompleted};
 use client_messages::mod_ReadStreamEventsCompleted::ReadStreamResult;
 use client_messages::ResolvedIndexedEvent;
 use {Message, StreamVersion, EventNumber, ReadDirection};
@@ -54,6 +54,13 @@ impl<'a> From<(ReadDirection, ReadStreamEventsCompleted<'a>)> for Message {
 
             None => panic!("No result found from ReadStreamEventsCompleted"),
         }
+    }
+}
+
+impl<'a> From<(ReadDirection, client_messages::ReadStreamEvents<'a>)> for Message {
+    fn from((dir, body): (ReadDirection, client_messages::ReadStreamEvents<'a>)) -> Message {
+        use client_messages_ext::ReadStreamEventsExt;
+        Message::ReadStreamEvents(dir, body.into_owned())
     }
 }
 

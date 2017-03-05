@@ -1,6 +1,7 @@
 use std::borrow::Cow;
-use client_messages::{ReadEventCompleted, EventRecord, ResolvedIndexedEvent};
+use client_messages::{self, ReadEventCompleted, EventRecord, ResolvedIndexedEvent};
 use client_messages::mod_ReadEventCompleted::ReadEventResult;
+use {Message};
 
 /// `ReadEventFailure` maps to non-success of `ReadEventResult`
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -15,6 +16,29 @@ pub enum ReadEventFailure {
     Error(Option<Cow<'static, str>>),
     /// Access was denied (no credentials provided or insufficient permissions)
     AccessDenied
+}
+
+impl<'a> From<client_messages::ReadEventCompleted<'a>> for Message {
+    fn from(rec: client_messages::ReadEventCompleted<'a>) -> Self {
+        use client_messages::mod_ReadEventCompleted::ReadEventResult;
+        use client_messages_ext::ResolvedIndexedEventExt;
+
+        // FIXME: can panic
+        let res = match rec.result {
+            Some(ReadEventResult::Success) => Ok(rec.event.into_owned()),
+            Some(other) => Err((other, rec.error).into()),
+            None => panic!("ReadEventResult was not found in the received message"),
+        };
+
+        Message::ReadEventCompleted(res)
+    }
+}
+
+impl<'a> From<client_messages::ReadEvent<'a>> for Message {
+    fn from(re: client_messages::ReadEvent<'a>) -> Self {
+        use client_messages_ext::ReadEventExt;
+        Message::ReadEvent(re.into_owned())
+    }
 }
 
 impl<'a> From<(ReadEventResult, Option<Cow<'a, str>>)> for ReadEventFailure {

@@ -92,7 +92,7 @@ extern crate tokio_service;
 extern crate rustc_serialize;
 
 use std::io;
-use std::ops::{Deref, Range};
+use std::ops::Deref;
 use std::borrow::Cow;
 use tokio_core::io::EasyBuf;
 
@@ -102,8 +102,8 @@ pub use client_messages::mod_NotHandled::{NotHandledReason, MasterInfo};
 
 mod client_messages_ext;
 
-mod failures;
-pub use failures::{WriteEventsFailure};
+mod write_events;
+pub use write_events::{WriteEventsCompleted, WriteEventsFailure};
 
 mod read_event;
 pub use read_event::ReadEventFailure;
@@ -383,43 +383,10 @@ pub enum Message {
     NotAuthenticated
 }
 
-/// Successful response to `Message::WriteEvents`
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WriteEventsCompleted {
-    /// The event number range assigned to the written events
-    pub event_numbers: Range<i32>,
-
-    /// Not public: missing type for positive i64
-    prepare_position: Option<i64>,
-
-    /// Not public: missing type for positive i64
-    commit_position: Option<i64>,
-}
-
 /// Trait allows converting values to wire structs that borrow data from the implementing type.
 /// Does not work as well as hoped if there is some data to borrow.
 trait AsMessageWrite<M: quick_protobuf::MessageWrite> {
     fn as_message_write(&self) -> M;
-}
-
-impl AsMessageWrite<client_messages::WriteEventsCompleted<'static>> for WriteEventsCompleted {
-    fn as_message_write(&self) -> client_messages::WriteEventsCompleted<'static> {
-        client_messages::WriteEventsCompleted {
-            result: Some(client_messages::OperationResult::Success),
-            message: None,
-            first_event_number: self.event_numbers.start,
-            last_event_number: self.event_numbers.end - 1,
-            prepare_position: self.prepare_position,
-            commit_position: self.commit_position
-        }
-    }
-}
-
-impl<'a> From<(ReadDirection, client_messages::ReadStreamEvents<'a>)> for Message {
-    fn from((dir, body): (ReadDirection, client_messages::ReadStreamEvents<'a>)) -> Message {
-        use client_messages_ext::ReadStreamEventsExt;
-        Message::ReadStreamEvents(dir, body.into_owned())
-    }
 }
 
 /// Global unique position in the EventStore, used when reading all events.
@@ -678,60 +645,5 @@ impl Message {
             Authenticated => 0xf3,
             NotAuthenticated => 0xf4
         }
-    }
-}
-
-impl<'a> From<WriteEvents<'a>> for Message {
-    fn from(we: WriteEvents<'a>) -> Self {
-        use client_messages_ext::WriteEventsExt;
-        Message::WriteEvents(we.into_owned())
-    }
-}
-
-impl<'a> From<client_messages::ReadEvent<'a>> for Message {
-    fn from(re: client_messages::ReadEvent<'a>) -> Self {
-        use client_messages_ext::ReadEventExt;
-        Message::ReadEvent(re.into_owned())
-    }
-}
-
-// these two are problematic and would probably be best served by using tryfrom
-// but as it's not yet stable, just use From with panics.
-
-impl<'a> From<client_messages::WriteEventsCompleted<'a>> for Message {
-    fn from(wec: client_messages::WriteEventsCompleted<'a>) -> Self {
-        use client_messages::OperationResult::*;
-
-        // FIXME: can panic
-        let res = match wec.result {
-            Some(Success) => {
-                Ok(WriteEventsCompleted {
-                    // off-by one: Range is [start, end)
-                    event_numbers: wec.first_event_number..wec.last_event_number + 1,
-                    prepare_position: wec.prepare_position,
-                    commit_position: wec.commit_position,
-                })
-            }
-            Some(other) => Err(other.into()),
-            None => panic!("OperationResult was not found in the received message"),
-        };
-
-        Message::WriteEventsCompleted(res)
-    }
-}
-
-impl<'a> From<client_messages::ReadEventCompleted<'a>> for Message {
-    fn from(rec: client_messages::ReadEventCompleted<'a>) -> Self {
-        use client_messages::mod_ReadEventCompleted::ReadEventResult;
-        use client_messages_ext::ResolvedIndexedEventExt;
-
-        // FIXME: can panic
-        let res = match rec.result {
-            Some(ReadEventResult::Success) => Ok(rec.event.into_owned()),
-            Some(other) => Err((other, rec.error).into()),
-            None => panic!("ReadEventResult was not found in the received message"),
-        };
-
-        Message::ReadEventCompleted(res)
     }
 }
