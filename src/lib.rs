@@ -87,6 +87,8 @@ extern crate futures;
 extern crate tokio_core;
 extern crate tokio_proto;
 extern crate tokio_service;
+#[macro_use]
+extern crate rental;
 
 #[cfg(test)]
 extern crate rustc_serialize;

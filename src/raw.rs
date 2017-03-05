@@ -7,6 +7,37 @@ use client_messages::{WriteEvents, WriteEventsCompleted, ReadEvent, ReadEventCom
 
 use ReadDirection;
 
+rental! {
+    mod rent_lib {
+        use super::RawMessage;
+        pub rental RentRawMessage<'rental>(Vec<u8>, RawMessage<'rental>);
+    }
+}
+
+struct OwningRawMessage {
+    inner: self::rent_lib::RentRawMessage<'static>,
+}
+
+impl OwningRawMessage {
+    fn decode_owned(discriminator: u8, buf: &mut EasyBuf) -> io::Result<OwnedRawMessage> {
+        // betting here that the decoding works out ok
+        let bytes = buf.as_slice().to_vec();
+        let rentable = self::rent_lib::RentRawMessage::try_new(
+            bytes, |bytes| RawMessage::decode(discriminator, bytes))
+            .map_err(|(e, _)| e)?;
+        Ok(OwnedRawMessage {
+            inner: rentable
+        })
+    }
+
+    fn raw_message<'a>(&'a self) -> &RawMessage<'a> {
+        use rental::Rental;
+        unsafe {
+            self.inner.rental()
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum RawMessage<'a> {
     /// Requests heartbeat from the other side. Unsure if clients or server sends these.
@@ -57,6 +88,7 @@ pub enum RawMessage<'a> {
     /// authentication was not accepted. May contain a reason.
     NotAuthenticated(Cow<'a, [u8]>),
 
+    /// Placeholder for a discriminator and the undecoded bytes
     Unsupported(u8, Cow<'a, [u8]>),
 }
 
