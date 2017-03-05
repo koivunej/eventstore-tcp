@@ -128,6 +128,8 @@ pub use builder::Builder;
 mod auth;
 pub use auth::UsernamePassword;
 
+mod raw;
+
 mod errors {
     use std::str;
     use std::io;
