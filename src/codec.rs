@@ -138,7 +138,7 @@ mod tests {
     use super::{PackageCodec};
     use package::Package;
     use errors;
-    use {Message, WriteEventsCompleted};
+    use {Message, WriteEventsCompleted, StreamVersion};
 
     #[test]
     fn decode_ping() {
@@ -210,9 +210,9 @@ mod tests {
                               correlation_id:
                                   Uuid::parse_str("9b59d873-4e9f-d84e-b8a4-21f2666a3aa4").unwrap(),
                               message: Message::WriteEventsCompleted(Ok(WriteEventsCompleted {
-                                  event_numbers: 30..40,
-                                  prepare_position: Some(181349124),
-                                  commit_position: Some(181349124)
+                                  event_numbers: StreamVersion::from(30)..StreamVersion::from(40),
+                                  prepare_position: Some(181349124.into()),
+                                  commit_position: Some(181349124.into())
                               }))
                           });
     }
@@ -226,9 +226,9 @@ mod tests {
                               correlation_id:
                                   Uuid::parse_str("9b59d873-4e9f-d84e-b8a4-21f2666a3aa4").unwrap(),
                               message: Message::WriteEventsCompleted(Ok(WriteEventsCompleted {
-                                  event_numbers: 30..40,
-                                  prepare_position: Some(181349124),
-                                  commit_position: Some(181349124)
+                                  event_numbers: StreamVersion::from(30)..StreamVersion::from(40),
+                                  prepare_position: Some(181349124.into()),
+                                  commit_position: Some(181349124.into())
                               }))
                           });
 

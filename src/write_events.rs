@@ -2,7 +2,7 @@ use std::fmt;
 use std::error::Error;
 use std::ops::Range;
 use client_messages::{self, OperationResult, WriteEvents};
-use {Message, AsMessageWrite};
+use {Message, AsMessageWrite, StreamVersion, LogPosition};
 
 impl<'a> From<WriteEvents<'a>> for Message {
     fn from(we: WriteEvents<'a>) -> Self {
@@ -11,28 +11,39 @@ impl<'a> From<WriteEvents<'a>> for Message {
     }
 }
 
+fn range_from_parts(start: i32, end: i32) -> Range<StreamVersion> {
+    StreamVersion::from_i32(start)..StreamVersion::from_i32(end + 1)
+}
+
+fn range_to_parts(r: &Range<StreamVersion>) -> (i32, i32) {
+    let start: i32 = r.start.into();
+    let end: i32 = r.end.into();
+    (start, end - 1)
+}
+
 /// Successful response to `Message::WriteEvents`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WriteEventsCompleted {
     /// The event number range assigned to the written events
-    pub event_numbers: Range<i32>,
+    pub event_numbers: Range<StreamVersion>,
 
-    /// Not public: missing type for positive i64
-    pub prepare_position: Option<i64>,
+    /// Position for `$all` query for one of the written events, perhaps the first?
+    pub prepare_position: Option<LogPosition>,
 
-    /// Not public: missing type for positive i64
-    pub commit_position: Option<i64>,
+    /// These can be used to locate last written event from the `$all` stream
+    pub commit_position: Option<LogPosition>,
 }
 
 impl AsMessageWrite<client_messages::WriteEventsCompleted<'static>> for WriteEventsCompleted {
     fn as_message_write(&self) -> client_messages::WriteEventsCompleted<'static> {
+        let parts = range_to_parts(&self.event_numbers);
         client_messages::WriteEventsCompleted {
             result: Some(client_messages::OperationResult::Success),
             message: None,
-            first_event_number: self.event_numbers.start,
-            last_event_number: self.event_numbers.end - 1,
-            prepare_position: self.prepare_position,
-            commit_position: self.commit_position
+            first_event_number: parts.0,
+            last_event_number: parts.1,
+            prepare_position: self.prepare_position.map(|x| x.into()),
+            commit_position: self.commit_position.map(|x| x.into()),
         }
     }
 }
@@ -45,10 +56,12 @@ impl<'a> From<client_messages::WriteEventsCompleted<'a>> for Message {
         let res = match wec.result {
             Some(Success) => {
                 Ok(WriteEventsCompleted {
-                    // off-by one: Range is [start, end)
-                    event_numbers: wec.first_event_number..wec.last_event_number + 1,
-                    prepare_position: wec.prepare_position,
-                    commit_position: wec.commit_position,
+                    event_numbers: range_from_parts(wec.first_event_number, wec.last_event_number),
+                    // unsure if these should be:
+                    //  * separate (instead of newtype for tuple)
+                    //  * options
+                    prepare_position: wec.prepare_position.map(|x| x.into()),
+                    commit_position: wec.commit_position.map(|x| x.into()),
                 })
             }
             Some(other) => Err(other.into()),
