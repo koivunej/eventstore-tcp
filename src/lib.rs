@@ -98,13 +98,21 @@ use tokio_core::io::EasyBuf;
 
 mod client_messages;
 pub use client_messages::{WriteEvents, ResolvedIndexedEvent, EventRecord, ReadAllEvents};
-use client_messages::ReadAllEventsCompleted;
 pub use client_messages::mod_NotHandled::{NotHandledReason, MasterInfo};
 
 mod client_messages_ext;
 
 mod failures;
-pub use failures::{WriteEventsFailure, ReadEventFailure, ReadStreamFailure, ReadAllFailure};
+pub use failures::{WriteEventsFailure};
+
+mod read_event;
+pub use read_event::ReadEventFailure;
+
+mod read_stream;
+pub use read_stream::{ReadStreamSuccess, ReadStreamFailure};
+
+mod read_all;
+pub use read_all::{ReadAllSuccess, ReadAllFailure};
 
 mod package;
 pub use package::Package;
@@ -322,7 +330,6 @@ impl Into<i32> for ContentType {
     }
 }
 
-
 /// Enumeration of currently supported messages. The plan is to include every defined message while trying
 /// to decode responses into `Result` alike messages, such as `ReadEventCompleted`.
 #[derive(Debug, PartialEq)]
@@ -415,78 +422,6 @@ impl<'a> From<(ReadDirection, client_messages::ReadStreamEvents<'a>)> for Messag
     }
 }
 
-/// Successful response to a `Message::ReadStreamEvents`.
-#[derive(Debug, PartialEq, Clone)]
-pub struct ReadStreamSuccess {
-    /// The actual events returned by the server. Subject to `resolve_link_tos` setting on the read
-    /// request.
-    pub events: Vec<ResolvedIndexedEvent<'static>>,
-    /// `EventNumber` for a query for the next page in the same direction, `None` if start has been
-    /// reached when reading backwards. When reading forwards, this will never be `None` as new
-    /// events might have appeared while receiving this response.
-    pub next_page: Option<EventNumber>,
-    /// Event number of the last event
-    pub last_event_number: StreamVersion,
-    /// Has the end of the stream been reached (or could more events be read immediatedly)
-    pub end_of_stream: bool,
-
-    /// Last commit position of the last event. Not public as there is currently no type for an
-    /// positive i64 (0 < x < i64). Also, not sure how to explain the use of this property.
-    last_commit_position: i64,
-}
-
-impl<'a> From<(ReadDirection, client_messages::ReadStreamEventsCompleted<'a>)> for Message {
-    fn from((dir, completed): (ReadDirection, client_messages::ReadStreamEventsCompleted<'a>)) -> Message {
-        use client_messages::mod_ReadStreamEventsCompleted::ReadStreamResult;
-        use client_messages_ext::ResolvedIndexedEventExt;
-
-        match completed.result {
-            Some(ReadStreamResult::Success) => {
-                let next_page = if dir == ReadDirection::Backward && completed.next_event_number < 0 {
-                    None
-                } else {
-                    EventNumber::from_i32_opt(completed.next_event_number)
-                };
-
-                // TODO: from_i32 can still panic but haven't found a legitimate situation
-
-                Message::ReadStreamEventsCompleted(dir, Ok(ReadStreamSuccess {
-                    events: completed.events.into_iter().map(|x| x.into_owned()).collect(),
-                    next_page: next_page,
-                    last_event_number: StreamVersion::from_i32(completed.last_event_number),
-                    end_of_stream: completed.is_end_of_stream,
-                    last_commit_position: completed.last_commit_position,
-                }))
-            },
-
-            Some(err) => {
-                // TODO: last_commit_position has readable value which is discarded here
-                Message::ReadStreamEventsCompleted(dir, Err((err, completed.error).into()))
-            },
-
-            None => panic!("No result found from ReadStreamEventsCompleted"),
-        }
-    }
-}
-
-impl ReadStreamSuccess {
-    #[doc(hidden)]
-    pub fn as_message_write<'a>(&'a self) -> client_messages::ReadStreamEventsCompleted<'a> {
-        use client_messages::mod_ReadStreamEventsCompleted::ReadStreamResult;
-        use client_messages_ext::ResolvedIndexedEventExt;
-
-        client_messages::ReadStreamEventsCompleted {
-            events: self.events.iter().map(|x| x.borrowed()).collect(),
-            result: Some(ReadStreamResult::Success),
-            next_event_number: self.next_page.map(|x| x.into()).unwrap_or(-1),
-            last_event_number: self.last_event_number.into(),
-            is_end_of_stream: self.end_of_stream,
-            last_commit_position: self.last_commit_position,
-            error: None,
-        }
-    }
-}
-
 /// Global unique position in the EventStore, used when reading all events.
 /// Range -1..i64::max_value()
 #[derive(Debug, Clone, Eq, PartialOrd, Ord)]
@@ -555,109 +490,6 @@ impl LogPosition {
                     None
                 }
             }
-        }
-    }
-}
-
-impl From<(ReadDirection, ReadAllEvents)> for Message {
-    fn from((dir, rae): (ReadDirection, ReadAllEvents)) -> Message {
-        Message::ReadAllEvents(dir, rae)
-    }
-}
-
-/// Successful response to `Message::ReadAllEvents`.
-#[derive(Debug, Clone, PartialEq)]
-pub struct ReadAllSuccess {
-    commit_position: LogPosition,
-    prepare_position: LogPosition,
-    /// The read events, with position metadata
-    pub events: Vec<ResolvedEvent<'static>>,
-    next_commit_position: Option<LogPosition>,
-    next_prepare_position: Option<LogPosition>,
-}
-
-/// Read event in `ReadAllSuccess` response
-#[derive(Debug, Clone, PartialEq)]
-pub struct ResolvedEvent<'a> {
-    /// The read event
-    pub event: client_messages::EventRecord<'a>,
-    /// Possible linking event
-    pub link: Option<client_messages::EventRecord<'a>>,
-    /// Position where this events transaction is commited
-    pub commit_position: LogPosition,
-    /// Position where this event is stored
-    pub prepare_position: LogPosition,
-}
-
-impl<'a> From<client_messages::ResolvedEvent<'a>> for ResolvedEvent<'a> {
-    fn from(e: client_messages::ResolvedEvent<'a>) -> ResolvedEvent<'a> {
-        ResolvedEvent {
-            event: e.event.into(),
-            link: e.link.into(),
-            commit_position: e.commit_position.into(),
-            prepare_position: e.prepare_position.into()
-        }
-    }
-}
-
-impl<'a> ResolvedEvent<'a> {
-    fn into_owned(self) -> ResolvedEvent<'static> {
-        use client_messages_ext::EventRecordExt;
-        ResolvedEvent {
-            event: self.event.into_owned(),
-            link: self.link.map(|link| link.into_owned()),
-            commit_position: self.commit_position,
-            prepare_position: self.prepare_position,
-        }
-    }
-
-    fn borrowed<'b>(&'b self) -> client_messages::ResolvedEvent<'b> {
-        use client_messages_ext::EventRecordExt;
-        client_messages::ResolvedEvent {
-            event: self.event.borrowed(),
-            link: self.link.as_ref().map(|x| x.borrowed()),
-            commit_position: self.commit_position.into(),
-            prepare_position: self.prepare_position.into(),
-        }
-    }
-}
-
-impl<'a> From<(ReadDirection, ReadAllEventsCompleted<'a>)> for Message {
-    fn from((dir, resp): (ReadDirection, ReadAllEventsCompleted<'a>)) -> Message {
-        use client_messages::mod_ReadAllEventsCompleted::ReadAllResult;
-
-        let res = match resp.result {
-            ReadAllResult::Success => {
-                Ok(ReadAllSuccess {
-                    commit_position: resp.commit_position.into(),
-                    prepare_position: resp.prepare_position.into(),
-                    events: resp.events.into_iter().map(|x| {
-                        let er: ResolvedEvent<'a> = x.into();
-                        er.into_owned()
-                    }).collect(),
-                    next_commit_position: LogPosition::from_i64_opt(resp.next_commit_position),
-                    next_prepare_position: LogPosition::from_i64_opt(resp.next_prepare_position),
-                })
-            },
-            fail => Err((fail, resp.error).into()),
-        };
-
-        Message::ReadAllEventsCompleted(dir, res)
-    }
-}
-
-impl ReadAllSuccess {
-    fn as_message_write<'a>(&'a self) -> client_messages::ReadAllEventsCompleted<'a> {
-        use client_messages::mod_ReadAllEventsCompleted::ReadAllResult;
-
-        client_messages::ReadAllEventsCompleted {
-            commit_position: self.commit_position.into(),
-            prepare_position: self.prepare_position.into(),
-            events: self.events.iter().map(|x| x.borrowed()).collect(),
-            next_commit_position: self.next_commit_position.map(|x| x.into()).unwrap_or(-1),
-            next_prepare_position: self.next_prepare_position.map(|x| x.into()).unwrap_or(-1),
-            result: ReadAllResult::Success,
-            error: None,
         }
     }
 }
