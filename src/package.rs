@@ -26,6 +26,10 @@ pub struct Package {
     pub message: MessageContainer<'static>,
 }
 
+trait SendReq: Send {}
+
+impl SendReq for Package {}
+
 /// Wrapper for either a raw just decoded or built-for sending message or an adapted one.
 #[derive(Debug, PartialEq)]
 pub enum MessageContainer<'a> {
