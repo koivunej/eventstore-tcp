@@ -18,7 +18,6 @@ futures = "0.1"
 tokio-core = "0.1"
 tokio-service = "0.1"
 tokio-proto = { path = "tokio-proto" }
-rental = "0.3"
 
 [dev-dependencies]
 rustc-serialize = "*"

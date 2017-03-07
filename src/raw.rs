@@ -4,42 +4,10 @@ use std::io;
 use std::str;
 use std::borrow::Cow;
 use quick_protobuf;
-use tokio_core::io::EasyBuf;
 
 use client_messages::{WriteEvents, WriteEventsCompleted, ReadEvent, ReadEventCompleted, ReadStreamEvents, ReadStreamEventsCompleted, ReadAllEvents, ReadAllEventsCompleted, NotHandled};
 
 use {MappingError, ReadDirection};
-
-rental! {
-    mod rent_lib {
-        use super::RawMessage;
-        pub rental RentRawMessage<'rental>(Vec<u8>, RawMessage<'rental>);
-    }
-}
-
-struct OwningRawMessage {
-    inner: self::rent_lib::RentRawMessage<'static>,
-}
-
-impl OwningRawMessage {
-    fn decode_owned(discriminator: u8, buf: &mut EasyBuf) -> io::Result<Self> {
-        // betting here that the decoding works out ok
-        let bytes = buf.as_slice().to_vec();
-        let rentable = self::rent_lib::RentRawMessage::try_new(
-            bytes, |bytes| RawMessage::decode(discriminator, bytes))
-            .map_err(|(e, _)| e)?;
-        Ok(OwningRawMessage {
-            inner: rentable
-        })
-    }
-
-    fn raw_message<'a>(&'a self) -> &RawMessage<'a> {
-        use rental::Rental;
-        unsafe {
-            self.inner.rental()
-        }
-    }
-}
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum RawMessage<'a> {
@@ -212,6 +180,10 @@ impl<'a> From<(u8, Cow<'a, [u8]>)> for RawMessage<'a> {
 }
 
 impl<'a> RawMessage<'a> {
+
+    pub fn into_owned(self) -> RawMessage<'static> {
+        unimplemented!()
+    }
 
     /// Decodes the message from the buffer without any cloning.
     pub fn decode(discriminator: u8, buf: &'a [u8]) -> io::Result<RawMessage<'a>> {

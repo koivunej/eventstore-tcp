@@ -4,8 +4,9 @@ use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 use tokio_core::io::{Codec, EasyBuf};
 
 use errors::ErrorKind;
-use package::{self, Package, TcpFlags};
-use {Message, UsernamePassword};
+use package::{self, Package, TcpFlags, MessageContainer};
+use {UsernamePassword};
+use raw::RawMessage;
 
 pub struct PackageCodec;
 
@@ -40,7 +41,7 @@ impl PackageCodec {
                 Ok(Some(Package {
                     correlation_id: c,
                     authentication: a,
-                    message: m,
+                    message: m.into(),
                 }))
             }
             Err(e) => Err(e),
@@ -49,9 +50,9 @@ impl PackageCodec {
 
     fn decode_body(&mut self,
                    buf: &mut EasyBuf)
-                   -> io::Result<(Uuid, Option<UsernamePassword>, Message)> {
+                   -> io::Result<(Uuid, Option<UsernamePassword>, RawMessage<'static>)> {
         let (d, c, a) = self.decode_header(buf)?;
-        let message = Message::decode(d, buf)?;
+        let message = RawMessage::decode(d, buf.as_slice())?.into_owned();
         Ok((c, a, message))
     }
 
@@ -105,8 +106,13 @@ impl Codec for PackageCodec {
             flags.insert(package::FLAG_AUTHENTICATED);
         }
 
+        let raw = match msg.message {
+            MessageContainer::Raw(raw) => raw,
+            MessageContainer::Adapted(ref adapted) => adapted.as_raw()
+        };
+
         cursor.write_u32::<LittleEndian>(0)?; // placeholder for prefix
-        cursor.write_u8(msg.message.discriminator())?;
+        cursor.write_u8(raw.discriminator())?;
         cursor.write_u8(flags.bits())?;
         cursor.write_all(msg.correlation_id.as_bytes())?;
         if flags.contains(package::FLAG_AUTHENTICATED) {
@@ -115,7 +121,7 @@ impl Codec for PackageCodec {
                 .encode(&mut cursor)?;
         }
 
-        msg.message.encode(&mut cursor)?;
+        raw.encode(&mut cursor)?;
 
         let at_end = cursor.position();
         let len = at_end as u32 - 4;

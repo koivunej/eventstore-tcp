@@ -87,8 +87,6 @@ extern crate futures;
 extern crate tokio_core;
 extern crate tokio_proto;
 extern crate tokio_service;
-#[macro_use]
-extern crate rental;
 
 #[cfg(test)]
 extern crate rustc_serialize;
@@ -143,9 +141,6 @@ mod errors {
         errors {
             InvalidFlags(flags: u8) {
                 display("Invalid flags: 0x{:02x}", flags)
-            }
-            UnsupportedDiscriminator(d: u8) {
-                display("Unsupported discriminator: 0x{:02x}", d)
             }
         }
     }

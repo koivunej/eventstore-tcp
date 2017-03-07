@@ -17,8 +17,9 @@ use std::borrow::Cow;
 
 use uuid::Uuid;
 use package::Package;
-use {UsernamePassword, Message, ReadDirection, ExpectedVersion, EventNumber, LogPosition, ContentType};
+use {UsernamePassword, ReadDirection, ExpectedVersion, EventNumber, LogPosition, ContentType};
 use client_messages::{WriteEvents, NewEvent, ReadEvent, ReadStreamEvents, ReadAllEvents};
+use raw::RawMessage;
 
 /// Factory factory for creating builders.
 pub struct Builder;
@@ -26,13 +27,13 @@ pub struct Builder;
 impl Builder {
     /// Simple builder for a Ping message, that has no other data.
     pub fn ping() -> SimpleBuilder {
-        SimpleBuilder(Message::Ping)
+        SimpleBuilder(RawMessage::Ping)
     }
 
     /// Simple builder for an Authenticate message, that has no other data (credentials are passed
     /// to the `build_package` method).
     pub fn authenticate() -> SimpleBuilder {
-        SimpleBuilder(Message::Authenticate)
+        SimpleBuilder(RawMessage::Authenticate)
     }
 
     /// Builder for `WriteEvents`, which allows writing multiple events to a stream, with expected
@@ -60,16 +61,12 @@ impl Builder {
 }
 
 /// Builder for messages without any additional contents.
-pub struct SimpleBuilder(Message);
+pub struct SimpleBuilder(RawMessage<'static>);
 
 impl SimpleBuilder {
     /// Returns a package which can be sent through `EventStoreClient::call` method.
     pub fn build_package(self, authentication: Option<UsernamePassword>, correlation_id: Option<Uuid>) -> Package {
-        Package {
-            authentication: authentication,
-            correlation_id: correlation_id.unwrap_or_else(|| Uuid::new_v4()),
-            message: self.0
-        }
+        build_package(self.0, authentication, correlation_id)
     }
 }
 
@@ -162,7 +159,7 @@ impl WriteEventsBuilder {
         }
     }
 
-    fn build_message(&mut self) -> Message {
+    fn build_message(&mut self) -> RawMessage<'static> {
         self.build_command().into()
     }
 
@@ -342,7 +339,7 @@ impl ReadEventBuilder {
         }
     }
 
-    fn build_message(&mut self) -> Message {
+    fn build_message(&mut self) -> RawMessage<'static> {
         self.build_command().into()
     }
 
@@ -459,8 +456,8 @@ impl ReadStreamEventsBuilder {
         }
     }
 
-    fn build_message(&mut self) -> Message {
-        Message::ReadStreamEvents(self.direction.expect("direction not set"), self.build_command())
+    fn build_message(&mut self) -> RawMessage<'static> {
+        RawMessage::ReadStreamEvents(self.direction.expect("direction not set"), self.build_command())
     }
 
     /// Build a package. Will panic if required values are not set.
@@ -539,7 +536,7 @@ impl ReadAllEventsBuilder {
     /// Build a package. Will panic if required values are not set.
     /// Values of this builder will be moved into the package.
     pub fn build_package(&mut self, authentication: Option<UsernamePassword>, correlation_id: Option<Uuid>) -> Package {
-        let msg = Message::ReadAllEvents(
+        let msg = RawMessage::ReadAllEvents(
             self.direction.take().expect("direction"),
             ReadAllEvents {
                 commit_position: self.commit_position.expect("position").into(),
@@ -552,11 +549,11 @@ impl ReadAllEventsBuilder {
     }
 }
 
-fn build_package<M: Into<Message>>(msg: M, authentication: Option<UsernamePassword>, correlation_id: Option<Uuid>) -> Package {
+fn build_package<M: Into<RawMessage<'static>>>(msg: M, authentication: Option<UsernamePassword>, correlation_id: Option<Uuid>) -> Package {
     Package {
         authentication: authentication,
         correlation_id: correlation_id.unwrap_or_else(|| Uuid::new_v4()),
-        message: msg.into()
+        message: msg.into().into()
     }
 }
 
