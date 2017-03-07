@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
-use client_messages::{self, WriteEvents, NewEvent};
-use client_messages::mod_NotHandled::MasterInfo;
+use raw::client_messages::{self, WriteEvents, NewEvent};
+use raw::client_messages::mod_NotHandled::MasterInfo;
 
 pub trait WriteEventsExt<'a> {
     /// Turns this instance to an instance that owns all it's data and thus has `'static` lifetime.

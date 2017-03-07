@@ -1,7 +1,7 @@
 use std::fmt;
 use std::error::Error;
 use std::ops::Range;
-use client_messages::{OperationResult};
+use raw::client_messages::{OperationResult};
 use {StreamVersion, LogPosition};
 
 /// Successful response to `Message::WriteEvents`
@@ -41,7 +41,7 @@ impl WriteEventsFailure {
     /// Return `true` if the operation failed in a transient way that might be resolved by
     /// retrying.
     pub fn is_transient(&self) -> bool {
-        use WriteEventsFailure::*;
+        use self::WriteEventsFailure::*;
         match *self {
             PrepareTimeout | CommitTimeout | ForwardTimeout => true,
             _ => false
@@ -68,7 +68,7 @@ impl From<OperationResult> for WriteEventsFailure {
 
 impl Into<OperationResult> for WriteEventsFailure {
     fn into(self) -> OperationResult {
-        use WriteEventsFailure::*;
+        use self::WriteEventsFailure::*;
         match self {
             PrepareTimeout => OperationResult::PrepareTimeout,
             CommitTimeout => OperationResult::CommitTimeout,
@@ -88,7 +88,7 @@ impl fmt::Display for WriteEventsFailure {
 
 impl Error for WriteEventsFailure {
     fn description(&self) -> &str {
-        use WriteEventsFailure::*;
+        use self::WriteEventsFailure::*;
         match *self {
             PrepareTimeout => "Internal server timeout, should be retried",
             CommitTimeout => "Internal server timeout, should be retried",

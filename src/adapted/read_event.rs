@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use client_messages::mod_ReadEventCompleted::ReadEventResult;
+use raw::client_messages::mod_ReadEventCompleted::ReadEventResult;
 
 /// `ReadEventError` maps to non-success of `ReadEventResult`
 #[derive(Debug, Clone, Eq, PartialEq)]

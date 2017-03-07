@@ -1,6 +1,6 @@
 use std::borrow::Cow;
-use client_messages::mod_ReadStreamEventsCompleted::ReadStreamResult;
-use client_messages::ResolvedIndexedEvent;
+use raw::client_messages::mod_ReadStreamEventsCompleted::ReadStreamResult;
+use raw::client_messages::ResolvedIndexedEvent;
 use {StreamVersion, EventNumber};
 
 /// Successful response to a `Message::ReadStreamEvents`.

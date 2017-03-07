@@ -1,6 +1,6 @@
 use std::borrow::Cow;
-use client_messages;
-use client_messages::mod_ReadAllEventsCompleted::ReadAllResult;
+use raw::client_messages;
+use raw::client_messages::mod_ReadAllEventsCompleted::ReadAllResult;
 
 use LogPosition;
 

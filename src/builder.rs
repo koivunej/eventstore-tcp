@@ -18,7 +18,7 @@ use std::borrow::Cow;
 use uuid::Uuid;
 use package::Package;
 use {UsernamePassword, ReadDirection, ExpectedVersion, EventNumber, LogPosition, ContentType};
-use client_messages::{WriteEvents, NewEvent, ReadEvent, ReadStreamEvents, ReadAllEvents};
+use raw::client_messages::{WriteEvents, NewEvent, ReadEvent, ReadStreamEvents, ReadAllEvents};
 use raw::RawMessage;
 
 /// Factory factory for creating builders.

@@ -144,7 +144,7 @@ mod tests {
     use super::{PackageCodec};
     use package::Package;
     use raw::RawMessage;
-    use client_messages::{WriteEventsCompleted, OperationResult};
+    use raw::client_messages::{WriteEventsCompleted, OperationResult};
 
     #[test]
     fn decode_ping() {

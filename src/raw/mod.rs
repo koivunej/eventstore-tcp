@@ -7,7 +7,10 @@ use std::str;
 use std::borrow::Cow;
 use quick_protobuf;
 
-use client_messages::{WriteEvents, WriteEventsCompleted, ReadEvent, ReadEventCompleted, ReadStreamEvents, ReadStreamEventsCompleted, ReadAllEvents, ReadAllEventsCompleted, NotHandled};
+pub mod client_messages;
+use self::client_messages::{WriteEvents, WriteEventsCompleted, ReadEvent, ReadEventCompleted, ReadStreamEvents, ReadStreamEventsCompleted, ReadAllEvents, ReadAllEventsCompleted, NotHandled};
+
+mod client_messages_ext;
 
 use errors::Error;
 use ReadDirection;
@@ -200,7 +203,7 @@ impl<'a> RawMessage<'a> {
     /// Turns possibly borrowed value of `self` into one that owns all of it's data.
     pub fn into_owned(self) -> RawMessage<'static> {
         use self::RawMessage::*;
-        use client_messages_ext::{WriteEventsExt, WriteEventsCompletedExt, ReadEventExt, ReadEventCompletedExt, ReadStreamEventsExt, ReadStreamEventsCompletedExt, ReadAllEventsCompletedExt, NotHandledExt};
+        use self::client_messages_ext::{WriteEventsExt, WriteEventsCompletedExt, ReadEventExt, ReadEventCompletedExt, ReadStreamEventsExt, ReadStreamEventsCompletedExt, ReadAllEventsCompletedExt, NotHandledExt};
 
         match self {
             HeartbeatRequest => HeartbeatRequest,

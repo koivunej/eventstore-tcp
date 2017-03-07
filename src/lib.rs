@@ -95,29 +95,13 @@ extern crate rustc_serialize;
 
 use std::str;
 
-mod client_messages;
-pub use client_messages::{WriteEvents, ResolvedIndexedEvent, EventRecord, ReadAllEvents};
-pub use client_messages::mod_NotHandled::{NotHandledReason, MasterInfo};
-
-mod client_messages_ext;
-
 pub mod raw;
 pub use raw::RawMessage;
+pub use raw::client_messages::{WriteEvents, ResolvedIndexedEvent, EventRecord, ReadAllEvents};
+pub use raw::client_messages::mod_NotHandled::{NotHandledReason, MasterInfo};
 
 pub mod adapted;
 pub use adapted::AdaptedMessage;
-
-mod write_events;
-pub use write_events::{WriteEventsCompleted, WriteEventsFailure};
-
-mod read_event;
-pub use read_event::{ReadEventError};
-
-mod read_stream;
-pub use read_stream::{ReadStreamCompleted, ReadStreamError};
-
-mod read_all;
-pub use read_all::{ReadAllCompleted, ReadAllError};
 
 mod package;
 pub use package::Package;
