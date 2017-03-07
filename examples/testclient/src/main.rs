@@ -21,7 +21,7 @@ use tokio_service::Service;
 
 use clap::{Arg, App, SubCommand, ArgMatches};
 
-use eventstore_tcp::{EventStoreClient, Package, Message, Builder, ExpectedVersion, StreamVersion, EventNumber, ContentType, ReadDirection, ReadStreamSuccess, EventRecord, LogPosition, UsernamePassword, ReadAllSuccess, ReadEventFailure, ReadStreamFailure, ReadAllFailure};
+use eventstore_tcp::{EventStoreClient, Package, AdaptedMessage, Builder, ExpectedVersion, StreamVersion, EventNumber, ContentType, ReadDirection, ReadStreamCompleted, EventRecord, LogPosition, UsernamePassword, ReadAllCompleted, ReadEventError, ReadStreamError, ReadAllError};
 
 #[derive(Debug)]
 enum ByteParsingError {
@@ -65,15 +65,15 @@ impl<'a, 'b: 'a> JsonWrapper<'b, 'a> {
 }
 
 #[derive(Debug)]
-enum ReadFailure {
-    Event(ReadEventFailure),
-    Stream(ReadStreamFailure),
-    All(ReadAllFailure)
+enum ReadFailure<'a> {
+    Event(ReadEventError<'a>),
+    Stream(ReadStreamError<'a>),
+    All(ReadAllError<'a>)
 }
 
-impl From<ReadEventFailure> for ReadFailure { fn from(e: ReadEventFailure) -> Self { ReadFailure::Event(e) } }
-impl From<ReadStreamFailure> for ReadFailure { fn from(e: ReadStreamFailure) -> Self { ReadFailure::Stream(e) } }
-impl From<ReadAllFailure> for ReadFailure { fn from(e: ReadAllFailure) -> Self { ReadFailure::All(e) } }
+impl<'a> From<ReadEventError<'a>> for ReadFailure<'a> { fn from(e: ReadEventError<'a>) -> Self { ReadFailure::Event(e) } }
+impl<'a> From<ReadStreamError<'a>> for ReadFailure<'a> { fn from(e: ReadStreamError<'a>) -> Self { ReadFailure::Stream(e) } }
+impl<'a> From<ReadAllError<'a>> for ReadFailure<'a> { fn from(e: ReadAllError<'a>) -> Self { ReadFailure::All(e) } }
 
 #[derive(Debug, Clone)]
 enum Position {
@@ -218,7 +218,7 @@ impl OutputMode {
         Ok(())
     }
 
-    fn format_fail<Out: io::Write, ErrOut: io::Write>(&self, verbose: bool, fail: ReadFailure, _: &mut Out, err: &mut ErrOut) -> io::Result<()> {
+    fn format_fail<'a, Out: io::Write, ErrOut: io::Write>(&self, verbose: bool, fail: ReadFailure<'a>, _: &mut Out, err: &mut ErrOut) -> io::Result<()> {
         if verbose {
             writeln!(err, "{}: {:#?}", "Read failed", fail)
         } else {
@@ -226,25 +226,25 @@ impl OutputMode {
         }
     }
 
-    fn format<Out: io::Write, ErrOut: io::Write>(&self, verbose: bool, msg: Message, out: &mut Out, err: &mut ErrOut) -> io::Result<()> {
+    fn format<'a, Out: io::Write, ErrOut: io::Write>(&self, verbose: bool, msg: AdaptedMessage<'a>, out: &mut Out, err: &mut ErrOut) -> io::Result<()> {
 
         match msg {
-            Message::ReadEventCompleted(Ok(rie)) => {
+            AdaptedMessage::ReadEventCompleted(Ok(rie)) => {
                 self.format_events(verbose, vec![rie].into_iter().map(|x| x.event).collect(), out, err)
             }
-            Message::ReadStreamEventsCompleted(_, Ok(ReadStreamSuccess { events, .. })) => {
+            AdaptedMessage::ReadStreamEventsCompleted(_, Ok(ReadStreamCompleted { events, .. })) => {
                 self.format_events(verbose, events.into_iter().map(|x| x.event).collect(), out, err)
             }
-            Message::ReadAllEventsCompleted(_, Ok(ReadAllSuccess { events, .. })) => {
+            AdaptedMessage::ReadAllEventsCompleted(_, Ok(ReadAllCompleted { events, .. })) => {
                 self.format_events(verbose, events.into_iter().map(|x| x.event).collect(), out, err)
             }
-            Message::ReadEventCompleted(Err(fail)) => {
+            AdaptedMessage::ReadEventCompleted(Err(fail)) => {
                 self.format_fail(verbose, fail.into(), out, err)
             }
-            Message::ReadStreamEventsCompleted(_, Err(fail)) => {
+            AdaptedMessage::ReadStreamEventsCompleted(_, Err(fail)) => {
                 self.format_fail(verbose, fail.into(), out, err)
             }
-            Message::ReadAllEventsCompleted(_, Err(fail)) => {
+            AdaptedMessage::ReadAllEventsCompleted(_, Err(fail)) => {
                 self.format_fail(verbose, fail.into(), out, err)
             }
             x => {
@@ -455,8 +455,8 @@ fn ping(addr: SocketAddr, verbose: bool) -> Result<(), io::Error> {
             f.map(move |resp| (resp, connected, send_began))
         }).and_then(|(pong, connected, send_began)| {
             let received = Instant::now();
-            match pong.message {
-                Message::Pong => Ok((connected, send_began, received)),
+            match pong.message.try_adapt().unwrap() {
+                AdaptedMessage::Pong => Ok((connected, send_began, received)),
                 msg => Err(io::Error::new(io::ErrorKind::Other, format!("Unexpected response: {:?}", msg)))
             }
         }).and_then(move |(connected, send_began, received)| {
@@ -517,15 +517,15 @@ fn write(addr: SocketAddr, verbose: bool, pkg: Package) -> Result<(), io::Error>
     let job = client.and_then(|client| {
         client.call(pkg)
     }).and_then(|resp| {
-        match resp.message {
-            Message::WriteEventsCompleted(Ok(success)) => {
+        match resp.message.try_adapt().unwrap() {
+            AdaptedMessage::WriteEventsCompleted(Ok(success)) => {
                 print_elapsed("Success in", started.elapsed());
                 if verbose {
                     println!("{:#?}", success);
                 }
                 Ok(())
             },
-            Message::WriteEventsCompleted(Err(reason)) => {
+            AdaptedMessage::WriteEventsCompleted(Err(reason)) => {
                 Err(io::Error::new(io::ErrorKind::Other, format!("{}", reason)))
             },
             x => {
@@ -547,7 +547,7 @@ fn read(addr: SocketAddr, verbose: bool, output: OutputMode, stream_id: &str, mo
     }).and_then(|resp| {
         let mut stdout = io::stdout();
         let mut stderr = io::stderr();
-        output.format(verbose, resp.message, &mut stdout, &mut stderr)
+        output.format(verbose, resp.message.try_adapt().unwrap(), &mut stdout, &mut stderr)
     });
 
     core.run(job)

@@ -7,11 +7,15 @@ use LogPosition;
 /// Successful response to `Message::ReadAllEvents`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ReadAllCompleted<'a> {
+    /// Position of the commit of the current prepare
     pub commit_position: LogPosition,
+    /// Position of the current prepare
     pub prepare_position: LogPosition,
     /// The read events, with position metadata
     pub events: Vec<ResolvedEvent<'a>>,
+    /// For paging: next commit position
     pub next_commit_position: Option<LogPosition>,
+    /// For paging: next prepare position
     pub next_prepare_position: Option<LogPosition>,
 }
 

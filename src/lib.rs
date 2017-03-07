@@ -111,10 +111,13 @@ mod write_events;
 pub use write_events::{WriteEventsCompleted, WriteEventsFailure};
 
 mod read_event;
+pub use read_event::{ReadEventError};
 
 mod read_stream;
+pub use read_stream::{ReadStreamCompleted, ReadStreamError};
 
 mod read_all;
+pub use read_all::{ReadAllCompleted, ReadAllError};
 
 mod package;
 pub use package::Package;
