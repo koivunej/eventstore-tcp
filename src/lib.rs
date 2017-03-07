@@ -93,7 +93,9 @@ extern crate rental;
 #[cfg(test)]
 extern crate rustc_serialize;
 
+use std::fmt;
 use std::io;
+use std::str;
 use std::ops::Deref;
 use std::borrow::Cow;
 use tokio_core::io::EasyBuf;
@@ -103,6 +105,9 @@ pub use client_messages::{WriteEvents, ResolvedIndexedEvent, EventRecord, ReadAl
 pub use client_messages::mod_NotHandled::{NotHandledReason, MasterInfo};
 
 mod client_messages_ext;
+
+mod raw;
+mod adapted;
 
 mod write_events;
 pub use write_events::{WriteEventsCompleted, WriteEventsFailure};
@@ -129,8 +134,6 @@ pub use builder::Builder;
 
 mod auth;
 pub use auth::UsernamePassword;
-
-mod raw;
 
 mod errors {
     use std::str;
@@ -462,6 +465,69 @@ impl LogPosition {
                 }
             }
         }
+    }
+}
+
+trait CustomTryFrom<T: Sized>: Sized {
+    type Err;
+
+    fn try_from(t: T) -> Result<Self, (T, Self::Err)>;
+}
+
+trait CustomTryInto<T: Sized>: Sized {
+    type Err;
+
+    fn try_into(self) -> Result<T, (Self, Self::Err)>;
+}
+
+impl<T, U> CustomTryInto<U> for T where U: CustomTryFrom<T> {
+    type Err = U::Err;
+
+    fn try_into(self) -> Result<U, (T, Self::Err)> {
+        U::try_from(self)
+    }
+}
+
+enum ResultStatusKind {
+    WriteEvents,
+    ReadEvent,
+    ReadStream,
+}
+
+impl fmt::Display for ResultStatusKind {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        use ResultStatusKind::*;
+        write!(fmt, "{}", match self {
+            &WriteEvents => "WriteEventsCompleted::result",
+            &ReadEvent => "ReadEventCompleted::result",
+            &ReadStream => "ReadStreamEventsCompleted::result",
+        })
+    }
+}
+
+enum MappingErrorKind {
+    InvalidUtf8(str::Utf8Error),
+    MissingResultField(ResultStatusKind),
+    Unsupported(u8)
+}
+
+struct MappingError(MappingErrorKind);
+
+impl fmt::Display for MappingError {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        unimplemented!()
+    }
+}
+
+impl From<str::Utf8Error> for MappingError {
+    fn from(e: str::Utf8Error) -> MappingError {
+        MappingError(MappingErrorKind::InvalidUtf8(e))
+    }
+}
+
+impl From<MappingErrorKind> for MappingError {
+    fn from(e: MappingErrorKind) -> Self {
+        MappingError(e)
     }
 }
 

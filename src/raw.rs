@@ -1,11 +1,12 @@
 use std::io;
+use std::str;
 use std::borrow::Cow;
 use quick_protobuf;
 use tokio_core::io::EasyBuf;
 
 use client_messages::{WriteEvents, WriteEventsCompleted, ReadEvent, ReadEventCompleted, ReadStreamEvents, ReadStreamEventsCompleted, ReadAllEvents, ReadAllEventsCompleted, NotHandled};
 
-use ReadDirection;
+use {CustomTryInto, MappingError, ReadDirection};
 
 rental! {
     mod rent_lib {
@@ -19,13 +20,13 @@ struct OwningRawMessage {
 }
 
 impl OwningRawMessage {
-    fn decode_owned(discriminator: u8, buf: &mut EasyBuf) -> io::Result<OwnedRawMessage> {
+    fn decode_owned(discriminator: u8, buf: &mut EasyBuf) -> io::Result<Self> {
         // betting here that the decoding works out ok
         let bytes = buf.as_slice().to_vec();
         let rentable = self::rent_lib::RentRawMessage::try_new(
             bytes, |bytes| RawMessage::decode(discriminator, bytes))
             .map_err(|(e, _)| e)?;
-        Ok(OwnedRawMessage {
+        Ok(OwningRawMessage {
             inner: rentable
         })
     }
@@ -71,7 +72,7 @@ pub enum RawMessage<'a> {
     ReadAllEventsCompleted(ReadDirection, ReadAllEventsCompleted<'a>),
 
     /// Request was not understood. Please open an issue!
-    BadRequest(Cow<'a, [u8]>),
+    BadRequest(BadRequestPayload<'a>),
 
     /// Correlated request was not handled. This is the likely response to requests where
     /// `require_master` is `true`, but the connected endpoint is not master and cannot reach it.
@@ -86,10 +87,121 @@ pub enum RawMessage<'a> {
 
     /// Negative authentication response, or response to any sent request for which used
     /// authentication was not accepted. May contain a reason.
-    NotAuthenticated(Cow<'a, [u8]>),
+    NotAuthenticated(NotAuthenticatedPayload<'a>),
 
     /// Placeholder for a discriminator and the undecoded bytes
     Unsupported(u8, Cow<'a, [u8]>),
+}
+
+pub trait ByteWrapper<'a>: Into<Cow<'a, [u8]>> + From<Cow<'a, [u8]>> {
+    type ConversionErr: From<str::Utf8Error>;
+
+    fn into_str_wrapper(self) -> Result<Cow<'a, str>, (Self, Self::ConversionErr)> {
+        let plain: Cow<'a, [u8]> = self.into();
+        match plain {
+            Cow::Owned(vec) =>
+                String::from_utf8(vec)
+                    .map(|s| Cow::Owned(s))
+                    .map_err(|e| {
+                        let narrowed = e.utf8_error();
+                        let revived = Self::from(Cow::Owned(e.into_bytes()));
+
+                        (revived, narrowed.into())
+                    }),
+            Cow::Borrowed(buf) =>
+                str::from_utf8(buf)
+                    .map(|s| Cow::Borrowed(s))
+                    .map_err(|e| (Self::from(Cow::Borrowed(buf)), e.into()))
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct NotAuthenticatedPayload<'a>(Cow<'a, [u8]>);
+
+impl<'a> AsRef<[u8]> for NotAuthenticatedPayload<'a> {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+}
+
+impl<'a> ByteWrapper<'a> for NotAuthenticatedPayload<'a> {
+    type ConversionErr = MappingError;
+}
+
+impl<'a> From<Cow<'a, [u8]>> for NotAuthenticatedPayload<'a> {
+    fn from(data: Cow<'a, [u8]>) -> NotAuthenticatedPayload<'a> {
+        NotAuthenticatedPayload(data)
+    }
+}
+
+impl<'a> Into<Cow<'a, [u8]>> for NotAuthenticatedPayload<'a> {
+    fn into(self) -> Cow<'a, [u8]> {
+        self.0
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct BadRequestPayload<'a>(Cow<'a, [u8]>);
+
+impl<'a> AsRef<[u8]> for BadRequestPayload<'a> {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+}
+
+impl<'a> ByteWrapper<'a> for BadRequestPayload<'a> {
+    type ConversionErr = MappingError;
+}
+
+impl<'a> From<Cow<'a, [u8]>> for BadRequestPayload<'a> {
+    fn from(data: Cow<'a, [u8]>) -> BadRequestPayload<'a> {
+        BadRequestPayload(data)
+    }
+}
+
+impl<'a> Into<Cow<'a, [u8]>> for BadRequestPayload<'a> {
+    fn into(self) -> Cow<'a, [u8]> {
+        self.0
+    }
+}
+
+macro_rules! wrapup {
+    ($x:ty, $f:expr) => {
+        impl<'a> From<$x> for RawMessage<'a> {
+            fn from(x: $x) -> RawMessage<'a> {
+                $f(x)
+            }
+        }
+    };
+}
+
+macro_rules! wrapup_directed {
+    ($x: ty, $f: expr) => {
+        impl<'a> From<(ReadDirection, $x)> for RawMessage<'a> {
+            fn from((x, y): (ReadDirection, $x)) -> RawMessage<'a> {
+                $f(x, y)
+            }
+        }
+    };
+}
+
+wrapup!(BadRequestPayload<'a>, RawMessage::BadRequest);
+wrapup!(NotAuthenticatedPayload<'a>, RawMessage::NotAuthenticated);
+wrapup!(WriteEvents<'a>, RawMessage::WriteEvents);
+wrapup!(WriteEventsCompleted<'a>, RawMessage::WriteEventsCompleted);
+wrapup!(ReadEvent<'a>, RawMessage::ReadEvent);
+wrapup!(ReadEventCompleted<'a>, RawMessage::ReadEventCompleted);
+wrapup!(NotHandled<'a>, RawMessage::NotHandled);
+wrapup_directed!(ReadStreamEvents<'a>, RawMessage::ReadStreamEvents);
+wrapup_directed!(ReadStreamEventsCompleted<'a>, RawMessage::ReadStreamEventsCompleted);
+wrapup_directed!(ReadAllEvents, RawMessage::ReadAllEvents);
+wrapup_directed!(ReadAllEventsCompleted<'a>, RawMessage::ReadAllEventsCompleted);
+
+impl<'a> From<(u8, Cow<'a, [u8]>)> for RawMessage<'a> {
+    fn from((d, data): (u8, Cow<'a, [u8]>)) -> RawMessage<'a> {
+        RawMessage::Unsupported(d, data)
+    }
 }
 
 impl<'a> RawMessage<'a> {
@@ -155,12 +267,16 @@ impl<'a> RawMessage<'a> {
             0xB8 => decoded!(ReadAllEvents, buf, RawMessage::ReadAllEvents, Backward),
             0xB9 => decoded!(ReadAllEventsCompleted, buf, RawMessage::ReadAllEventsCompleted, Backward),
 
-            0xF0 => Ok(RawMessage::BadRequest(Cow::Borrowed(buf))),
+            0xF0 => Ok(RawMessage::BadRequest(Cow::Borrowed(buf).into())),
             0xF1 => decoded!(NotHandled, buf, RawMessage::NotHandled),
             0xF2 => without_data!(RawMessage::Authenticate, buf),
             0xF3 => without_data!(RawMessage::Authenticated, buf),
-            0xF4 => Ok(RawMessage::NotAuthenticated(Cow::Borrowed(buf))),
-            x => Ok(RawMessage::Unsupported(x, Cow::Borrowed(buf))),
+            0xF4 => Ok({
+                let payload: NotAuthenticatedPayload<'a> = Cow::Borrowed(buf).into();
+                //payload.into()
+                unimplemented!()
+            }),
+            x => Ok((x, Cow::Borrowed(buf)).into()),
         }
     }
 
@@ -201,9 +317,9 @@ impl<'a> RawMessage<'a> {
             ReadAllEvents(_, ref x) => encode!(x, w),
             ReadAllEventsCompleted(_, ref x) => encode!(x, w),
 
-            BadRequest(ref x) => w.write_all(x),
+            BadRequest(ref x) => w.write_all(x.as_ref()),
             NotHandled(ref x) => encode!(x, w),
-            NotAuthenticated(ref x) => w.write_all(x),
+            NotAuthenticated(ref x) => w.write_all(x.as_ref()),
             Unsupported(_, ref x) => w.write_all(x),
         }
     }
