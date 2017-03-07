@@ -522,23 +522,6 @@
 <span id="477">477</span>
 <span id="478">478</span>
 <span id="479">479</span>
-<span id="480">480</span>
-<span id="481">481</span>
-<span id="482">482</span>
-<span id="483">483</span>
-<span id="484">484</span>
-<span id="485">485</span>
-<span id="486">486</span>
-<span id="487">487</span>
-<span id="488">488</span>
-<span id="489">489</span>
-<span id="490">490</span>
-<span id="491">491</span>
-<span id="492">492</span>
-<span id="493">493</span>
-<span id="494">494</span>
-<span id="495">495</span>
-<span id="496">496</span>
 </pre><pre class='rust '>
 <span class='doccomment'>//! Tokio-based [EventStore](https://geteventstore.com/) client library in it&#39;s early stages.</span>
 <span class='doccomment'>//! Currently the most interesting API is the `tokio_service::service::Service` implemented by</span>
@@ -556,8 +539,7 @@
 <span class='doccomment'>//!</span>
 <span class='doccomment'>//! # Panics</span>
 <span class='doccomment'>//!</span>
-<span class='doccomment'>//!   * members of `builder` module can panic in a number of places (documented)</span>
-<span class='doccomment'>//!   * panics when decoding missing protobuf `required` values</span>
+<span class='doccomment'>//! There should not be any panicing now that `adapted` and `raw` are separate.</span>
 <span class='doccomment'>//!</span>
 <span class='doccomment'>//! # Simplest example</span>
 <span class='doccomment'>//!</span>
@@ -637,31 +619,15 @@
 
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>str</span>;
 
-<span class='kw'>mod</span> <span class='ident'>client_messages</span>;
-<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>client_messages</span>::{<span class='ident'>WriteEvents</span>, <span class='ident'>ResolvedIndexedEvent</span>, <span class='ident'>EventRecord</span>, <span class='ident'>ReadAllEvents</span>};
-<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>client_messages</span>::<span class='ident'>mod_NotHandled</span>::{<span class='ident'>NotHandledReason</span>, <span class='ident'>MasterInfo</span>};
-
-<span class='kw'>mod</span> <span class='ident'>client_messages_ext</span>;
-
 <span class='kw'>pub</span> <span class='kw'>mod</span> <span class='ident'>raw</span>;
 <span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>raw</span>::<span class='ident'>RawMessage</span>;
+<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>raw</span>::<span class='ident'>client_messages</span>::{<span class='ident'>WriteEvents</span>, <span class='ident'>ResolvedIndexedEvent</span>, <span class='ident'>EventRecord</span>, <span class='ident'>ReadAllEvents</span>};
+<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>raw</span>::<span class='ident'>client_messages</span>::<span class='ident'>mod_NotHandled</span>::{<span class='ident'>NotHandledReason</span>, <span class='ident'>MasterInfo</span>};
 
 <span class='kw'>pub</span> <span class='kw'>mod</span> <span class='ident'>adapted</span>;
 <span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>adapted</span>::<span class='ident'>AdaptedMessage</span>;
 
-<span class='kw'>mod</span> <span class='ident'>write_events</span>;
-<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>write_events</span>::{<span class='ident'>WriteEventsCompleted</span>, <span class='ident'>WriteEventsFailure</span>};
-
-<span class='kw'>mod</span> <span class='ident'>read_event</span>;
-<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>read_event</span>::{<span class='ident'>ReadEventError</span>};
-
-<span class='kw'>mod</span> <span class='ident'>read_stream</span>;
-<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>read_stream</span>::{<span class='ident'>ReadStreamCompleted</span>, <span class='ident'>ReadStreamError</span>};
-
-<span class='kw'>mod</span> <span class='ident'>read_all</span>;
-<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>read_all</span>::{<span class='ident'>ReadAllCompleted</span>, <span class='ident'>ReadAllError</span>};
-
-<span class='kw'>mod</span> <span class='ident'>package</span>;
+<span class='kw'>pub</span> <span class='kw'>mod</span> <span class='ident'>package</span>;
 <span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>package</span>::<span class='ident'>Package</span>;
 
 <span class='kw'>mod</span> <span class='ident'>codec</span>;

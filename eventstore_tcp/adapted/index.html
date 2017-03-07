@@ -48,7 +48,7 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a class='srclink' href='../../src/eventstore_tcp/adapted.rs.html#1-750' title='goto source code'>[src]</a></span></h1>
+               </span><a class='srclink' href='../../src/eventstore_tcp/adapted/mod.rs.html#1-759' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>Adapted or refined types providing a much more oxidized API for handling the messages in the
 protocol.</p>
 </div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
@@ -73,6 +73,27 @@ protocol.</p>
                            <td class='docblock-short'>
                                 <p>Placeholder for NotHandledInfo, unused.</p>
                            </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.ReadAllCompleted.html'
+                                  title='struct eventstore_tcp::adapted::ReadAllCompleted'>ReadAllCompleted</a></td>
+                           <td class='docblock-short'>
+                                <p>Successful response to <code>Message::ReadAllEvents</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.ReadStreamCompleted.html'
+                                  title='struct eventstore_tcp::adapted::ReadStreamCompleted'>ReadStreamCompleted</a></td>
+                           <td class='docblock-short'>
+                                <p>Successful response to a <code>Message::ReadStreamEvents</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.WriteEventsCompleted.html'
+                                  title='struct eventstore_tcp::adapted::WriteEventsCompleted'>WriteEventsCompleted</a></td>
+                           <td class='docblock-short'>
+                                <p>Successful response to <code>Message::WriteEvents</code></p>
+                           </td>
                        </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
 <table>
                        <tr class=' module-item'>
@@ -80,6 +101,36 @@ protocol.</p>
                                   title='enum eventstore_tcp::adapted::AdaptedMessage'>AdaptedMessage</a></td>
                            <td class='docblock-short'>
                                 <p>Enumeration of converted messages for more oxidized API.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='enum' href='enum.ReadAllError.html'
+                                  title='enum eventstore_tcp::adapted::ReadAllError'>ReadAllError</a></td>
+                           <td class='docblock-short'>
+                                <p>Failure cases of wire enum <code>ReadAllResult</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='enum' href='enum.ReadEventError.html'
+                                  title='enum eventstore_tcp::adapted::ReadEventError'>ReadEventError</a></td>
+                           <td class='docblock-short'>
+                                <p><code>ReadEventError</code> maps to non-success of <code>ReadEventResult</code></p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='enum' href='enum.ReadStreamError.html'
+                                  title='enum eventstore_tcp::adapted::ReadStreamError'>ReadStreamError</a></td>
+                           <td class='docblock-short'>
+                                <p>Non-success projection of the <code>ReadStreamResult</code> enum on the wire representing
+a failed <code>ReadStreamCompleted</code> request.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='enum' href='enum.WriteEventsFailure.html'
+                                  title='enum eventstore_tcp::adapted::WriteEventsFailure'>WriteEventsFailure</a></td>
+                           <td class='docblock-short'>
+                                <p>Like <code>OperationResult</code> on the wire but does not have a success value. Explains the reason for
+failure.</p>
                            </td>
                        </tr></table></section>
     <section id='search' class="content hidden"></section>

@@ -48,7 +48,7 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a class='srclink' href='../src/eventstore_tcp/lib.rs.html#1-496' title='goto source code'>[src]</a></span></h1>
+               </span><a class='srclink' href='../src/eventstore_tcp/lib.rs.html#1-479' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>Tokio-based <a href="https://geteventstore.com/">EventStore</a> client library in it&#39;s early stages.
 Currently the most interesting API is the <code>tokio_service::service::Service</code> implemented by
 <code>client::Client</code>, which allows sending values of <code>Package</code> to get back a <code>Future</code> of a response
@@ -64,10 +64,7 @@ moment using a custom fork. It does not yet support <code>tokio_proto::streaming
 needed to support subscriptions.</p>
 
 <h1 id='panics' class='section-header'><a href='#panics'>Panics</a></h1>
-<ul>
-<li>members of <code>builder</code> module can panic in a number of places (documented)</li>
-<li>panics when decoding missing protobuf <code>required</code> values</li>
-</ul>
+<p>There should not be any panicing now that <code>adapted</code> and <code>raw</code> are separate.</p>
 
 <h1 id='simplest-example' class='section-header'><a href='#simplest-example'>Simplest example</a></h1>
 <p>Example of writing to the database and simple handling of the response.</p>
@@ -127,7 +124,7 @@ needed to support subscriptions.</p>
 
 <p>More examples can be found in the aspiring command line tool under <code>examples/testclient</code>.</p>
 </div><h2 id='reexports' class='section-header'><a href="#reexports">Reexports</a></h2>
-<table><tr><td><code>pub use raw::<a class='enum' href='../eventstore_tcp/raw/enum.RawMessage.html' title='enum eventstore_tcp::raw::RawMessage'>RawMessage</a>;</code></td></tr><tr><td><code>pub use adapted::<a class='enum' href='../eventstore_tcp/adapted/enum.AdaptedMessage.html' title='enum eventstore_tcp::adapted::AdaptedMessage'>AdaptedMessage</a>;</code></td></tr><tr><td><code>pub use builder::<a class='struct' href='../eventstore_tcp/builder/struct.Builder.html' title='struct eventstore_tcp::builder::Builder'>Builder</a>;</code></td></tr></table><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+<table><tr><td><code>pub use raw::<a class='enum' href='../eventstore_tcp/raw/enum.RawMessage.html' title='enum eventstore_tcp::raw::RawMessage'>RawMessage</a>;</code></td></tr><tr><td><code>pub use raw::client_messages::<a class='struct' href='../eventstore_tcp/raw/client_messages/struct.WriteEvents.html' title='struct eventstore_tcp::raw::client_messages::WriteEvents'>WriteEvents</a>;</code></td></tr><tr><td><code>pub use raw::client_messages::<a class='struct' href='../eventstore_tcp/raw/client_messages/struct.ResolvedIndexedEvent.html' title='struct eventstore_tcp::raw::client_messages::ResolvedIndexedEvent'>ResolvedIndexedEvent</a>;</code></td></tr><tr><td><code>pub use raw::client_messages::<a class='struct' href='../eventstore_tcp/raw/client_messages/struct.EventRecord.html' title='struct eventstore_tcp::raw::client_messages::EventRecord'>EventRecord</a>;</code></td></tr><tr><td><code>pub use raw::client_messages::<a class='struct' href='../eventstore_tcp/raw/client_messages/struct.ReadAllEvents.html' title='struct eventstore_tcp::raw::client_messages::ReadAllEvents'>ReadAllEvents</a>;</code></td></tr><tr><td><code>pub use raw::client_messages::mod_NotHandled::<a class='enum' href='../eventstore_tcp/raw/client_messages/mod_NotHandled/enum.NotHandledReason.html' title='enum eventstore_tcp::raw::client_messages::mod_NotHandled::NotHandledReason'>NotHandledReason</a>;</code></td></tr><tr><td><code>pub use raw::client_messages::mod_NotHandled::<a class='struct' href='../eventstore_tcp/raw/client_messages/mod_NotHandled/struct.MasterInfo.html' title='struct eventstore_tcp::raw::client_messages::mod_NotHandled::MasterInfo'>MasterInfo</a>;</code></td></tr><tr><td><code>pub use adapted::<a class='enum' href='../eventstore_tcp/adapted/enum.AdaptedMessage.html' title='enum eventstore_tcp::adapted::AdaptedMessage'>AdaptedMessage</a>;</code></td></tr><tr><td><code>pub use package::<a class='struct' href='../eventstore_tcp/package/struct.Package.html' title='struct eventstore_tcp::package::Package'>Package</a>;</code></td></tr><tr><td><code>pub use builder::<a class='struct' href='../eventstore_tcp/builder/struct.Builder.html' title='struct eventstore_tcp::builder::Builder'>Builder</a>;</code></td></tr></table><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
 <table>
                        <tr class=' module-item'>
                            <td><a class='mod' href='adapted/index.html'
@@ -145,6 +142,13 @@ protocol.</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
+                           <td><a class='mod' href='package/index.html'
+                                  title='mod eventstore_tcp::package'>package</a></td>
+                           <td class='docblock-short'>
+                                <p>Frame and MessageContainer</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
                            <td><a class='mod' href='raw/index.html'
                                   title='mod eventstore_tcp::raw'>raw</a></td>
                            <td class='docblock-short'>
@@ -155,60 +159,10 @@ using the raw messages should still work.</p>
                        </tr></table><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
 <table>
                        <tr class=' module-item'>
-                           <td><a class='struct' href='struct.EventRecord.html'
-                                  title='struct eventstore_tcp::EventRecord'>EventRecord</a></td>
-                           <td class='docblock-short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
                            <td><a class='struct' href='struct.EventStoreClient.html'
                                   title='struct eventstore_tcp::EventStoreClient'>EventStoreClient</a></td>
                            <td class='docblock-short'>
                                 <p><code>tokio_service::Service</code> implementation of the client.</p>
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='struct' href='struct.MasterInfo.html'
-                                  title='struct eventstore_tcp::MasterInfo'>MasterInfo</a></td>
-                           <td class='docblock-short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='struct' href='struct.Package.html'
-                                  title='struct eventstore_tcp::Package'>Package</a></td>
-                           <td class='docblock-short'>
-                                <p>Frame in the protocol. On the wire, packets are embedded in frames with length
-prefix and suffix.</p>
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='struct' href='struct.ReadAllCompleted.html'
-                                  title='struct eventstore_tcp::ReadAllCompleted'>ReadAllCompleted</a></td>
-                           <td class='docblock-short'>
-                                <p>Successful response to <code>Message::ReadAllEvents</code>.</p>
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='struct' href='struct.ReadAllEvents.html'
-                                  title='struct eventstore_tcp::ReadAllEvents'>ReadAllEvents</a></td>
-                           <td class='docblock-short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='struct' href='struct.ReadStreamCompleted.html'
-                                  title='struct eventstore_tcp::ReadStreamCompleted'>ReadStreamCompleted</a></td>
-                           <td class='docblock-short'>
-                                <p>Successful response to a <code>Message::ReadStreamEvents</code>.</p>
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='struct' href='struct.ResolvedIndexedEvent.html'
-                                  title='struct eventstore_tcp::ResolvedIndexedEvent'>ResolvedIndexedEvent</a></td>
-                           <td class='docblock-short'>
-                                
                            </td>
                        </tr>
                        <tr class=' module-item'>
@@ -227,20 +181,6 @@ restricted from being used with this type.</p>
                            <td class='docblock-short'>
                                 <p>Username and password authentication token embedded in requests as there is no concept of
 session in the TCP protocol, every request must be authenticated.</p>
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='struct' href='struct.WriteEvents.html'
-                                  title='struct eventstore_tcp::WriteEvents'>WriteEvents</a></td>
-                           <td class='docblock-short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='struct' href='struct.WriteEventsCompleted.html'
-                                  title='struct eventstore_tcp::WriteEventsCompleted'>WriteEventsCompleted</a></td>
-                           <td class='docblock-short'>
-                                <p>Successful response to <code>Message::WriteEvents</code></p>
                            </td>
                        </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
 <table>
@@ -277,47 +217,10 @@ Range -1..i64::max_value()</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='enum' href='enum.NotHandledReason.html'
-                                  title='enum eventstore_tcp::NotHandledReason'>NotHandledReason</a></td>
-                           <td class='docblock-short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='enum' href='enum.ReadAllError.html'
-                                  title='enum eventstore_tcp::ReadAllError'>ReadAllError</a></td>
-                           <td class='docblock-short'>
-                                <p>Failure cases of wire enum <code>ReadAllResult</code>.</p>
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
                            <td><a class='enum' href='enum.ReadDirection.html'
                                   title='enum eventstore_tcp::ReadDirection'>ReadDirection</a></td>
                            <td class='docblock-short'>
                                 <p>The direction in which events are read.</p>
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='enum' href='enum.ReadEventError.html'
-                                  title='enum eventstore_tcp::ReadEventError'>ReadEventError</a></td>
-                           <td class='docblock-short'>
-                                <p><code>ReadEventError</code> maps to non-success of <code>ReadEventResult</code></p>
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='enum' href='enum.ReadStreamError.html'
-                                  title='enum eventstore_tcp::ReadStreamError'>ReadStreamError</a></td>
-                           <td class='docblock-short'>
-                                <p>Non-success projection of the <code>ReadStreamResult</code> enum on the wire representing
-a failed <code>ReadStreamCompleted</code> request.</p>
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='enum' href='enum.WriteEventsFailure.html'
-                                  title='enum eventstore_tcp::WriteEventsFailure'>WriteEventsFailure</a></td>
-                           <td class='docblock-short'>
-                                <p>Like <code>OperationResult</code> on the wire but does not have a success value. Explains the reason for
-failure.</p>
                            </td>
                        </tr></table></section>
     <section id='search' class="content hidden"></section>

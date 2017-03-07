@@ -48,9 +48,9 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a class='srclink' href='../../src/eventstore_tcp/builder.rs.html#25' title='goto source code'>[src]</a></span></h1>
+               </span><a class='srclink' href='../../src/eventstore_tcp/builder.rs.html#106' title='goto source code'>[src]</a></span></h1>
 <pre class='rust struct'>pub struct Builder;</pre><div class='docblock'><p>Factory factory for creating builders.</p>
-</div><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class='struct' href='../../eventstore_tcp/builder/struct.Builder.html' title='struct eventstore_tcp::builder::Builder'>Builder</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/eventstore_tcp/builder.rs.html#27-61' title='goto source code'>[src]</a></span></h3>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class='struct' href='../../eventstore_tcp/builder/struct.Builder.html' title='struct eventstore_tcp::builder::Builder'>Builder</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/eventstore_tcp/builder.rs.html#108-147' title='goto source code'>[src]</a></span></h3>
 <div class='impl-items'><h4 id='method.ping' class='method'><span id='ping.v' class='invisible'><code>fn <a href='#method.ping' class='fnname'>ping</a>() -&gt; <a class='struct' href='../../eventstore_tcp/builder/struct.SimpleBuilder.html' title='struct eventstore_tcp::builder::SimpleBuilder'>SimpleBuilder</a></code></span></h4>
 <div class='docblock'><p>Simple builder for a Ping message, that has no other data.</p>
 </div><h4 id='method.authenticate' class='method'><span id='authenticate.v' class='invisible'><code>fn <a href='#method.authenticate' class='fnname'>authenticate</a>() -&gt; <a class='struct' href='../../eventstore_tcp/builder/struct.SimpleBuilder.html' title='struct eventstore_tcp::builder::SimpleBuilder'>SimpleBuilder</a></code></span></h4>
@@ -59,6 +59,8 @@ to the <code>build_package</code> method).</p>
 </div><h4 id='method.write_events' class='method'><span id='write_events.v' class='invisible'><code>fn <a href='#method.write_events' class='fnname'>write_events</a>() -&gt; <a class='struct' href='../../eventstore_tcp/builder/struct.WriteEventsBuilder.html' title='struct eventstore_tcp::builder::WriteEventsBuilder'>WriteEventsBuilder</a></code></span></h4>
 <div class='docblock'><p>Builder for <code>WriteEvents</code>, which allows writing multiple events to a stream, with expected
 current version of the stream.</p>
+</div><h4 id='method.delete_stream' class='method'><span id='delete_stream.v' class='invisible'><code>fn <a href='#method.delete_stream' class='fnname'>delete_stream</a>() -&gt; <a class='struct' href='../../eventstore_tcp/builder/struct.DeleteStreamBuilder.html' title='struct eventstore_tcp::builder::DeleteStreamBuilder'>DeleteStreamBuilder</a></code></span></h4>
+<div class='docblock'><p>Builder for <code>DeleteStream</code> which allows deleting a stream.</p>
 </div><h4 id='method.read_event' class='method'><span id='read_event.v' class='invisible'><code>fn <a href='#method.read_event' class='fnname'>read_event</a>() -&gt; <a class='struct' href='../../eventstore_tcp/builder/struct.ReadEventBuilder.html' title='struct eventstore_tcp::builder::ReadEventBuilder'>ReadEventBuilder</a></code></span></h4>
 <div class='docblock'><p>Builder for <code>ReadEvent</code> which allows reading a single event off a stream.</p>
 </div><h4 id='method.read_stream_events' class='method'><span id='read_stream_events.v' class='invisible'><code>fn <a href='#method.read_stream_events' class='fnname'>read_stream_events</a>() -&gt; <a class='struct' href='../../eventstore_tcp/builder/struct.ReadStreamEventsBuilder.html' title='struct eventstore_tcp::builder::ReadStreamEventsBuilder'>ReadStreamEventsBuilder</a></code></span></h4>

@@ -613,6 +613,22 @@
 <span id="568">568</span>
 <span id="569">569</span>
 <span id="570">570</span>
+<span id="571">571</span>
+<span id="572">572</span>
+<span id="573">573</span>
+<span id="574">574</span>
+<span id="575">575</span>
+<span id="576">576</span>
+<span id="577">577</span>
+<span id="578">578</span>
+<span id="579">579</span>
+<span id="580">580</span>
+<span id="581">581</span>
+<span id="582">582</span>
+<span id="583">583</span>
+<span id="584">584</span>
+<span id="585">585</span>
+<span id="586">586</span>
 </pre><pre class='rust '>
 <span class='doccomment'>//! Builders to help building requests.</span>
 <span class='doccomment'>//!</span>
@@ -634,8 +650,89 @@
 <span class='kw'>use</span> <span class='ident'>uuid</span>::<span class='ident'>Uuid</span>;
 <span class='kw'>use</span> <span class='ident'>package</span>::<span class='ident'>Package</span>;
 <span class='kw'>use</span> {<span class='ident'>UsernamePassword</span>, <span class='ident'>ReadDirection</span>, <span class='ident'>ExpectedVersion</span>, <span class='ident'>EventNumber</span>, <span class='ident'>LogPosition</span>, <span class='ident'>ContentType</span>};
-<span class='kw'>use</span> <span class='ident'>client_messages</span>::{<span class='ident'>WriteEvents</span>, <span class='ident'>NewEvent</span>, <span class='ident'>ReadEvent</span>, <span class='ident'>ReadStreamEvents</span>, <span class='ident'>ReadAllEvents</span>};
+<span class='kw'>use</span> <span class='ident'>raw</span>::<span class='ident'>client_messages</span>::{<span class='ident'>WriteEvents</span>, <span class='ident'>NewEvent</span>, <span class='ident'>ReadEvent</span>, <span class='ident'>ReadStreamEvents</span>, <span class='ident'>ReadAllEvents</span>, <span class='ident'>DeleteStream</span>};
 <span class='kw'>use</span> <span class='ident'>raw</span>::<span class='ident'>RawMessage</span>;
+
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>common_stream_id</span> {
+    () <span class='op'>=&gt;</span> {
+        <span class='doccomment'>/// Panics if the id is an empty string</span>
+        <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>stream_id</span><span class='op'>&lt;</span><span class='ident'>S</span>: <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span>, <span class='ident'>str</span><span class='op'>&gt;&gt;</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>id</span>: <span class='ident'>S</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
+            <span class='kw'>let</span> <span class='ident'>id</span> <span class='op'>=</span> <span class='ident'>id</span>.<span class='ident'>into</span>();
+            <span class='macro'>assert</span><span class='macro'>!</span>(<span class='ident'>id</span>.<span class='ident'>len</span>() <span class='op'>&gt;</span> <span class='number'>0</span>);
+            <span class='self'>self</span>.<span class='ident'>event_stream_id</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>id</span>);
+            <span class='self'>self</span>
+        }
+    }
+}
+
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>common_expected_version</span> {
+    () <span class='op'>=&gt;</span> {
+        <span class='doccomment'>/// Sets the expected version of the stream as an optimistic locking mechanism.</span>
+        <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>expected_version</span><span class='op'>&lt;</span><span class='ident'>V</span>: <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>ExpectedVersion</span><span class='op'>&gt;&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>version</span>: <span class='ident'>V</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
+            <span class='self'>self</span>.<span class='ident'>expected_version</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>version</span>.<span class='ident'>into</span>());
+            <span class='self'>self</span>
+        }
+    }
+}
+
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>common_require_master</span> {
+    () <span class='op'>=&gt;</span> {
+        <span class='doccomment'>/// Should the server only handle the request if it is the cluster master. Note that while only</span>
+        <span class='doccomment'>/// the master server can accept writes, other cluster members can forward requests to the master.</span>
+        <span class='doccomment'>///</span>
+        <span class='doccomment'>/// Defaults to `false`.</span>
+        <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>require_master</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>require</span>: <span class='ident'>bool</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
+            <span class='self'>self</span>.<span class='ident'>require_master</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>require</span>);
+            <span class='self'>self</span>
+        }
+    }
+}
+
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>common_direction</span> {
+    () <span class='op'>=&gt;</span> {
+        <span class='doccomment'>/// Set the read direction (required).</span>
+        <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>direction</span><span class='op'>&lt;</span><span class='ident'>D</span>: <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>ReadDirection</span><span class='op'>&gt;&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>dir</span>: <span class='ident'>D</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
+            <span class='self'>self</span>.<span class='ident'>direction</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>dir</span>.<span class='ident'>into</span>());
+            <span class='self'>self</span>
+        }
+    }
+}
+
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>common_max_count</span> {
+    () <span class='op'>=&gt;</span> {
+        <span class='doccomment'>/// Sets the maximum number of events to read (required). Panics if argument is zero.</span>
+        <span class='doccomment'>/// `u8` is used as larger batches should be paged. At the moment maximum buffer requirement</span>
+        <span class='doccomment'>/// even for 255 events is 255*16MiB &gt; 4000MB.</span>
+        <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>max_count</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>count</span>: <span class='ident'>u8</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
+            <span class='macro'>assert</span><span class='macro'>!</span>(<span class='ident'>count</span> <span class='op'>&gt;</span> <span class='number'>0</span>);
+            <span class='comment'>// TODO: check ClientAPI, or just use u8?</span>
+            <span class='self'>self</span>.<span class='ident'>max_count</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>count</span>);
+            <span class='self'>self</span>
+        }
+    }
+}
+
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>common_resolve_link_tos</span> {
+    () <span class='op'>=&gt;</span> {
+        <span class='doccomment'>/// Whether or not the server should resolve links found in the stream to events of other</span>
+        <span class='doccomment'>/// streams. Defaults to `true`.</span>
+        <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>resolve_link_tos</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>resolve</span>: <span class='ident'>bool</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
+            <span class='self'>self</span>.<span class='ident'>resolve_link_tos</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>resolve</span>);
+            <span class='self'>self</span>
+        }
+    }
+}
+
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>common_build_package</span> {
+    () <span class='op'>=&gt;</span> {
+        <span class='doccomment'>/// Build a package. Will panic if required values are not set.</span>
+        <span class='doccomment'>/// Values of this builder will be moved into the package.</span>
+        <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>build_package</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>authentication</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>UsernamePassword</span><span class='op'>&gt;</span>, <span class='ident'>correlation_id</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Uuid</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>Package</span> {
+            <span class='ident'>build_package</span>(<span class='self'>self</span>.<span class='ident'>build_message</span>(), <span class='ident'>authentication</span>, <span class='ident'>correlation_id</span>)
+        }
+    }
+}
+
 
 <span class='doccomment'>/// Factory factory for creating builders.</span>
 <span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>Builder</span>;
@@ -656,6 +753,11 @@
     <span class='doccomment'>/// current version of the stream.</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>write_events</span>() <span class='op'>-&gt;</span> <span class='ident'>WriteEventsBuilder</span> {
         <span class='ident'>WriteEventsBuilder</span>::<span class='ident'>new</span>()
+    }
+
+    <span class='doccomment'>/// Builder for `DeleteStream` which allows deleting a stream.</span>
+    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>delete_stream</span>() <span class='op'>-&gt;</span> <span class='ident'>DeleteStreamBuilder</span> {
+        <span class='ident'>DeleteStreamBuilder</span>::<span class='ident'>new</span>()
     }
 
     <span class='doccomment'>/// Builder for `ReadEvent` which allows reading a single event off a stream.</span>
@@ -692,9 +794,7 @@
 <span class='doccomment'>///</span>
 <span class='doccomment'>/// ```rust</span>
 <span class='doccomment'>/// use eventstore_tcp::{Builder, ExpectedVersion, StreamVersion, ContentType};</span>
-<span class='doccomment'>/// # use eventstore_tcp::Package;</span>
 <span class='doccomment'>///</span>
-<span class='doccomment'>/// # fn example() -&gt; Package {</span>
 <span class='doccomment'>/// let package = Builder::write_events()</span>
 <span class='doccomment'>///     .stream_id(&quot;my_stream-1&quot;)</span>
 <span class='doccomment'>///     .expected_version(StreamVersion::from(42))</span>
@@ -710,8 +810,6 @@
 <span class='doccomment'>///     .done()</span>
 <span class='doccomment'>///     .require_master(false) // default</span>
 <span class='doccomment'>///     .build_package(None, None);</span>
-<span class='doccomment'>/// # package</span>
-<span class='doccomment'>/// # }</span>
 <span class='doccomment'>/// ```</span>
 <span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>WriteEventsBuilder</span> {
     <span class='ident'>event_stream_id</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span>, <span class='ident'>str</span><span class='op'>&gt;&gt;</span>,
@@ -731,28 +829,11 @@
         }
     }
 
-    <span class='doccomment'>/// Panics if the id is an empty string</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>stream_id</span><span class='op'>&lt;</span><span class='ident'>S</span>: <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span>, <span class='ident'>str</span><span class='op'>&gt;&gt;</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>id</span>: <span class='ident'>S</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
-        <span class='kw'>let</span> <span class='ident'>id</span> <span class='op'>=</span> <span class='ident'>id</span>.<span class='ident'>into</span>();
-        <span class='macro'>assert</span><span class='macro'>!</span>(<span class='ident'>id</span>.<span class='ident'>len</span>() <span class='op'>&gt;</span> <span class='number'>0</span>);
-        <span class='self'>self</span>.<span class='ident'>event_stream_id</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>id</span>);
-        <span class='self'>self</span>
-    }
+    <span class='macro'>common_stream_id</span><span class='macro'>!</span>();
 
-    <span class='doccomment'>/// Sets the expected version of the stream as an optimistic locking mechanism.</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>expected_version</span><span class='op'>&lt;</span><span class='ident'>V</span>: <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>ExpectedVersion</span><span class='op'>&gt;&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>version</span>: <span class='ident'>V</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
-        <span class='self'>self</span>.<span class='ident'>expected_version</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>version</span>.<span class='ident'>into</span>());
-        <span class='self'>self</span>
-    }
+    <span class='macro'>common_expected_version</span><span class='macro'>!</span>();
 
-    <span class='doccomment'>/// Should the server only handle the request if it is the cluster master. Note that while only</span>
-    <span class='doccomment'>/// the master server can accept writes, other cluster members can forward requests to the master.</span>
-    <span class='doccomment'>///</span>
-    <span class='doccomment'>/// Defaults to `false`.</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>require_master</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>require</span>: <span class='ident'>bool</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
-        <span class='self'>self</span>.<span class='ident'>require_master</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>require</span>);
-        <span class='self'>self</span>
-    }
+    <span class='macro'>common_require_master</span><span class='macro'>!</span>();
 
     <span class='doccomment'>/// Start creating a new event using `NewEventBuilder`.</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>new_event</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='kw-2'>mut</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>NewEventBuilder</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span> {
@@ -779,11 +860,7 @@
         <span class='self'>self</span>.<span class='ident'>build_command</span>().<span class='ident'>into</span>()
     }
 
-    <span class='doccomment'>/// Build a package. Will panic if required values are not set.</span>
-    <span class='doccomment'>/// Values of this builder will be moved into the package.</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>build_package</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>authentication</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>UsernamePassword</span><span class='op'>&gt;</span>, <span class='ident'>correlation_id</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Uuid</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>Package</span> {
-        <span class='ident'>build_package</span>(<span class='self'>self</span>.<span class='ident'>build_message</span>(), <span class='ident'>authentication</span>, <span class='ident'>correlation_id</span>)
-    }
+    <span class='macro'>common_build_package</span><span class='macro'>!</span>();
 }
 
 <span class='doccomment'>/// Builder for specifying an event when using `WriteEventsBuilder`.</span>
@@ -884,18 +961,13 @@
 <span class='doccomment'>///</span>
 <span class='doccomment'>/// ```rust</span>
 <span class='doccomment'>/// use eventstore_tcp::{Builder, StreamVersion};</span>
-<span class='doccomment'>/// # use eventstore_tcp::Package;</span>
 <span class='doccomment'>///</span>
-<span class='doccomment'>/// # fn example() -&gt; Package {</span>
 <span class='doccomment'>/// let package = Builder::read_event()</span>
 <span class='doccomment'>///     .stream_id(&quot;my_stream-1&quot;)</span>
 <span class='doccomment'>///     .event_number(StreamVersion::from(42))</span>
 <span class='doccomment'>///     .resolve_link_tos(true) // default</span>
 <span class='doccomment'>///     .require_master(false)  // default</span>
 <span class='doccomment'>///     .build_package(None, None);</span>
-<span class='doccomment'>///</span>
-<span class='doccomment'>/// # package</span>
-<span class='doccomment'>/// # }</span>
 <span class='doccomment'>///</span>
 <span class='doccomment'>/// ```</span>
 <span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>ReadEventBuilder</span> {
@@ -915,13 +987,7 @@
         }
     }
 
-    <span class='doccomment'>/// Panics if the id is an empty string</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>stream_id</span><span class='op'>&lt;</span><span class='ident'>S</span>: <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span>, <span class='ident'>str</span><span class='op'>&gt;&gt;</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>id</span>: <span class='ident'>S</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
-        <span class='kw'>let</span> <span class='ident'>id</span> <span class='op'>=</span> <span class='ident'>id</span>.<span class='ident'>into</span>();
-        <span class='macro'>assert</span><span class='macro'>!</span>(<span class='ident'>id</span>.<span class='ident'>len</span>() <span class='op'>&gt;</span> <span class='number'>0</span>);
-        <span class='self'>self</span>.<span class='ident'>event_stream_id</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>id</span>);
-        <span class='self'>self</span>
-    }
+    <span class='macro'>common_stream_id</span><span class='macro'>!</span>();
 
     <span class='doccomment'>/// Event number to be read.</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>event_number</span><span class='op'>&lt;</span><span class='ident'>N</span>: <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>EventNumber</span><span class='op'>&gt;&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>number</span>: <span class='ident'>N</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
@@ -929,22 +995,9 @@
         <span class='self'>self</span>
     }
 
-    <span class='doccomment'>/// Whether or not the server should resolve links found in the stream to events of other</span>
-    <span class='doccomment'>/// streams. Defaults to `true`.</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>resolve_link_tos</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>resolve</span>: <span class='ident'>bool</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
-        <span class='self'>self</span>.<span class='ident'>resolve_link_tos</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>resolve</span>);
-        <span class='self'>self</span>
-    }
+    <span class='macro'>common_resolve_link_tos</span><span class='macro'>!</span>();
 
-    <span class='doccomment'>/// Should the server only handle the request if it is the cluster master. Master server is the</span>
-    <span class='doccomment'>/// only one which can accept writes, so reading from other members than master can result in</span>
-    <span class='doccomment'>/// some specific event not yet being replicated and thus not found.</span>
-    <span class='doccomment'>///</span>
-    <span class='doccomment'>/// Defaults to `false`.</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>require_master</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>require</span>: <span class='ident'>bool</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
-        <span class='self'>self</span>.<span class='ident'>require_master</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>require</span>);
-        <span class='self'>self</span>
-    }
+    <span class='macro'>common_require_master</span><span class='macro'>!</span>();
 
     <span class='kw'>fn</span> <span class='ident'>build_command</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>ReadEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
         <span class='ident'>ReadEvent</span> {
@@ -959,11 +1012,7 @@
         <span class='self'>self</span>.<span class='ident'>build_command</span>().<span class='ident'>into</span>()
     }
 
-    <span class='doccomment'>/// Build a package. Will panic if required values are not set.</span>
-    <span class='doccomment'>/// Values of this builder will be moved into the package.</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>build_package</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>authentication</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>UsernamePassword</span><span class='op'>&gt;</span>, <span class='ident'>correlation_id</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Uuid</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>Package</span> {
-        <span class='ident'>build_package</span>(<span class='self'>self</span>.<span class='ident'>build_message</span>(), <span class='ident'>authentication</span>, <span class='ident'>correlation_id</span>)
-    }
+    <span class='macro'>common_build_package</span><span class='macro'>!</span>();
 }
 
 <span class='doccomment'>/// Builds a package for reading multiple events from a stream in either `ReadDirection`.</span>
@@ -972,9 +1021,7 @@
 <span class='doccomment'>///</span>
 <span class='doccomment'>/// ```rust</span>
 <span class='doccomment'>/// use eventstore_tcp::{Builder, ReadDirection, StreamVersion};</span>
-<span class='doccomment'>/// # use eventstore_tcp::Package;</span>
 <span class='doccomment'>///</span>
-<span class='doccomment'>/// # fn example() -&gt; Package {</span>
 <span class='doccomment'>/// let package = Builder::read_stream_events()</span>
 <span class='doccomment'>///     .direction(ReadDirection::Forward)</span>
 <span class='doccomment'>///     .stream_id(&quot;my_stream-1&quot;)</span>
@@ -983,9 +1030,6 @@
 <span class='doccomment'>///     .resolve_link_tos(true) // default</span>
 <span class='doccomment'>///     .require_master(false)  // default</span>
 <span class='doccomment'>///     .build_package(None, None);</span>
-<span class='doccomment'>///</span>
-<span class='doccomment'>/// # package</span>
-<span class='doccomment'>/// # }</span>
 <span class='doccomment'>///</span>
 <span class='doccomment'>/// ```</span>
 <span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>ReadStreamEventsBuilder</span> {
@@ -1009,35 +1053,11 @@
         }
     }
 
-    <span class='doccomment'>/// Set the read direction (required).</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>direction</span><span class='op'>&lt;</span><span class='ident'>D</span>: <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>ReadDirection</span><span class='op'>&gt;&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>dir</span>: <span class='ident'>D</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
-        <span class='self'>self</span>.<span class='ident'>direction</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>dir</span>.<span class='ident'>into</span>());
-        <span class='self'>self</span>
-    }
+    <span class='macro'>common_direction</span><span class='macro'>!</span>();
 
-    <span class='doccomment'>/// Sets the maximum number of events to read (required). Panics if argument is zero.</span>
-    <span class='doccomment'>/// `u8` is used as larger batches should be paged. At the moment maximum buffer requirement</span>
-    <span class='doccomment'>/// even for 255 events is 255*16MiB &gt; 4000MB.</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>max_count</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>count</span>: <span class='ident'>u8</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
-        <span class='macro'>assert</span><span class='macro'>!</span>(<span class='ident'>count</span> <span class='op'>&gt;</span> <span class='number'>0</span>);
-        <span class='comment'>// TODO: check ClientAPI, or just use u8?</span>
-        <span class='self'>self</span>.<span class='ident'>max_count</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>count</span>);
-        <span class='self'>self</span>
-    }
+    <span class='macro'>common_max_count</span><span class='macro'>!</span>();
 
-    <span class='doccomment'>/// Sets the stream to read from. Panics if the id is an empty string. Required.</span>
-    <span class='doccomment'>///</span>
-    <span class='doccomment'>/// Panics if the id is `$all`, which is currently unimplemented.</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>stream_id</span><span class='op'>&lt;</span><span class='ident'>S</span>: <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span>, <span class='ident'>str</span><span class='op'>&gt;&gt;</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>id</span>: <span class='ident'>S</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
-        <span class='kw'>let</span> <span class='ident'>id</span> <span class='op'>=</span> <span class='ident'>id</span>.<span class='ident'>into</span>();
-        <span class='kw'>if</span> <span class='ident'>id</span> <span class='op'>==</span> <span class='string'>&quot;$all&quot;</span> {
-            <span class='comment'>// ReadAll is not yet implemented</span>
-            <span class='macro'>unimplemented</span><span class='macro'>!</span>()
-        }
-        <span class='macro'>assert</span><span class='macro'>!</span>(<span class='ident'>id</span>.<span class='ident'>len</span>() <span class='op'>&gt;</span> <span class='number'>0</span>);
-        <span class='self'>self</span>.<span class='ident'>event_stream_id</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>id</span>);
-        <span class='self'>self</span>
-    }
+    <span class='macro'>common_stream_id</span><span class='macro'>!</span>();
 
     <span class='doccomment'>/// Event number to read from to the given direction.</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>from_event_number</span><span class='op'>&lt;</span><span class='ident'>N</span>: <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>EventNumber</span><span class='op'>&gt;&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>n</span>: <span class='ident'>N</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
@@ -1045,22 +1065,9 @@
         <span class='self'>self</span>
     }
 
-    <span class='doccomment'>/// Whether or not the server should resolve links found in the stream to events of other</span>
-    <span class='doccomment'>/// streams. Defaults to `true`.</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>resolve_link_tos</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>resolve</span>: <span class='ident'>bool</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
-        <span class='self'>self</span>.<span class='ident'>resolve_link_tos</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>resolve</span>);
-        <span class='self'>self</span>
-    }
+    <span class='macro'>common_resolve_link_tos</span><span class='macro'>!</span>();
 
-    <span class='doccomment'>/// Should the server only handle the request if it is the cluster master. Master server is the</span>
-    <span class='doccomment'>/// only one which can accept writes, so reading from other members than master can result in</span>
-    <span class='doccomment'>/// some specific event not yet being replicated and thus not found.</span>
-    <span class='doccomment'>///</span>
-    <span class='doccomment'>/// Defaults to `false`.</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>require_master</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>require</span>: <span class='ident'>bool</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
-        <span class='self'>self</span>.<span class='ident'>require_master</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>require</span>);
-        <span class='self'>self</span>
-    }
+    <span class='macro'>common_require_master</span><span class='macro'>!</span>();
 
     <span class='kw'>fn</span> <span class='ident'>build_command</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>ReadStreamEvents</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
         <span class='ident'>ReadStreamEvents</span> {
@@ -1076,14 +1083,7 @@
         <span class='ident'>RawMessage</span>::<span class='ident'>ReadStreamEvents</span>(<span class='self'>self</span>.<span class='ident'>direction</span>.<span class='ident'>expect</span>(<span class='string'>&quot;direction not set&quot;</span>), <span class='self'>self</span>.<span class='ident'>build_command</span>())
     }
 
-    <span class='doccomment'>/// Build a package. Will panic if required values are not set.</span>
-    <span class='doccomment'>/// Values of this builder will be moved into the package.</span>
-    <span class='doccomment'>///</span>
-    <span class='doccomment'>/// Note that this method can start panicing in future if an unsupported combination of `ReadDirection`</span>
-    <span class='doccomment'>/// and `from_event_number` is specified.</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>build_package</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>authentication</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>UsernamePassword</span><span class='op'>&gt;</span>, <span class='ident'>correlation_id</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Uuid</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>Package</span> {
-        <span class='ident'>build_package</span>(<span class='self'>self</span>.<span class='ident'>build_message</span>(), <span class='ident'>authentication</span>, <span class='ident'>correlation_id</span>)
-    }
+    <span class='macro'>common_build_package</span><span class='macro'>!</span>();
 }
 
 <span class='doccomment'>/// Builder for `ReadAllEvents`.</span>
@@ -1108,11 +1108,7 @@
         }
     }
 
-    <span class='doccomment'>/// Set the read direction (required).</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>direction</span><span class='op'>&lt;</span><span class='ident'>D</span>: <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>ReadDirection</span><span class='op'>&gt;&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>dir</span>: <span class='ident'>D</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
-        <span class='self'>self</span>.<span class='ident'>direction</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>dir</span>.<span class='ident'>into</span>());
-        <span class='self'>self</span>
-    }
+    <span class='macro'>common_direction</span><span class='macro'>!</span>();
 
     <span class='doccomment'>/// Sets the positions to read from. These are easiest to acquire from previous ReadAllSuccess</span>
     <span class='doccomment'>/// responses, likely persisted somewhere between reads.</span>
@@ -1122,37 +1118,14 @@
         <span class='self'>self</span>
     }
 
-    <span class='doccomment'>/// Sets the maximum number of events to read (required). Panics if argument is zero.</span>
-    <span class='doccomment'>/// `u8` is used as larger batches should be paged. At the moment maximum buffer requirement</span>
-    <span class='doccomment'>/// even for 255 events is 255*16MiB &gt; 4000MB.</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>max_count</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>count</span>: <span class='ident'>u8</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
-        <span class='macro'>assert</span><span class='macro'>!</span>(<span class='ident'>count</span> <span class='op'>&gt;</span> <span class='number'>0</span>);
-        <span class='comment'>// TODO: check ClientAPI, or just use u8?</span>
-        <span class='self'>self</span>.<span class='ident'>max_count</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>count</span>);
-        <span class='self'>self</span>
-    }
+    <span class='macro'>common_max_count</span><span class='macro'>!</span>();
 
-    <span class='doccomment'>/// Whether or not the server should resolve links found in the stream to events of other</span>
-    <span class='doccomment'>/// streams. Defaults to `true`.</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>resolve_link_tos</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>resolve</span>: <span class='ident'>bool</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
-        <span class='self'>self</span>.<span class='ident'>resolve_link_tos</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>resolve</span>);
-        <span class='self'>self</span>
-    }
+    <span class='macro'>common_resolve_link_tos</span><span class='macro'>!</span>();
 
-    <span class='doccomment'>/// Should the server only handle the request if it is the cluster master. Master server is the</span>
-    <span class='doccomment'>/// only one which can accept writes, so reading from other members than master can result in</span>
-    <span class='doccomment'>/// some specific event not yet being replicated and thus not found.</span>
-    <span class='doccomment'>///</span>
-    <span class='doccomment'>/// Defaults to `false`.</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>require_master</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>require</span>: <span class='ident'>bool</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
-        <span class='self'>self</span>.<span class='ident'>require_master</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>require</span>);
-        <span class='self'>self</span>
-    }
+    <span class='macro'>common_require_master</span><span class='macro'>!</span>();
 
-    <span class='doccomment'>/// Build a package. Will panic if required values are not set.</span>
-    <span class='doccomment'>/// Values of this builder will be moved into the package.</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>build_package</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>authentication</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>UsernamePassword</span><span class='op'>&gt;</span>, <span class='ident'>correlation_id</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Uuid</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>Package</span> {
-        <span class='kw'>let</span> <span class='ident'>msg</span> <span class='op'>=</span> <span class='ident'>RawMessage</span>::<span class='ident'>ReadAllEvents</span>(
+    <span class='kw'>fn</span> <span class='ident'>build_message</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>RawMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
+        <span class='ident'>RawMessage</span>::<span class='ident'>ReadAllEvents</span>(
             <span class='self'>self</span>.<span class='ident'>direction</span>.<span class='ident'>take</span>().<span class='ident'>expect</span>(<span class='string'>&quot;direction&quot;</span>),
             <span class='ident'>ReadAllEvents</span> {
                 <span class='ident'>commit_position</span>: <span class='self'>self</span>.<span class='ident'>commit_position</span>.<span class='ident'>expect</span>(<span class='string'>&quot;position&quot;</span>).<span class='ident'>into</span>(),
@@ -1160,9 +1133,68 @@
                 <span class='ident'>max_count</span>: <span class='self'>self</span>.<span class='ident'>max_count</span>.<span class='ident'>expect</span>(<span class='string'>&quot;max_count&quot;</span>) <span class='kw'>as</span> <span class='ident'>i32</span>,
                 <span class='ident'>resolve_link_tos</span>: <span class='self'>self</span>.<span class='ident'>resolve_link_tos</span>.<span class='ident'>unwrap_or</span>(<span class='bool-val'>true</span>),
                 <span class='ident'>require_master</span>: <span class='self'>self</span>.<span class='ident'>require_master</span>.<span class='ident'>unwrap_or</span>(<span class='bool-val'>true</span>)
-            });
-        <span class='ident'>build_package</span>(<span class='ident'>msg</span>, <span class='ident'>authentication</span>, <span class='ident'>correlation_id</span>)
+            })
     }
+
+    <span class='macro'>common_build_package</span><span class='macro'>!</span>();
+}
+
+<span class='doccomment'>/// Builder for `DeleteStream`.</span>
+<span class='doccomment'>///</span>
+<span class='doccomment'>/// # Example</span>
+<span class='doccomment'>///</span>
+<span class='doccomment'>/// ```</span>
+<span class='doccomment'>/// use eventstore_tcp::{Builder, StreamVersion};</span>
+<span class='doccomment'>///</span>
+<span class='doccomment'>/// let package = Builder::delete_stream()</span>
+<span class='doccomment'>///     .stream_id(&quot;hello_world&quot;)</span>
+<span class='doccomment'>///     .expected_version(StreamVersion::from(42))</span>
+<span class='doccomment'>///     .require_master(false) // default</span>
+<span class='doccomment'>///     .hard_delete(false)    // default</span>
+<span class='doccomment'>///     .build_package(None, None);</span>
+<span class='doccomment'>/// ```</span>
+<span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>DeleteStreamBuilder</span> {
+    <span class='ident'>event_stream_id</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span>, <span class='ident'>str</span><span class='op'>&gt;&gt;</span>,
+    <span class='ident'>expected_version</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>ExpectedVersion</span><span class='op'>&gt;</span>,
+    <span class='ident'>require_master</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>bool</span><span class='op'>&gt;</span>,
+    <span class='ident'>hard_delete</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>bool</span><span class='op'>&gt;</span>
+}
+
+<span class='kw'>impl</span> <span class='ident'>DeleteStreamBuilder</span> {
+    <span class='kw'>fn</span> <span class='ident'>new</span>() <span class='op'>-&gt;</span> <span class='self'>Self</span> {
+        <span class='ident'>DeleteStreamBuilder</span> {
+            <span class='ident'>event_stream_id</span>: <span class='prelude-val'>None</span>,
+            <span class='ident'>expected_version</span>: <span class='prelude-val'>None</span>,
+            <span class='ident'>require_master</span>: <span class='prelude-val'>None</span>,
+            <span class='ident'>hard_delete</span>: <span class='prelude-val'>None</span>,
+        }
+    }
+
+    <span class='macro'>common_stream_id</span><span class='macro'>!</span>();
+
+    <span class='macro'>common_expected_version</span><span class='macro'>!</span>();
+
+    <span class='macro'>common_require_master</span><span class='macro'>!</span>();
+
+    <span class='doccomment'>/// Set to `true` to actually delete data instead of just marking the stream as deleted.</span>
+    <span class='doccomment'>/// Data may be deleted in the next scavenge operation.</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>/// Defaults to `false`.</span>
+    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>hard_delete</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>hard_delete</span>: <span class='ident'>bool</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
+        <span class='self'>self</span>.<span class='ident'>hard_delete</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>hard_delete</span>);
+        <span class='self'>self</span>
+    }
+
+    <span class='kw'>fn</span> <span class='ident'>build_message</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>RawMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
+        <span class='ident'>RawMessage</span>::<span class='ident'>DeleteStream</span>(<span class='ident'>DeleteStream</span> {
+            <span class='ident'>event_stream_id</span>: <span class='self'>self</span>.<span class='ident'>event_stream_id</span>.<span class='ident'>take</span>().<span class='ident'>unwrap</span>(),
+            <span class='ident'>expected_version</span>: <span class='self'>self</span>.<span class='ident'>expected_version</span>.<span class='ident'>take</span>().<span class='ident'>unwrap</span>().<span class='ident'>into</span>(),
+            <span class='ident'>require_master</span>: <span class='self'>self</span>.<span class='ident'>require_master</span>.<span class='ident'>unwrap_or</span>(<span class='bool-val'>false</span>),
+            <span class='ident'>hard_delete</span>: <span class='prelude-val'>Some</span>(<span class='self'>self</span>.<span class='ident'>hard_delete</span>.<span class='ident'>unwrap_or</span>(<span class='bool-val'>false</span>)),
+        })
+    }
+
+    <span class='macro'>common_build_package</span><span class='macro'>!</span>();
 }
 
 <span class='kw'>fn</span> <span class='ident'>build_package</span><span class='op'>&lt;</span><span class='ident'>M</span>: <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>RawMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;&gt;</span><span class='op'>&gt;</span>(<span class='ident'>msg</span>: <span class='ident'>M</span>, <span class='ident'>authentication</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>UsernamePassword</span><span class='op'>&gt;</span>, <span class='ident'>correlation_id</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Uuid</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>Package</span> {
