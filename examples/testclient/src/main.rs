@@ -21,7 +21,9 @@ use tokio_service::Service;
 
 use clap::{Arg, App, SubCommand, ArgMatches};
 
-use eventstore_tcp::{EventStoreClient, Package, AdaptedMessage, Builder, ExpectedVersion, StreamVersion, EventNumber, ContentType, ReadDirection, ReadStreamCompleted, EventRecord, LogPosition, UsernamePassword, ReadAllCompleted, ReadEventError, ReadStreamError, ReadAllError};
+use eventstore_tcp::{EventStoreClient, Package, AdaptedMessage, Builder, ExpectedVersion, StreamVersion, EventNumber, ContentType, ReadDirection, LogPosition, UsernamePassword};
+use eventstore_tcp::raw::EventRecord;
+use eventstore_tcp::adapted::{ReadEventError, ReadStreamError, ReadStreamCompleted, ReadAllError, ReadAllCompleted};
 
 #[derive(Debug)]
 enum ByteParsingError {
