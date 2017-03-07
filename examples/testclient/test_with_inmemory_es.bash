@@ -57,63 +57,99 @@ main () {
 
 	echo "$self: using stream name $stream_name" >&2
 
+	echo -n 'writing first... '
 	run "write" --json "$stream_name" created test_message "${messages_in[0]}"
 
+	echo -n 'reading first forward... '
 	diff \
 		<(run "read" --output json_oneline --mode forward-once --count 1 --position first "$stream_name") \
 		<(echo -e "${messages_out[0]}")
+	echo 'ok'
+	echo -n 'reading first backward (again)... '
 	diff \
 		<(run "read" --output json_oneline --mode backward --count 1 --position last "$stream_name") \
 		<(echo -e "${messages_out[0]}")
+	echo 'ok'
 
+	echo -n 'writing second... '
 	run "write" --json "$stream_name" 0 test_message "${messages_in[1]}"
 
+	echo -n 'reading 2 forward... '
 	diff \
 		<(run "read" --output json_oneline --mode forward-once --count 2 --position first "$stream_name") \
 		<(echo -e "${messages_out[0]}\n${messages_out[1]}")
+	echo 'ok'
+	echo -n 'reading 2 backwards... '
 	diff \
 		<(run "read" --output json_oneline --mode backward --count 2 --position last "$stream_name") \
 		<(echo -e "${messages_out[1]}\n${messages_out[0]}")
+	echo 'ok'
 
+	echo -n 'writing third... '
 	run "write" --json "$stream_name" 1 test_message "${messages_in[2]}"
+	echo -n 'writing fourth... '
 	run "write" --json "$stream_name" 2 test_message "${messages_in[3]}"
 
+	echo -n 'reading 2 forwards from first... '
 	diff \
 		<(run "read" --output json_oneline --mode forward-once --count 2 --position first "$stream_name") \
 		<(echo -e "${messages_out[0]}\n${messages_out[1]}")
+	echo 'ok'
+	echo -n 'reading 3 forwards from first... '
 	diff \
 		<(run "read" --output json_oneline --mode forward-once --count 3 --position first "$stream_name") \
 		<(echo -e "${messages_out[0]}\n${messages_out[1]}\n${messages_out[2]}")
+	echo 'ok'
+	echo -n 'reading 3 forwards from 1... '
 	diff \
 		<(run "read" --output json_oneline --mode forward-once --count 3 --position 1 "$stream_name") \
 		<(echo -e "${messages_out[1]}\n${messages_out[2]}\n${messages_out[3]}")
+	echo 'ok'
+	echo -n 'reading 2 backwards from last... '
 	diff \
 		<(run "read" --output json_oneline --mode backward --count 2 --position last "$stream_name") \
 		<(echo -e "${messages_out[3]}\n${messages_out[2]}")
+	echo 'ok'
+	echo -n 'reading 2 backwards from 3... '
 	diff \
 		<(run "read" --output json_oneline --mode backward --count 2 --position 3 "$stream_name") \
 		<(echo -e "${messages_out[3]}\n${messages_out[2]}")
+	echo 'ok'
+	echo -n 'reading 2 backwards from 2... '
 	diff \
 		<(run "read" --output json_oneline --mode backward --count 2 --position 2 "$stream_name") \
 		<(echo -e "${messages_out[2]}\n${messages_out[1]}")
+	echo 'ok'
+	echo -n 'reading 2 backwards from 1... '
 	diff \
 		<(run "read" --output json_oneline --mode backward --count 2 --position 1 "$stream_name") \
 		<(echo -e "${messages_out[1]}\n${messages_out[0]}")
+	echo 'ok'
+	echo -n 'reading 2 backwards from first... '
 	diff \
 		<(run "read" --output json_oneline --mode backward --count 2 --position first "$stream_name") \
 		<(echo -e "${messages_out[0]}")
+	echo 'ok'
 
+	echo -n 'writing fifth... '
 	run "write" --json "$stream_name" "any" test_message "${messages_in[4]}"
 
+	echo -n 'reading 10 from first... '
 	diff \
 		<(run "read" --output json_oneline --mode forward-once --count 10 --position first "$stream_name") \
 		<(echo -e "${messages_out[0]}\n${messages_out[1]}\n${messages_out[2]}\n${messages_out[3]}\n${messages_out[4]}")
-
+	echo 'ok'
+	echo -n 'reading 10 from last... '
 	diff \
 		<(run "read" --output json_oneline --mode backward --count 10 --position last "$stream_name") \
 		<(echo -e "${messages_out[4]}\n${messages_out[3]}\n${messages_out[2]}\n${messages_out[1]}\n${messages_out[0]}")
+	echo 'ok'
 
+	echo -n 'deleting the stream soft... '
 	run "delete" "$stream_name" 4
+
+	echo -n 'deleting the stream hard... '
+	run "delete" "$stream_name" 4 --hard-delete
 }
 
 kill_server () {
