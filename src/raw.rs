@@ -1,4 +1,6 @@
-#![allow(dead_code)]
+//! Raw module contains the enumeration `RawMessage` and raw decoding and encoding functionality.
+//! There should not be need to handle `RawMessage` values directly but if there is ever a bug,
+//! using the raw messages should still work.
 
 use std::io;
 use std::str;
@@ -10,6 +12,7 @@ use client_messages::{WriteEvents, WriteEventsCompleted, ReadEvent, ReadEventCom
 use errors::Error;
 use ReadDirection;
 
+/// Enumeration much like the `adapted::AdaptedMessage` for all the messages in the protocol.
 #[derive(Debug, PartialEq, Clone)]
 pub enum RawMessage<'a> {
     /// Requests heartbeat from the other side. Unsure if clients or server sends these.
@@ -65,6 +68,7 @@ pub enum RawMessage<'a> {
 }
 
 /// Trait for facilitating fallible Cow<'a, [u8]> -> Cow<'a, str> conversion.
+#[doc(hidden)]
 pub trait ByteWrapper<'a>: Into<Cow<'a, [u8]>> + From<Cow<'a, [u8]>> {
     type ConversionErr: From<str::Utf8Error>;
 
@@ -193,6 +197,7 @@ impl<'a> From<(u8, Cow<'a, [u8]>)> for RawMessage<'a> {
 }
 
 impl<'a> RawMessage<'a> {
+    /// Turns possibly borrowed value of `self` into one that owns all of it's data.
     pub fn into_owned(self) -> RawMessage<'static> {
         use self::RawMessage::*;
         use client_messages_ext::{WriteEventsExt, WriteEventsCompletedExt, ReadEventExt, ReadEventCompletedExt, ReadStreamEventsExt, ReadStreamEventsCompletedExt, ReadAllEventsCompletedExt, NotHandledExt};

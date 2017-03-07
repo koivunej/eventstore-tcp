@@ -33,7 +33,7 @@
 //! use tokio_core::reactor::Core;
 //! use tokio_service::Service;
 //!
-//! use eventstore_tcp::{EventStoreClient, Builder, Message, StreamVersion, ContentType};
+//! use eventstore_tcp::{EventStoreClient, Builder, AdaptedMessage, StreamVersion, ContentType};
 //!
 //! fn main() {
 //!     let addr = "127.0.0.1:1113".parse::<SocketAddr>().unwrap();
@@ -58,10 +58,12 @@
 //!
 //!         // call returns a future representing the response
 //!     }).and_then(|resp| {
-//!         match resp.message {
-//!             Message::WriteEventsCompleted(Ok(_)) =>
+//!         // By default, `resp` is a `Package` that contains the raw protobuf defined message
+//!         // (`RawMessage`). It is possible to refine it into AdaptedMessage which can fail:
+//!         match resp.message.try_adapt().unwrap() {
+//!             AdaptedMessage::WriteEventsCompleted(Ok(_)) =>
 //!                 println!("Event was written successfully"),
-//!             Message::WriteEventsCompleted(Err(fail)) =>
+//!             AdaptedMessage::WriteEventsCompleted(Err(fail)) =>
 //!                 println!("Event writing failed: {:?}", fail),
 //!             unexpected => println!("Unexpected response: {:#?}", unexpected),
 //!         };
@@ -99,8 +101,11 @@ pub use client_messages::mod_NotHandled::{NotHandledReason, MasterInfo};
 
 mod client_messages_ext;
 
-mod raw;
-mod adapted;
+pub mod raw;
+pub use raw::RawMessage;
+
+pub mod adapted;
+pub use adapted::AdaptedMessage;
 
 mod write_events;
 pub use write_events::{WriteEventsCompleted, WriteEventsFailure};

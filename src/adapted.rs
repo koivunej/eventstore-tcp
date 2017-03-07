@@ -1,4 +1,5 @@
-#![allow(dead_code)]
+//! Adapted or refined types providing a much more oxidized API for handling the messages in the
+//! protocol.
 
 use std::borrow::Cow;
 use std::ops::Range;
@@ -50,7 +51,6 @@ pub enum AdaptedMessage<'a> {
 
     /// Correlated request was not handled. This is the likely response to requests where
     /// `require_master` is `true`, but the connected endpoint is not master and cannot reach it.
-    //NotHandled(NotHandledReason, Option<MasterInfo<'a>>),
     NotHandled(NotHandledInfo<'a>),
 
     /// Request to authenticate attached credentials.
@@ -152,6 +152,7 @@ trait AsRawPayload<'a, 'b, P: 'b> {
     fn as_raw(&'b self) -> P;
 }
 
+/// Placeholder for NotHandledInfo, unused.
 #[derive(Debug, PartialEq, Clone)]
 pub struct NotHandledInfo<'a> {
     ph: &'a str
