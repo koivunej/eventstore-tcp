@@ -7,7 +7,8 @@ use quick_protobuf;
 
 use client_messages::{WriteEvents, WriteEventsCompleted, ReadEvent, ReadEventCompleted, ReadStreamEvents, ReadStreamEventsCompleted, ReadAllEvents, ReadAllEventsCompleted, NotHandled};
 
-use {MappingError, ReadDirection};
+use errors::Error;
+use ReadDirection;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum RawMessage<'a> {
@@ -105,7 +106,7 @@ impl<'a> AsRef<[u8]> for NotAuthenticatedPayload<'a> {
 }
 
 impl<'a> ByteWrapper<'a> for NotAuthenticatedPayload<'a> {
-    type ConversionErr = MappingError;
+    type ConversionErr = Error;
 }
 
 impl<'a> From<Cow<'a, [u8]>> for NotAuthenticatedPayload<'a> {
@@ -138,7 +139,7 @@ impl<'a> AsRef<[u8]> for BadRequestPayload<'a> {
 }
 
 impl<'a> ByteWrapper<'a> for BadRequestPayload<'a> {
-    type ConversionErr = MappingError;
+    type ConversionErr = Error;
 }
 
 impl<'a> From<Cow<'a, [u8]>> for BadRequestPayload<'a> {

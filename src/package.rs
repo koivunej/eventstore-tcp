@@ -1,5 +1,6 @@
 use uuid::Uuid;
-use {UsernamePassword, MappingError};
+use UsernamePassword;
+use errors::Error;
 use raw;
 use adapted;
 
@@ -46,14 +47,13 @@ impl<'a> From<adapted::AdaptedMessage<'a>> for MessageContainer<'a> {
 
 impl<'a> MessageContainer<'a> {
     /// Attempt to convert a raw message into an adapted one
-    pub fn try_adapt(self) -> Result<adapted::AdaptedMessage<'a>, (raw::RawMessage<'a>, MappingError)> {
+    pub fn try_adapt(self) -> Result<adapted::AdaptedMessage<'a>, (raw::RawMessage<'a>, Error)> {
         use CustomTryInto;
         use self::MessageContainer::*;
         match self {
             Adapted(adapted) => Ok(adapted),
             Raw(raw) => {
-                let res: Result<adapted::AdaptedMessage<'a>, (raw::RawMessage<'a>, MappingError)> = raw.try_into();
-                res
+                raw.try_into()
             }
         }
     }

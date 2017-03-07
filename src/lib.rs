@@ -91,7 +91,6 @@ extern crate tokio_service;
 #[cfg(test)]
 extern crate rustc_serialize;
 
-use std::fmt;
 use std::str;
 
 mod client_messages;
@@ -129,11 +128,59 @@ pub use auth::UsernamePassword;
 mod errors {
     use std::str;
     use std::io;
+    use std::fmt;
+
+    /// Enum describing the locations where a result value can be missing
+    #[derive(Debug, PartialEq)]
+    pub enum ResultStatusKind {
+        /// Missing from WriteEventsCompleted
+        WriteEvents,
+        /// Missing from ReadEventCompleted
+        ReadEvent,
+        /// Missing from ReadStreamEventsCompleted
+        ReadStream,
+    }
+
+    impl fmt::Display for ResultStatusKind {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+            use self::ResultStatusKind::*;
+            write!(fmt, "{}", match self {
+                &WriteEvents => "WriteEventsCompleted::result",
+                &ReadEvent => "ReadEventCompleted::result",
+                &ReadStream => "ReadStreamEventsCompleted::result",
+            })
+        }
+    }
 
     error_chain! {
+        foreign_links {
+            InvalidUtf8(str::Utf8Error);
+        }
+
         errors {
             InvalidFlags(flags: u8) {
                 display("Invalid flags: 0x{:02x}", flags)
+            }
+            MissingResultField(which: ResultStatusKind) {
+                display("Missing result field: {}", which)
+            }
+            InvalidStreamVersion(value: i32) {
+                display("Invalid StreamVersion: {}", value)
+            }
+            InvalidEventNumber(value: i32) {
+                display("Invalid EventNumber: {}", value)
+            }
+            InvalidLogPosition(value: i64) {
+                display("Invalid LogPosition: {}", value)
+            }
+            UnsupportedDiscriminator(d: u8) {
+                display("Unsupported discriminator 0x{:02x}", d)
+            }
+            UnimplementedConversion {
+                display("Unimplemented conversion")
+            }
+            WriteEventsInvalidTransaction {
+                display("Unexpected WriteEvents result: InvalidTransaction")
             }
         }
     }
@@ -152,6 +199,8 @@ mod errors {
         }
     }
 }
+
+use self::errors::{Error, ErrorKind};
 
 /// The direction in which events are read.
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -196,10 +245,19 @@ impl From<StreamVersion> for ExpectedVersion {
     }
 }
 
+impl CustomTryFrom<i32> for ExpectedVersion {
+    type Err = Error;
+
+    fn try_from(val: i32) -> Result<ExpectedVersion, (i32, Self::Err)> {
+        let ver = StreamVersion::try_from(val)?;
+        Ok(ExpectedVersion::from(ver))
+    }
+}
+
 /// `StreamVersion` represents the valid values for a stream version which is the same as the
 /// event number of the latest event. As such, values are non-negative integers up to
 /// `i32::max_value`. Negative values of `i32` have special meaning in the protocol, and are
-/// restricted from used with this type.
+/// restricted from being used with this type.
 ///
 /// Conversions to StreamVersion are quite horrible until TryFrom is stabilized.
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -225,18 +283,24 @@ impl StreamVersion {
 
     #[doc(hidden)]
     pub fn from_i32(version: i32) -> Self {
-        Self::from_i32_opt(version).expect("StreamVersion over/underflow")
+        Self::try_from(version).unwrap()
+
     }
 
     #[doc(hidden)]
     pub fn from_i32_opt(version: i32) -> Option<Self> {
-        if version < 0 {
-            None
-        } else if version == i32::max_value() {
-            // this value is used to marking streams as deleted
-            None
+        Self::try_from(version).ok()
+    }
+}
+
+impl CustomTryFrom<i32> for StreamVersion {
+    type Err = Error;
+
+    fn try_from(val: i32) -> Result<Self, (i32, Self::Err)> {
+        if val < 0 {
+            Err((val, ErrorKind::InvalidStreamVersion(val).into()))
         } else {
-            Some(StreamVersion(version as u32))
+            Ok(StreamVersion(val as u32))
         }
     }
 }
@@ -277,6 +341,21 @@ impl From<StreamVersion> for EventNumber {
     }
 }
 
+impl CustomTryFrom<i32> for EventNumber {
+    type Err = Error;
+
+    fn try_from(val: i32) -> Result<Self, (i32, Self::Err)> {
+        match val {
+            0 => Ok(EventNumber::First),
+            -1 => Ok(EventNumber::Last),
+            x if x > 0 => Ok(EventNumber::Exact(StreamVersion::from_i32(x))),
+            invalid => {
+                Err((invalid, ErrorKind::InvalidEventNumber(val).into()))
+            }
+        }
+    }
+}
+
 impl Into<i32> for EventNumber {
     /// Returns the wire representation.
     fn into(self) -> i32 {
@@ -284,21 +363,6 @@ impl Into<i32> for EventNumber {
             EventNumber::First => 0,
             EventNumber::Exact(x) => x.into(),
             EventNumber::Last => -1
-        }
-    }
-}
-
-impl EventNumber {
-    #[doc(hidden)]
-    pub fn from_i32_opt(val: i32) -> Option<Self> {
-        match val {
-            0 => Some(EventNumber::First),
-            -1 => Some(EventNumber::Last),
-            x if x > 0 => Some(EventNumber::Exact(StreamVersion::from_i32(x))),
-            invalid => {
-                println!("invalid event number: {}", invalid);
-                None
-            }
         }
     }
 }
@@ -354,6 +418,24 @@ impl From<i64> for LogPosition {
     }
 }
 
+impl CustomTryFrom<i64> for LogPosition {
+    type Err = Error;
+
+    fn try_from(val: i64) -> Result<Self, (i64, Self::Err)> {
+        match val {
+            0 => Ok(LogPosition::First),
+            -1 => Ok(LogPosition::Last),
+            pos => {
+                if pos > 0 {
+                    Ok(LogPosition::Exact(pos as u64))
+                } else {
+                    Err((pos, ErrorKind::InvalidLogPosition(pos).into()))
+                }
+            }
+        }
+    }
+}
+
 impl Into<i64> for LogPosition {
     fn into(self) -> i64 {
         match self {
@@ -381,17 +463,7 @@ impl LogPosition {
 
     #[doc(hidden)]
     pub fn from_i64_opt(pos: i64) -> Option<LogPosition> {
-        match pos {
-            0 => Some(LogPosition::First),
-            -1 => Some(LogPosition::Last),
-            pos => {
-                if pos > 0 {
-                    Some(LogPosition::Exact(pos as u64))
-                } else {
-                    None
-                }
-            }
-        }
+        Self::try_from(pos).ok()
     }
 }
 
@@ -412,80 +484,5 @@ impl<T, U> CustomTryInto<U> for T where U: CustomTryFrom<T> {
 
     fn try_into(self) -> Result<U, (T, Self::Err)> {
         U::try_from(self)
-    }
-}
-
-/// Enum describing the locations where a result value can be missing
-#[derive(Debug, PartialEq)]
-pub enum ResultStatusKind {
-    /// Missing from WriteEventsCompleted
-    WriteEvents,
-    /// Missing from ReadEventCompleted
-    ReadEvent,
-    /// Missing from ReadStreamEventsCompleted
-    ReadStream,
-}
-
-impl fmt::Display for ResultStatusKind {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        use ResultStatusKind::*;
-        write!(fmt, "{}", match self {
-            &WriteEvents => "WriteEventsCompleted::result",
-            &ReadEvent => "ReadEventCompleted::result",
-            &ReadStream => "ReadStreamEventsCompleted::result",
-        })
-    }
-}
-
-/// Error kind of `MappingError`
-#[derive(Debug, PartialEq)]
-pub enum MappingErrorKind {
-    /// A byte segment was a not UTF8 as expected
-    InvalidUtf8(str::Utf8Error),
-    /// A result field was missing
-    MissingResultField(ResultStatusKind),
-    /// Invalid stream version
-    InvalidStreamVersion(&'static str, i32),
-    /// Unsupported discriminator value
-    Unsupported(u8),
-    /// Unimplemented conversion
-    Unimplemented,
-    /// InvalidTransaction received for WriteEvents
-    WriteEventsInvalidTransaction
-}
-
-impl fmt::Display for MappingErrorKind {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        use self::MappingErrorKind::*;
-        match self {
-            &InvalidUtf8(e) => write!(fmt, "{}", e),
-            &MissingResultField(ref x) => write!(fmt, "Missing result field: {}", x),
-            &InvalidStreamVersion(prop, val) => write!(fmt, "Invalid StreamVersion for {}: {}", prop, val),
-            &Unsupported(d) => write!(fmt, "Unsupported discriminator: 0x{:02x}", d),
-            &Unimplemented => write!(fmt, "No mapping implemented"),
-            &WriteEventsInvalidTransaction => write!(fmt, "Unexpected result for WriteEventsCompleted: InvalidTransaction"),
-        }
-    }
-}
-
-/// Error describing why the raw message could not be mapped into more nicer value.
-#[derive(Debug, PartialEq)]
-pub struct MappingError(MappingErrorKind);
-
-impl fmt::Display for MappingError {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "{}", self.0)
-    }
-}
-
-impl From<str::Utf8Error> for MappingError {
-    fn from(e: str::Utf8Error) -> MappingError {
-        MappingError(MappingErrorKind::InvalidUtf8(e))
-    }
-}
-
-impl From<MappingErrorKind> for MappingError {
-    fn from(e: MappingErrorKind) -> Self {
-        MappingError(e)
     }
 }
