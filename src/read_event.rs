@@ -18,6 +18,21 @@ pub enum ReadEventFailure {
     AccessDenied
 }
 
+/// `ReadEventError` maps to non-success of `ReadEventResult`
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum ReadEventError<'a> {
+    /// Event of requested number was not found (scavenged or never existed)
+    NotFound,
+    /// No such stream
+    NoStream,
+    /// Stream has been deleted
+    StreamDeleted,
+    /// Other error
+    Error(Option<Cow<'a, str>>),
+    /// Access was denied (no credentials provided or insufficient permissions)
+    AccessDenied
+}
+
 impl<'a> From<client_messages::ReadEventCompleted<'a>> for Message {
     fn from(rec: client_messages::ReadEventCompleted<'a>) -> Self {
         use client_messages::mod_ReadEventCompleted::ReadEventResult;
@@ -54,6 +69,21 @@ impl<'a> From<(ReadEventResult, Option<Cow<'a, str>>)> for ReadEventFailure {
         }
     }
 }
+
+impl<'a> From<(ReadEventResult, Option<Cow<'a, str>>)> for ReadEventError<'a> {
+    fn from((res, err): (ReadEventResult, Option<Cow<'a, str>>)) -> Self {
+        use self::ReadEventResult::*;
+        match res {
+            Success => unreachable!(),
+            NotFound => ReadEventError::NotFound,
+            NoStream => ReadEventError::NoStream,
+            StreamDeleted => ReadEventError::StreamDeleted,
+            Error => ReadEventError::Error(err),
+            AccessDenied => ReadEventError::AccessDenied,
+        }
+    }
+}
+
 
 impl Into<(ReadEventResult, Option<Cow<'static, str>>)> for ReadEventFailure {
     fn into(self) -> (ReadEventResult, Option<Cow<'static, str>>) {

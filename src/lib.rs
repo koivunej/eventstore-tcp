@@ -488,9 +488,14 @@ impl<T, U> CustomTryInto<U> for T where U: CustomTryFrom<T> {
     }
 }
 
-enum ResultStatusKind {
+/// Enum describing the locations where a result value can be missing
+#[derive(Debug, PartialEq)]
+pub enum ResultStatusKind {
+    /// Missing from WriteEventsCompleted
     WriteEvents,
+    /// Missing from ReadEventCompleted
     ReadEvent,
+    /// Missing from ReadStreamEventsCompleted
     ReadStream,
 }
 
@@ -505,17 +510,44 @@ impl fmt::Display for ResultStatusKind {
     }
 }
 
-enum MappingErrorKind {
+/// Error kind of `MappingError`
+#[derive(Debug, PartialEq)]
+pub enum MappingErrorKind {
+    /// A byte segment was a not UTF8 as expected
     InvalidUtf8(str::Utf8Error),
+    /// A result field was missing
     MissingResultField(ResultStatusKind),
-    Unsupported(u8)
+    /// Invalid stream version
+    InvalidStreamVersion(&'static str, i32),
+    /// Unsupported discriminator value
+    Unsupported(u8),
+    /// Unimplemented conversion
+    Unimplemented,
+    /// InvalidTransaction received for WriteEvents
+    WriteEventsInvalidTransaction
 }
 
-struct MappingError(MappingErrorKind);
+impl fmt::Display for MappingErrorKind {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        use self::MappingErrorKind::*;
+        match self {
+            &InvalidUtf8(e) => write!(fmt, "{}", e),
+            &MissingResultField(ref x) => write!(fmt, "Missing result field: {}", x),
+            &InvalidStreamVersion(prop, val) => write!(fmt, "Invalid StreamVersion for {}: {}", prop, val),
+            &Unsupported(d) => write!(fmt, "Unsupported discriminator: 0x{:02x}", d),
+            &Unimplemented => write!(fmt, "No mapping implemented"),
+            &WriteEventsInvalidTransaction => write!(fmt, "Unexpected result for WriteEventsCompleted: InvalidTransaction"),
+        }
+    }
+}
+
+/// Error describing why the raw message could not be mapped into more nicer value.
+#[derive(Debug, PartialEq)]
+pub struct MappingError(MappingErrorKind);
 
 impl fmt::Display for MappingError {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        unimplemented!()
+        write!(fmt, "{}", self.0)
     }
 }
 

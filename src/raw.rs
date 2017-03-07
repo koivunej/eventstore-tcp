@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::io;
 use std::str;
 use std::borrow::Cow;
@@ -6,7 +8,7 @@ use tokio_core::io::EasyBuf;
 
 use client_messages::{WriteEvents, WriteEventsCompleted, ReadEvent, ReadEventCompleted, ReadStreamEvents, ReadStreamEventsCompleted, ReadAllEvents, ReadAllEventsCompleted, NotHandled};
 
-use {CustomTryInto, MappingError, ReadDirection};
+use {MappingError, ReadDirection};
 
 rental! {
     mod rent_lib {
@@ -39,7 +41,7 @@ impl OwningRawMessage {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum RawMessage<'a> {
     /// Requests heartbeat from the other side. Unsure if clients or server sends these.
     HeartbeatRequest,
@@ -93,6 +95,7 @@ pub enum RawMessage<'a> {
     Unsupported(u8, Cow<'a, [u8]>),
 }
 
+/// Trait for facilitating fallible Cow<'a, [u8]> -> Cow<'a, str> conversion.
 pub trait ByteWrapper<'a>: Into<Cow<'a, [u8]>> + From<Cow<'a, [u8]>> {
     type ConversionErr: From<str::Utf8Error>;
 
@@ -116,7 +119,9 @@ pub trait ByteWrapper<'a>: Into<Cow<'a, [u8]>> + From<Cow<'a, [u8]>> {
     }
 }
 
-#[derive(Debug, PartialEq)]
+/// Newtype for an arbitary NotAuthenticated "info", which could be
+/// UTF8 string.
+#[derive(Debug, PartialEq, Clone)]
 pub struct NotAuthenticatedPayload<'a>(Cow<'a, [u8]>);
 
 impl<'a> AsRef<[u8]> for NotAuthenticatedPayload<'a> {
@@ -141,7 +146,9 @@ impl<'a> Into<Cow<'a, [u8]>> for NotAuthenticatedPayload<'a> {
     }
 }
 
-#[derive(Debug, PartialEq)]
+/// Newtype for an arbitary BadRequest "info", which could be
+/// UTF8 string.
+#[derive(Debug, PartialEq, Clone)]
 pub struct BadRequestPayload<'a>(Cow<'a, [u8]>);
 
 impl<'a> AsRef<[u8]> for BadRequestPayload<'a> {
@@ -206,8 +213,8 @@ impl<'a> From<(u8, Cow<'a, [u8]>)> for RawMessage<'a> {
 
 impl<'a> RawMessage<'a> {
 
-    fn decode(discriminator: u8, buf: &'a [u8]) -> io::Result<RawMessage<'a>> {
-        use client_messages_ext::*;
+    /// Decodes the message from the buffer without any cloning.
+    pub fn decode(discriminator: u8, buf: &'a [u8]) -> io::Result<RawMessage<'a>> {
         use self::RawMessage;
         use ReadDirection::{Forward, Backward};
 
@@ -271,16 +278,13 @@ impl<'a> RawMessage<'a> {
             0xF1 => decoded!(NotHandled, buf, RawMessage::NotHandled),
             0xF2 => without_data!(RawMessage::Authenticate, buf),
             0xF3 => without_data!(RawMessage::Authenticated, buf),
-            0xF4 => Ok({
-                let payload: NotAuthenticatedPayload<'a> = Cow::Borrowed(buf).into();
-                //payload.into()
-                unimplemented!()
-            }),
+            0xF4 => Ok(RawMessage::NotAuthenticated(Cow::Borrowed(buf).into())),
             x => Ok((x, Cow::Borrowed(buf)).into()),
         }
     }
 
-    fn encode<W: io::Write>(&self, w: &mut W) -> io::Result<()> {
+    /// Encodes the message into the given writer.
+    pub fn encode<W: io::Write>(&self, w: &mut W) -> io::Result<()> {
         use self::RawMessage::*;
         use quick_protobuf::MessageWrite;
 
@@ -304,8 +308,6 @@ impl<'a> RawMessage<'a> {
             Authenticated => Ok(()),
 
             WriteEvents(ref x) => encode!(x, w),
-
-            WriteEventsCompleted(ref x) => encode!(x, w),
             WriteEventsCompleted(ref x) => encode!(x, w),
 
             ReadEvent(ref x) => encode!(x, w),
@@ -324,7 +326,8 @@ impl<'a> RawMessage<'a> {
         }
     }
 
-    fn discriminator(&self) -> u8 {
+    /// Returns the protocol discriminator value for the variant
+    pub fn discriminator(&self) -> u8 {
         // FIXME: copied from ::Message
         use self::RawMessage::*;
         match *self {

@@ -21,6 +21,17 @@ pub struct ReadAllSuccess {
     next_prepare_position: Option<LogPosition>,
 }
 
+/// Successful response to `Message::ReadAllEvents`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReadAllCompleted<'a> {
+    pub commit_position: LogPosition,
+    pub prepare_position: LogPosition,
+    /// The read events, with position metadata
+    pub events: Vec<ResolvedEvent<'a>>,
+    pub next_commit_position: Option<LogPosition>,
+    pub next_prepare_position: Option<LogPosition>,
+}
+
 /// Read event in `ReadAllSuccess` response
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResolvedEvent<'a> {
@@ -152,6 +163,29 @@ impl ReadAllFailure {
             next_prepare_position: -1,
             result: res,
             error: msg,
+        }
+    }
+}
+
+/// Failure cases of wire enum `ReadAllResult`.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ReadAllError<'a> {
+    /// Unknown when this happens,
+    NotModified,
+    /// Other error
+    Error(Option<Cow<'a, str>>),
+    /// Access was denied (no credentials provided or insufficient permissions)
+    AccessDenied
+}
+
+impl<'a> From<(ReadAllResult, Option<Cow<'a, str>>)> for ReadAllError<'a> {
+    fn from((r, msg): (ReadAllResult, Option<Cow<'a, str>>)) -> ReadAllError<'a> {
+        use self::ReadAllResult::*;
+        match r {
+            Success => unreachable!(),
+            NotModified => ReadAllError::NotModified,
+            Error => ReadAllError::Error(msg),
+            AccessDenied => ReadAllError::AccessDenied,
         }
     }
 }
