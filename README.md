@@ -5,8 +5,10 @@ EventStore allows writing to named event streams with optional optimistic lockin
 This project aims to be a driver with similar features to the .NET client API but at the moment it has the simplest operations implemented:
 
  * read an event
- * read a stream forward or backward
+ * read a stream forwards or backwards
+ * read all events forwards or backwards
  * write events
+ * delete stream
 
 Supported server version: currently this has been developed against the latest stable 3.9.3.
 
@@ -31,16 +33,17 @@ eventstore-tcp = { git = "https://github.com/koivunej/eventstore-tcp.git" }
 # Unimplemented features
 
  1. ~~read events from `$all` stream~~
- 2. deleting a stream
- 3. volatile subscriptions:
+ 2. ~~deleting a stream~~
+ 3. adapted interface for DeleteStreamCompleted
+ 4. volatile subscriptions:
    * refactoring to use `tokio_proto::streaming::multiplex` instead of `tokio_proto::multiplex`
    * current messages are ok as headers, but appeared events could probably be body chunks
    * maintaining a subscription by pumping events to a `futures::sink::Sink`, detecting overflows and dropping the subscription
- 4. Less of directly using the protobuf messages in the API
- 5. Cleaning up the message builders
- 6. Hide the use of `Package` from users
- 7. Add some "operation" API so that user does not need to `match package.message {}`
- 8. Nice API which would not require users to run the `tokio_core::reactor::Core``
+ 5. Less of directly using the protobuf messages in the API
+ 6. Cleaning up the message builders
+ 7. Hide the use of `Package` from users
+ 8. Add some "operation" API so that user does not need to `match package.message {}`
+ 9. Nice API which would not require users to run the `tokio_core::reactor::Core``
 
 ## "Perhaps later" features
 
