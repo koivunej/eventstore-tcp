@@ -112,6 +112,8 @@ main () {
 	diff \
 		<(run "read" --output json_oneline --mode backward --count 10 --position last "$stream_name") \
 		<(echo -e "${messages_out[4]}\n${messages_out[3]}\n${messages_out[2]}\n${messages_out[1]}\n${messages_out[0]}")
+
+	run "delete" "$stream_name" 4
 }
 
 kill_server () {

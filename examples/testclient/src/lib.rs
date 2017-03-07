@@ -21,6 +21,9 @@ pub use write::Write;
 pub mod read;
 pub use read::Read;
 
+mod delete;
+pub use delete::Delete;
+
 pub struct Config {
     pub addr: SocketAddr,
     pub credentials: Option<UsernamePassword>,

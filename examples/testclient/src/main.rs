@@ -17,7 +17,7 @@ use std::str;
 use clap::{Arg, App, SubCommand, ArgMatches};
 
 use eventstore_tcp::{Builder, ExpectedVersion, StreamVersion, ContentType, UsernamePassword};
-use testclient::{Config, Runner, Ping, Write, Read};
+use testclient::{Config, Runner, Ping, Write, Read, Delete};
 
 fn env_credentials() -> Option<UsernamePassword> {
     let username = env::var("ES_USERNAME");
@@ -53,6 +53,27 @@ fn main() {
                  .help("Output verbose timings"))
         .subcommand(SubCommand::with_name("ping")
                         .about("Send a ping to the host after possibly authenticating depending on the options"))
+        .subcommand(SubCommand::with_name("delete")
+                        .about("Delete a stream")
+                        .arg(Arg::with_name("stream_id")
+                                .value_name("STREAM-ID")
+                                .required(true)
+                                .index(1)
+                                .help("Stream id to write to"))
+                        .arg(Arg::with_name("expected_version")
+                                .value_name("EXPECTED_VERSION")
+                                .required(true)
+                                .index(2)
+                                .help("Acceptable values: any|created|n where n >= 0"))
+                        .arg(Arg::with_name("hard_delete")
+                                .takes_value(false)
+                                .long("hard-delete")
+                                .help("Schedules the stream events to be deleted instead of soft deleting"))
+                        .arg(Arg::with_name("require_master")
+                                .takes_value(false)
+                                .short("m")
+                                .long("require-master")
+                                .help("Disables intra-cluster request forwarding")))
         .subcommand(SubCommand::with_name("write")
                         .about("Write single event to a given stream")
                         .arg(Arg::with_name("stream_id")
@@ -64,7 +85,7 @@ fn main() {
                                 .value_name("EXPECTED_VERSION")
                                 .required(true)
                                 .index(2)
-                                .help("Acceptable values: any|created|n where n >= -2"))
+                                .help("Acceptable values: any|created|n where n >= 0"))
                         .arg(Arg::with_name("type")
                                 .value_name("TYPE")
                                 .required(true)
@@ -84,7 +105,12 @@ fn main() {
                                 .short("j")
                                 .long("json")
                                 .takes_value(false)
-                                .help("Flags the data and metadata (when given) as json values")))
+                                .help("Flags the data and metadata (when given) as json values"))
+                        .arg(Arg::with_name("require_master")
+                                .takes_value(false)
+                                .short("m")
+                                .long("require-master")
+                                .help("Disables intra-cluster request forwarding")))
         .subcommand(SubCommand::with_name("read")
                         .about("Read event(s) of a stream")
                         .arg(Arg::with_name("stream_id")
@@ -148,6 +174,9 @@ fn main() {
     } else if let Some(r) = matches.subcommand_matches("read") {
         let read = prepare_read(r);
         runner.run(read)
+    } else if let Some(d) = matches.subcommand_matches("delete") {
+        let delete = prepare_delete(d);
+        runner.run(delete)
     } else {
         println!("Subcommand is required.\n\n{}", matches.usage());
         process::exit(1);
@@ -214,3 +243,16 @@ fn prepare_read<'a>(r: &ArgMatches<'a>) -> Read {
     Read::new(stream_id.to_owned(), mode, output)
 }
 
+fn prepare_delete<'a>(d: &ArgMatches<'a>) -> Delete {
+    let mut builder = Builder::delete_stream();
+    builder.stream_id(d.value_of("stream_id").unwrap().to_string())
+        .expected_version(match d.value_of("expected_version").unwrap() {
+            "any" => ExpectedVersion::Any,
+            "created" => ExpectedVersion::NewStream,
+            n => ExpectedVersion::Exact(StreamVersion::from(n.parse().unwrap()))
+        })
+        .hard_delete(d.is_present("hard_delete"))
+        .require_master(d.is_present("require_master"));
+
+    Delete::new(builder)
+}

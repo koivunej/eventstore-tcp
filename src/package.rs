@@ -1,16 +1,10 @@
+//! Frame and MessageContainer
+
 use uuid::Uuid;
 use UsernamePassword;
 use errors::Error;
 use raw;
 use adapted;
-
-bitflags!{
-    pub flags TcpFlags: u8 {
-        const FLAG_NONE = 0x00,
-        const FLAG_AUTHENTICATED = 0x01,
-        //const FLAG_TRUSTED_WRITE = 0x02, // only in core
-    }
-}
 
 /// Frame in the protocol. On the wire, packets are embedded in frames with length
 /// prefix and suffix.
@@ -33,7 +27,10 @@ impl SendReq for Package {}
 /// Wrapper for either a raw just decoded or built-for sending message or an adapted one.
 #[derive(Debug, PartialEq)]
 pub enum MessageContainer<'a> {
+    /// Contains a raw message
     Raw(raw::RawMessage<'a>),
+
+    /// Contains an adapted message
     Adapted(adapted::AdaptedMessage<'a>),
 }
 

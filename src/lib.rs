@@ -102,7 +102,7 @@ pub use raw::client_messages::mod_NotHandled::{NotHandledReason, MasterInfo};
 pub mod adapted;
 pub use adapted::AdaptedMessage;
 
-mod package;
+pub mod package;
 pub use package::Package;
 
 mod codec;

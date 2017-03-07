@@ -4,9 +4,17 @@ use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 use tokio_core::io::{Codec, EasyBuf};
 
 use errors::ErrorKind;
-use package::{self, Package, TcpFlags, MessageContainer};
+use package::{Package, MessageContainer};
 use {UsernamePassword};
 use raw::RawMessage;
+
+bitflags!{
+    pub flags TcpFlags: u8 {
+        const FLAG_NONE = 0x00,
+        const FLAG_AUTHENTICATED = 0x01,
+        //const FLAG_TRUSTED_WRITE = 0x02, // only in core
+    }
+}
 
 pub struct PackageCodec;
 
@@ -75,7 +83,7 @@ impl PackageCodec {
                 Uuid::from_bytes(&uuid_bytes).unwrap()
             };
 
-            let authentication = if flags.contains(package::FLAG_AUTHENTICATED) {
+            let authentication = if flags.contains(FLAG_AUTHENTICATED) {
                 Some(UsernamePassword::decode(&mut cursor)?)
             } else {
                 None
@@ -101,9 +109,9 @@ impl Codec for PackageCodec {
         // not sure how to make this without tmp vec
         let mut cursor = io::Cursor::new(Vec::new());
 
-        let mut flags = package::FLAG_NONE;
+        let mut flags = FLAG_NONE;
         if msg.authentication.is_some() {
-            flags.insert(package::FLAG_AUTHENTICATED);
+            flags.insert(FLAG_AUTHENTICATED);
         }
 
         let raw = match msg.message {
@@ -115,7 +123,7 @@ impl Codec for PackageCodec {
         cursor.write_u8(raw.discriminator())?;
         cursor.write_u8(flags.bits())?;
         cursor.write_all(msg.correlation_id.as_bytes())?;
-        if flags.contains(package::FLAG_AUTHENTICATED) {
+        if flags.contains(FLAG_AUTHENTICATED) {
             msg.authentication
                 .expect("According to flag authentication token is present")
                 .encode(&mut cursor)?;

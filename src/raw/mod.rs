@@ -8,7 +8,7 @@ use std::borrow::Cow;
 use quick_protobuf;
 
 pub mod client_messages;
-pub use self::client_messages::{EventRecord, WriteEvents, WriteEventsCompleted, ReadEvent, ReadEventCompleted, ReadStreamEvents, ReadStreamEventsCompleted, ReadAllEvents, ReadAllEventsCompleted, NotHandled, DeleteStream, DeleteStreamCompleted};
+pub use self::client_messages::{EventRecord, WriteEvents, WriteEventsCompleted, ReadEvent, ReadEventCompleted, ReadStreamEvents, ReadStreamEventsCompleted, ReadAllEvents, ReadAllEventsCompleted, NotHandled, DeleteStream, DeleteStreamCompleted, OperationResult};
 
 mod client_messages_ext;
 
