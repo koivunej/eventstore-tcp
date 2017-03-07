@@ -92,6 +92,12 @@ pub trait ByteWrapper<'a>: Into<Cow<'a, [u8]>> + From<Cow<'a, [u8]>> {
 #[derive(Debug, PartialEq, Clone)]
 pub struct NotAuthenticatedPayload<'a>(Cow<'a, [u8]>);
 
+impl<'a> NotAuthenticatedPayload<'a> {
+    fn into_owned(self) -> NotAuthenticatedPayload<'static> {
+        NotAuthenticatedPayload(Cow::Owned(self.0.into_owned()))
+    }
+}
+
 impl<'a> AsRef<[u8]> for NotAuthenticatedPayload<'a> {
     fn as_ref(&self) -> &[u8] {
         self.0.as_ref()
@@ -118,6 +124,12 @@ impl<'a> Into<Cow<'a, [u8]>> for NotAuthenticatedPayload<'a> {
 /// UTF8 string.
 #[derive(Debug, PartialEq, Clone)]
 pub struct BadRequestPayload<'a>(Cow<'a, [u8]>);
+
+impl<'a> BadRequestPayload<'a> {
+    fn into_owned(self) -> BadRequestPayload<'static> {
+        BadRequestPayload(Cow::Owned(self.0.into_owned()))
+    }
+}
 
 impl<'a> AsRef<[u8]> for BadRequestPayload<'a> {
     fn as_ref(&self) -> &[u8] {
@@ -180,9 +192,37 @@ impl<'a> From<(u8, Cow<'a, [u8]>)> for RawMessage<'a> {
 }
 
 impl<'a> RawMessage<'a> {
-
     pub fn into_owned(self) -> RawMessage<'static> {
-        unimplemented!()
+        use self::RawMessage::*;
+        use client_messages_ext::{WriteEventsExt, WriteEventsCompletedExt, ReadEventExt, ReadEventCompletedExt, ReadStreamEventsExt, ReadStreamEventsCompletedExt, ReadAllEventsCompletedExt, NotHandledExt};
+
+        match self {
+            HeartbeatRequest => HeartbeatRequest,
+            HeartbeatResponse => HeartbeatResponse,
+
+            Ping => Ping,
+            Pong => Pong,
+
+            Authenticate => Authenticate,
+            Authenticated => Authenticated,
+
+            WriteEvents(e) => WriteEvents(e.into_owned()),
+            WriteEventsCompleted(e) => WriteEventsCompleted(e.into_owned()),
+
+            ReadEvent(e) => ReadEvent(e.into_owned()),
+            ReadEventCompleted(e) => ReadEventCompleted(e.into_owned()),
+
+            ReadStreamEvents(dir, e) => ReadStreamEvents(dir, e.into_owned()),
+            ReadStreamEventsCompleted(dir, e) => ReadStreamEventsCompleted(dir, e.into_owned()),
+
+            ReadAllEvents(dir, e) => ReadAllEvents(dir, e),
+            ReadAllEventsCompleted(dir, e) => ReadAllEventsCompleted(dir, e.into_owned()),
+
+            BadRequest(e) => BadRequest(e.into_owned()),
+            NotHandled(e) => NotHandled(e.into_owned()),
+            NotAuthenticated(e) => NotAuthenticated(e.into_owned()),
+            Unsupported(d, bytes) => Unsupported(d, Cow::Owned(bytes.into_owned())),
+        }
     }
 
     /// Decodes the message from the buffer without any cloning.

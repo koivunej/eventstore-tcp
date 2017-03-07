@@ -8,9 +8,9 @@ pub trait WriteEventsExt<'a> {
     fn into_owned(self) -> WriteEvents<'static>;
 }
 
-impl<'a> WriteEventsExt<'a> for WriteEvents<'a> {
-    fn into_owned(self) -> WriteEvents<'static> {
-        WriteEvents {
+impl<'a> WriteEventsExt<'a> for client_messages::WriteEvents<'a> {
+    fn into_owned(self) -> client_messages::WriteEvents<'static> {
+        client_messages::WriteEvents {
             event_stream_id: Cow::Owned(self.event_stream_id.into_owned()),
             expected_version: self.expected_version,
             events: self.events.into_iter().map(|x| x.into_owned()).collect(),
@@ -18,6 +18,25 @@ impl<'a> WriteEventsExt<'a> for WriteEvents<'a> {
         }
     }
 }
+
+pub trait WriteEventsCompletedExt<'a> {
+    /// Turns this instance to an instance that owns all it's data and thus has `'static` lifetime.
+    fn into_owned(self) -> client_messages::WriteEventsCompleted<'static>;
+}
+
+impl<'a> WriteEventsCompletedExt<'a> for client_messages::WriteEventsCompleted<'a> {
+    fn into_owned(self) -> client_messages::WriteEventsCompleted<'static> {
+        client_messages::WriteEventsCompleted {
+            result: self.result,
+            message: owned_opt_cow(self.message),
+            first_event_number: self.first_event_number,
+            last_event_number: self.last_event_number,
+            prepare_position: self.prepare_position,
+            commit_position: self.commit_position,
+        }
+    }
+}
+
 
 pub trait NewEventExt<'a> {
     /// Turns this instance to an instance that owns all it's data and thus has `'static` lifetime.
@@ -70,6 +89,22 @@ impl<'a> ReadEventExt<'a> for client_messages::ReadEvent<'a> {
         }
     }
 }
+
+pub trait ReadEventCompletedExt<'a> {
+    /// Turns this instance to an instance that owns all it's data and thus has `'static` lifetime.
+    fn into_owned(self) -> client_messages::ReadEventCompleted<'static>;
+}
+
+impl<'a> ReadEventCompletedExt<'a> for client_messages::ReadEventCompleted<'a> {
+    fn into_owned(self) -> client_messages::ReadEventCompleted<'static> {
+        client_messages::ReadEventCompleted {
+            result: self.result,
+            event: self.event.into_owned(),
+            error: owned_opt_cow(self.error),
+        }
+    }
+}
+
 
 pub trait ResolvedIndexedEventExt<'a> {
     /// Turns this instance to an instance that owns all it's data and thus has `'static` lifetime.
@@ -186,4 +221,95 @@ impl<'a> ResolvedEventExt<'a> for client_messages::ResolvedEvent<'a> {
             prepare_position: self.prepare_position,
         }
     }
+}
+
+pub trait NotHandledExt<'a> {
+    fn into_owned(self) -> client_messages::NotHandled<'static>;
+    fn borrowed<'b>(&'b self) -> client_messages::NotHandled<'b>;
+}
+
+impl<'a> NotHandledExt<'a> for client_messages::NotHandled<'a> {
+    fn into_owned(self) -> client_messages::NotHandled<'static> {
+        client_messages::NotHandled {
+            reason: self.reason,
+            additional_info: owned_opt_cow(self.additional_info),
+        }
+    }
+
+    fn borrowed<'b>(&'b self) -> client_messages::NotHandled<'b> {
+        client_messages::NotHandled {
+            reason: self.reason,
+            additional_info: borrowed_opt_cow(&self.additional_info),
+        }
+    }
+}
+
+pub trait ReadStreamEventsCompletedExt<'a> {
+    fn into_owned(self) -> client_messages::ReadStreamEventsCompleted<'static>;
+    fn borrowed<'b>(&'b self) -> client_messages::ReadStreamEventsCompleted<'b>;
+}
+
+impl<'a> ReadStreamEventsCompletedExt<'a> for client_messages::ReadStreamEventsCompleted<'a> {
+    fn into_owned(self) -> client_messages::ReadStreamEventsCompleted<'static> {
+        client_messages::ReadStreamEventsCompleted {
+            events: self.events.into_iter().map(|x| x.into_owned()).collect(),
+            result: self.result,
+            next_event_number: self.next_event_number,
+            last_event_number: self.last_event_number,
+            is_end_of_stream: self.is_end_of_stream,
+            last_commit_position: self.last_commit_position,
+            error: owned_opt_cow(self.error),
+        }
+    }
+
+    fn borrowed<'b>(&'b self) -> client_messages::ReadStreamEventsCompleted<'b> {
+        client_messages::ReadStreamEventsCompleted {
+            events: self.events.iter().map(|x| x.borrowed()).collect(),
+            result: self.result,
+            next_event_number: self.next_event_number,
+            last_event_number: self.last_event_number,
+            is_end_of_stream: self.is_end_of_stream,
+            last_commit_position: self.last_commit_position,
+            error: borrowed_opt_cow(&self.error),
+        }
+    }
+}
+
+pub trait ReadAllEventsCompletedExt<'a> {
+    fn into_owned(self) -> client_messages::ReadAllEventsCompleted<'static>;
+    fn borrowed<'b>(&'b self) -> client_messages::ReadAllEventsCompleted<'b>;
+}
+
+impl<'a> ReadAllEventsCompletedExt<'a> for client_messages::ReadAllEventsCompleted<'a> {
+    fn into_owned(self) -> client_messages::ReadAllEventsCompleted<'static> {
+        client_messages::ReadAllEventsCompleted {
+            commit_position: self.commit_position,
+            prepare_position: self.prepare_position,
+            events: self.events.into_iter().map(|x| x.into_owned()).collect(),
+            next_commit_position: self.next_commit_position,
+            next_prepare_position: self.next_prepare_position,
+            result: self.result,
+            error: owned_opt_cow(self.error),
+        }
+    }
+
+    fn borrowed<'b>(&'b self) -> client_messages::ReadAllEventsCompleted<'b> {
+        client_messages::ReadAllEventsCompleted {
+            commit_position: self.commit_position,
+            prepare_position: self.prepare_position,
+            events: self.events.iter().map(|x| x.borrowed()).collect(),
+            next_commit_position: self.next_commit_position,
+            next_prepare_position: self.next_prepare_position,
+            result: self.result,
+            error: borrowed_opt_cow(&self.error),
+        }
+    }
+}
+
+fn owned_opt_cow<'a, T: ToOwned + ?Sized>(opt_cow: Option<Cow<'a, T>>) -> Option<Cow<'static, T>> {
+    opt_cow.map(|x| Cow::Owned(x.into_owned()))
+}
+
+fn borrowed_opt_cow<'a, 'b, T: ToOwned + ?Sized>(opt_cow: &'b Option<Cow<'a, T>>) -> Option<Cow<'b, T>> {
+    opt_cow.as_ref().map(|x| Cow::Borrowed(x.as_ref()))
 }
