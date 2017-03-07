@@ -48,7 +48,7 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a class='srclink' href='../../src/eventstore_tcp/builder.rs.html#1-647' title='goto source code'>[src]</a></span></h1>
+               </span><a class='srclink' href='../../src/eventstore_tcp/builder.rs.html#1-570' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>Builders to help building requests.</p>
 
 <p>Every top-level builder exposes at least method <code>build_package</code> which will return a
@@ -80,6 +80,13 @@ generated.</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
+                           <td><a class='struct' href='struct.ReadAllEventsBuilder.html'
+                                  title='struct eventstore_tcp::builder::ReadAllEventsBuilder'>ReadAllEventsBuilder</a></td>
+                           <td class='docblock-short'>
+                                <p>Builder for <code>ReadAllEvents</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
                            <td><a class='struct' href='struct.ReadEventBuilder.html'
                                   title='struct eventstore_tcp::builder::ReadEventBuilder'>ReadEventBuilder</a></td>
                            <td class='docblock-short'>
@@ -101,45 +108,10 @@ generated.</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='struct' href='struct.StreamVersion.html'
-                                  title='struct eventstore_tcp::builder::StreamVersion'>StreamVersion</a></td>
-                           <td class='docblock-short'>
-                                <p><code>StreamVersion</code> represents the valid values for a stream version which is the same as the
-event number of the latest event. As such, values are non-negative integers up to
-<code>i32::max_value</code>. Negative values of <code>i32</code> have special meaning in the protocol, and are
-restricted from used with this type.</p>
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
                            <td><a class='struct' href='struct.WriteEventsBuilder.html'
                                   title='struct eventstore_tcp::builder::WriteEventsBuilder'>WriteEventsBuilder</a></td>
                            <td class='docblock-short'>
                                 <p>Builder for <code>WriteEvents</code> which allows writing multiple events to a stream.</p>
-                           </td>
-                       </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
-<table>
-                       <tr class=' module-item'>
-                           <td><a class='enum' href='enum.ContentType.html'
-                                  title='enum eventstore_tcp::builder::ContentType'>ContentType</a></td>
-                           <td class='docblock-short'>
-                                <p>Content type of the event <code>data</code> or <code>metadata</code>.</p>
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='enum' href='enum.EventNumber.html'
-                                  title='enum eventstore_tcp::builder::EventNumber'>EventNumber</a></td>
-                           <td class='docblock-short'>
-                                <p><code>EventNumber</code> is similar to <code>StreamVersion</code> and <code>ExpectedVersion</code> but is used when specifying a
-position to read from in the stream. Allows specifying the first or last (when reading
-backwards) event in addition to exact event number.</p>
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class='enum' href='enum.ExpectedVersion.html'
-                                  title='enum eventstore_tcp::builder::ExpectedVersion'>ExpectedVersion</a></td>
-                           <td class='docblock-short'>
-                                <p><code>ExpectedVersion</code> represents the different modes of optimistic locking when writing to a stream
-using <code>WriteEventsBuilder</code>.</p>
                            </td>
                        </tr></table></section>
     <section id='search' class="content hidden"></section>

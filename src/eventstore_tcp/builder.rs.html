@@ -613,83 +613,6 @@
 <span id="568">568</span>
 <span id="569">569</span>
 <span id="570">570</span>
-<span id="571">571</span>
-<span id="572">572</span>
-<span id="573">573</span>
-<span id="574">574</span>
-<span id="575">575</span>
-<span id="576">576</span>
-<span id="577">577</span>
-<span id="578">578</span>
-<span id="579">579</span>
-<span id="580">580</span>
-<span id="581">581</span>
-<span id="582">582</span>
-<span id="583">583</span>
-<span id="584">584</span>
-<span id="585">585</span>
-<span id="586">586</span>
-<span id="587">587</span>
-<span id="588">588</span>
-<span id="589">589</span>
-<span id="590">590</span>
-<span id="591">591</span>
-<span id="592">592</span>
-<span id="593">593</span>
-<span id="594">594</span>
-<span id="595">595</span>
-<span id="596">596</span>
-<span id="597">597</span>
-<span id="598">598</span>
-<span id="599">599</span>
-<span id="600">600</span>
-<span id="601">601</span>
-<span id="602">602</span>
-<span id="603">603</span>
-<span id="604">604</span>
-<span id="605">605</span>
-<span id="606">606</span>
-<span id="607">607</span>
-<span id="608">608</span>
-<span id="609">609</span>
-<span id="610">610</span>
-<span id="611">611</span>
-<span id="612">612</span>
-<span id="613">613</span>
-<span id="614">614</span>
-<span id="615">615</span>
-<span id="616">616</span>
-<span id="617">617</span>
-<span id="618">618</span>
-<span id="619">619</span>
-<span id="620">620</span>
-<span id="621">621</span>
-<span id="622">622</span>
-<span id="623">623</span>
-<span id="624">624</span>
-<span id="625">625</span>
-<span id="626">626</span>
-<span id="627">627</span>
-<span id="628">628</span>
-<span id="629">629</span>
-<span id="630">630</span>
-<span id="631">631</span>
-<span id="632">632</span>
-<span id="633">633</span>
-<span id="634">634</span>
-<span id="635">635</span>
-<span id="636">636</span>
-<span id="637">637</span>
-<span id="638">638</span>
-<span id="639">639</span>
-<span id="640">640</span>
-<span id="641">641</span>
-<span id="642">642</span>
-<span id="643">643</span>
-<span id="644">644</span>
-<span id="645">645</span>
-<span id="646">646</span>
-<span id="647">647</span>
 </pre><pre class='rust '>
 <span class='doccomment'>//! Builders to help building requests.</span>
 <span class='doccomment'>//!</span>
@@ -710,8 +633,9 @@
 
 <span class='kw'>use</span> <span class='ident'>uuid</span>::<span class='ident'>Uuid</span>;
 <span class='kw'>use</span> <span class='ident'>package</span>::<span class='ident'>Package</span>;
-<span class='kw'>use</span> {<span class='ident'>UsernamePassword</span>, <span class='ident'>Message</span>, <span class='ident'>ReadDirection</span>};
-<span class='kw'>use</span> <span class='ident'>client_messages</span>::{<span class='ident'>WriteEvents</span>, <span class='ident'>NewEvent</span>, <span class='ident'>ReadEvent</span>, <span class='ident'>ReadStreamEvents</span>};
+<span class='kw'>use</span> {<span class='ident'>UsernamePassword</span>, <span class='ident'>ReadDirection</span>, <span class='ident'>ExpectedVersion</span>, <span class='ident'>EventNumber</span>, <span class='ident'>LogPosition</span>, <span class='ident'>ContentType</span>};
+<span class='kw'>use</span> <span class='ident'>client_messages</span>::{<span class='ident'>WriteEvents</span>, <span class='ident'>NewEvent</span>, <span class='ident'>ReadEvent</span>, <span class='ident'>ReadStreamEvents</span>, <span class='ident'>ReadAllEvents</span>};
+<span class='kw'>use</span> <span class='ident'>raw</span>::<span class='ident'>RawMessage</span>;
 
 <span class='doccomment'>/// Factory factory for creating builders.</span>
 <span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>Builder</span>;
@@ -719,13 +643,13 @@
 <span class='kw'>impl</span> <span class='ident'>Builder</span> {
     <span class='doccomment'>/// Simple builder for a Ping message, that has no other data.</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>ping</span>() <span class='op'>-&gt;</span> <span class='ident'>SimpleBuilder</span> {
-        <span class='ident'>SimpleBuilder</span>(<span class='ident'>Message</span>::<span class='ident'>Ping</span>)
+        <span class='ident'>SimpleBuilder</span>(<span class='ident'>RawMessage</span>::<span class='ident'>Ping</span>)
     }
 
     <span class='doccomment'>/// Simple builder for an Authenticate message, that has no other data (credentials are passed</span>
     <span class='doccomment'>/// to the `build_package` method).</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>authenticate</span>() <span class='op'>-&gt;</span> <span class='ident'>SimpleBuilder</span> {
-        <span class='ident'>SimpleBuilder</span>(<span class='ident'>Message</span>::<span class='ident'>Authenticate</span>)
+        <span class='ident'>SimpleBuilder</span>(<span class='ident'>RawMessage</span>::<span class='ident'>Authenticate</span>)
     }
 
     <span class='doccomment'>/// Builder for `WriteEvents`, which allows writing multiple events to a stream, with expected</span>
@@ -744,178 +668,21 @@
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>read_stream_events</span>() <span class='op'>-&gt;</span> <span class='ident'>ReadStreamEventsBuilder</span> {
         <span class='ident'>ReadStreamEventsBuilder</span>::<span class='ident'>new</span>()
     }
+
+    <span class='doccomment'>/// Builder for `ReadAllEevents` which allows reading off a stream of all events in the</span>
+    <span class='doccomment'>/// database.</span>
+    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>read_all_events</span>() <span class='op'>-&gt;</span> <span class='ident'>ReadAllEventsBuilder</span> {
+        <span class='ident'>ReadAllEventsBuilder</span>::<span class='ident'>new</span>()
+    }
 }
 
 <span class='doccomment'>/// Builder for messages without any additional contents.</span>
-<span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>SimpleBuilder</span>(<span class='ident'>Message</span>);
+<span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>SimpleBuilder</span>(<span class='ident'>RawMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span>);
 
 <span class='kw'>impl</span> <span class='ident'>SimpleBuilder</span> {
     <span class='doccomment'>/// Returns a package which can be sent through `EventStoreClient::call` method.</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>build_package</span>(<span class='self'>self</span>, <span class='ident'>authentication</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>UsernamePassword</span><span class='op'>&gt;</span>, <span class='ident'>correlation_id</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Uuid</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>Package</span> {
-        <span class='ident'>Package</span> {
-            <span class='ident'>authentication</span>: <span class='ident'>authentication</span>,
-            <span class='ident'>correlation_id</span>: <span class='ident'>correlation_id</span>.<span class='ident'>unwrap_or_else</span>(<span class='op'>||</span> <span class='ident'>Uuid</span>::<span class='ident'>new_v4</span>()),
-            <span class='ident'>message</span>: <span class='self'>self</span>.<span class='number'>0</span>
-        }
-    }
-}
-
-<span class='doccomment'>/// `ExpectedVersion` represents the different modes of optimistic locking when writing to a stream</span>
-<span class='doccomment'>/// using `WriteEventsBuilder`.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>Clone</span>, <span class='ident'>Eq</span>, <span class='ident'>PartialEq</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>ExpectedVersion</span> {
-    <span class='doccomment'>/// No optimistic locking</span>
-    <span class='ident'>Any</span>,
-    <span class='doccomment'>/// Expect a stream not to exist</span>
-    <span class='ident'>NewStream</span>,
-    <span class='doccomment'>/// Expect exact number of events in the stream</span>
-    <span class='ident'>Exact</span>(<span class='ident'>StreamVersion</span>)
-}
-
-<span class='kw'>impl</span> <span class='ident'>Copy</span> <span class='kw'>for</span> <span class='ident'>ExpectedVersion</span> {}
-
-<span class='kw'>impl</span> <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>i32</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>ExpectedVersion</span> {
-    <span class='doccomment'>/// Returns the wire representation.</span>
-    <span class='kw'>fn</span> <span class='ident'>into</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>i32</span> {
-        <span class='kw'>use</span> <span class='self'>self</span>::<span class='ident'>ExpectedVersion</span>::<span class='kw-2'>*</span>;
-        <span class='kw'>match</span> <span class='self'>self</span> {
-            <span class='ident'>Any</span> <span class='op'>=&gt;</span> <span class='op'>-</span><span class='number'>2</span>,
-            <span class='ident'>NewStream</span> <span class='op'>=&gt;</span> <span class='op'>-</span><span class='number'>1</span>,
-            <span class='ident'>Exact</span>(<span class='ident'>ver</span>) <span class='op'>=&gt;</span> <span class='ident'>ver</span>.<span class='ident'>into</span>()
-        }
-    }
-}
-
-<span class='kw'>impl</span> <span class='ident'>From</span><span class='op'>&lt;</span><span class='ident'>StreamVersion</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>ExpectedVersion</span> {
-    <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>ver</span>: <span class='ident'>StreamVersion</span>) <span class='op'>-&gt;</span> <span class='self'>Self</span> {
-        <span class='ident'>ExpectedVersion</span>::<span class='ident'>Exact</span>(<span class='ident'>ver</span>)
-    }
-}
-
-<span class='doccomment'>/// `StreamVersion` represents the valid values for a stream version which is the same as the</span>
-<span class='doccomment'>/// event number of the latest event. As such, values are non-negative integers up to</span>
-<span class='doccomment'>/// `i32::max_value`. Negative values of `i32` have special meaning in the protocol, and are</span>
-<span class='doccomment'>/// restricted from used with this type.</span>
-<span class='doccomment'>///</span>
-<span class='doccomment'>/// Conversions to StreamVersion are quite horrible until TryFrom is stabilized.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>Clone</span>, <span class='ident'>Eq</span>, <span class='ident'>PartialEq</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>StreamVersion</span>(<span class='ident'>u32</span>);
-
-<span class='kw'>impl</span> <span class='ident'>Copy</span> <span class='kw'>for</span> <span class='ident'>StreamVersion</span> {}
-
-<span class='kw'>impl</span> <span class='ident'>StreamVersion</span> {
-    <span class='doccomment'>/// Converts the value to a StreamVersion or panics if the value is out of range</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>version</span>: <span class='ident'>u32</span>) <span class='op'>-&gt;</span> <span class='self'>Self</span> {
-        <span class='self'>Self</span>::<span class='ident'>from_opt</span>(<span class='ident'>version</span>).<span class='ident'>expect</span>(<span class='string'>&quot;StreamVersion overflow&quot;</span>)
-    }
-
-    <span class='doccomment'>/// Converts the value to a StreamVersion returning None if the input is out of range.</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>from_opt</span>(<span class='ident'>version</span>: <span class='ident'>u32</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='self'>Self</span><span class='op'>&gt;</span> {
-        <span class='comment'>// TODO: MAX_VALUE might be some magical value, should be lower?</span>
-        <span class='kw'>if</span> <span class='ident'>version</span> <span class='op'>&lt;</span> <span class='ident'>i32</span>::<span class='ident'>max_value</span>() <span class='kw'>as</span> <span class='ident'>u32</span> {
-            <span class='prelude-val'>Some</span>(<span class='ident'>StreamVersion</span>(<span class='ident'>version</span>))
-        } <span class='kw'>else</span> {
-            <span class='prelude-val'>None</span>
-        }
-    }
-
-    <span class='attribute'>#[<span class='ident'>doc</span>(<span class='ident'>hidden</span>)]</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>from_i32</span>(<span class='ident'>version</span>: <span class='ident'>i32</span>) <span class='op'>-&gt;</span> <span class='self'>Self</span> {
-        <span class='self'>Self</span>::<span class='ident'>from_i32_opt</span>(<span class='ident'>version</span>).<span class='ident'>expect</span>(<span class='string'>&quot;StreamVersion over/underflow&quot;</span>)
-    }
-
-    <span class='attribute'>#[<span class='ident'>doc</span>(<span class='ident'>hidden</span>)]</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>from_i32_opt</span>(<span class='ident'>version</span>: <span class='ident'>i32</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='self'>Self</span><span class='op'>&gt;</span> {
-        <span class='kw'>if</span> <span class='ident'>version</span> <span class='op'>&lt;</span> <span class='number'>0</span> {
-            <span class='prelude-val'>None</span>
-        } <span class='kw'>else</span> <span class='kw'>if</span> <span class='ident'>version</span> <span class='op'>==</span> <span class='ident'>i32</span>::<span class='ident'>max_value</span>() {
-            <span class='comment'>// this value is used to marking streams as deleted</span>
-            <span class='prelude-val'>None</span>
-        } <span class='kw'>else</span> {
-            <span class='prelude-val'>Some</span>(<span class='ident'>StreamVersion</span>(<span class='ident'>version</span> <span class='kw'>as</span> <span class='ident'>u32</span>))
-        }
-    }
-}
-
-<span class='kw'>impl</span> <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>i32</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>StreamVersion</span> {
-    <span class='doccomment'>/// Returns the wire representation.</span>
-    <span class='kw'>fn</span> <span class='ident'>into</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>i32</span> {
-        <span class='self'>self</span>.<span class='number'>0</span> <span class='kw'>as</span> <span class='ident'>i32</span>
-    }
-}
-
-<span class='doccomment'>/// `EventNumber` is similar to `StreamVersion` and `ExpectedVersion` but is used when specifying a</span>
-<span class='doccomment'>/// position to read from in the stream. Allows specifying the first or last (when reading</span>
-<span class='doccomment'>/// backwards) event in addition to exact event number.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>Clone</span>, <span class='ident'>Eq</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>EventNumber</span> {
-    <span class='doccomment'>/// The first event in a stream</span>
-    <span class='ident'>First</span>,
-    <span class='doccomment'>/// Exactly the given event number</span>
-    <span class='ident'>Exact</span>(<span class='ident'>StreamVersion</span>),
-    <span class='doccomment'>/// The last event in a stream</span>
-    <span class='ident'>Last</span>,
-}
-
-<span class='kw'>impl</span> <span class='ident'>Copy</span> <span class='kw'>for</span> <span class='ident'>EventNumber</span> {}
-
-<span class='kw'>impl</span> <span class='ident'>PartialEq</span><span class='op'>&lt;</span><span class='ident'>EventNumber</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>EventNumber</span> {
-    <span class='kw'>fn</span> <span class='ident'>eq</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>other</span>: <span class='kw-2'>&amp;</span><span class='ident'>EventNumber</span>) <span class='op'>-&gt;</span> <span class='ident'>bool</span> {
-        <span class='kw'>let</span> <span class='ident'>val</span>: <span class='ident'>i32</span> <span class='op'>=</span> (<span class='kw-2'>*</span><span class='self'>self</span>).<span class='ident'>into</span>();
-        <span class='kw'>let</span> <span class='ident'>other</span>: <span class='ident'>i32</span> <span class='op'>=</span> (<span class='kw-2'>*</span><span class='ident'>other</span>).<span class='ident'>into</span>();
-        <span class='ident'>val</span> <span class='op'>==</span> <span class='ident'>other</span>
-    }
-}
-
-<span class='kw'>impl</span> <span class='ident'>From</span><span class='op'>&lt;</span><span class='ident'>StreamVersion</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>EventNumber</span> {
-    <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>ver</span>: <span class='ident'>StreamVersion</span>) <span class='op'>-&gt;</span> <span class='self'>Self</span> {
-        <span class='ident'>EventNumber</span>::<span class='ident'>Exact</span>(<span class='ident'>ver</span>)
-    }
-}
-
-<span class='kw'>impl</span> <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>i32</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>EventNumber</span> {
-    <span class='doccomment'>/// Returns the wire representation.</span>
-    <span class='kw'>fn</span> <span class='ident'>into</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>i32</span> {
-        <span class='kw'>match</span> <span class='self'>self</span> {
-            <span class='ident'>EventNumber</span>::<span class='ident'>First</span> <span class='op'>=&gt;</span> <span class='number'>0</span>,
-            <span class='ident'>EventNumber</span>::<span class='ident'>Exact</span>(<span class='ident'>x</span>) <span class='op'>=&gt;</span> <span class='ident'>x</span>.<span class='ident'>into</span>(),
-            <span class='ident'>EventNumber</span>::<span class='ident'>Last</span> <span class='op'>=&gt;</span> <span class='op'>-</span><span class='number'>1</span>
-        }
-    }
-}
-
-<span class='kw'>impl</span> <span class='ident'>EventNumber</span> {
-    <span class='attribute'>#[<span class='ident'>doc</span>(<span class='ident'>hidden</span>)]</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>from_i32_opt</span>(<span class='ident'>val</span>: <span class='ident'>i32</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='self'>Self</span><span class='op'>&gt;</span> {
-        <span class='kw'>match</span> <span class='ident'>val</span> {
-            <span class='number'>0</span> <span class='op'>=&gt;</span> <span class='prelude-val'>Some</span>(<span class='ident'>EventNumber</span>::<span class='ident'>First</span>),
-            <span class='op'>-</span><span class='number'>1</span> <span class='op'>=&gt;</span> <span class='prelude-val'>Some</span>(<span class='ident'>EventNumber</span>::<span class='ident'>Last</span>),
-            <span class='ident'>x</span> <span class='kw'>if</span> <span class='ident'>x</span> <span class='op'>&gt;</span> <span class='number'>0</span> <span class='op'>=&gt;</span> <span class='prelude-val'>Some</span>(<span class='ident'>EventNumber</span>::<span class='ident'>Exact</span>(<span class='ident'>StreamVersion</span>::<span class='ident'>from_i32</span>(<span class='ident'>x</span>))),
-            <span class='ident'>invalid</span> <span class='op'>=&gt;</span> {
-                <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;invalid event number: {}&quot;</span>, <span class='ident'>invalid</span>);
-                <span class='prelude-val'>None</span>
-            }
-        }
-    }
-}
-
-<span class='doccomment'>/// Content type of the event `data` or `metadata`.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>PartialEq</span>, <span class='ident'>Eq</span>, <span class='ident'>Clone</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>ContentType</span> {
-    <span class='doccomment'>/// Raw bytes</span>
-    <span class='ident'>Bytes</span>,
-    <span class='doccomment'>/// JSON values usable with projections in EventStore</span>
-    <span class='ident'>Json</span>
-}
-
-<span class='kw'>impl</span> <span class='ident'>Copy</span> <span class='kw'>for</span> <span class='ident'>ContentType</span> {}
-
-<span class='kw'>impl</span> <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>i32</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>ContentType</span> {
-    <span class='kw'>fn</span> <span class='ident'>into</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>i32</span> {
-        <span class='kw'>match</span> <span class='self'>self</span> {
-            <span class='ident'>ContentType</span>::<span class='ident'>Bytes</span> <span class='op'>=&gt;</span> <span class='number'>0</span>,
-            <span class='ident'>ContentType</span>::<span class='ident'>Json</span> <span class='op'>=&gt;</span> <span class='number'>1</span>,
-        }
+        <span class='ident'>build_package</span>(<span class='self'>self</span>.<span class='number'>0</span>, <span class='ident'>authentication</span>, <span class='ident'>correlation_id</span>)
     }
 }
 
@@ -1008,7 +775,7 @@
         }
     }
 
-    <span class='kw'>fn</span> <span class='ident'>build_message</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>Message</span> {
+    <span class='kw'>fn</span> <span class='ident'>build_message</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>RawMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
         <span class='self'>self</span>.<span class='ident'>build_command</span>().<span class='ident'>into</span>()
     }
 
@@ -1188,7 +955,7 @@
         }
     }
 
-    <span class='kw'>fn</span> <span class='ident'>build_message</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>Message</span> {
+    <span class='kw'>fn</span> <span class='ident'>build_message</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>RawMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
         <span class='self'>self</span>.<span class='ident'>build_command</span>().<span class='ident'>into</span>()
     }
 
@@ -1305,8 +1072,8 @@
         }
     }
 
-    <span class='kw'>fn</span> <span class='ident'>build_message</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>Message</span> {
-        <span class='ident'>Message</span>::<span class='ident'>ReadStreamEvents</span>(<span class='self'>self</span>.<span class='ident'>direction</span>.<span class='ident'>expect</span>(<span class='string'>&quot;direction not set&quot;</span>), <span class='self'>self</span>.<span class='ident'>build_command</span>())
+    <span class='kw'>fn</span> <span class='ident'>build_message</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>RawMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
+        <span class='ident'>RawMessage</span>::<span class='ident'>ReadStreamEvents</span>(<span class='self'>self</span>.<span class='ident'>direction</span>.<span class='ident'>expect</span>(<span class='string'>&quot;direction not set&quot;</span>), <span class='self'>self</span>.<span class='ident'>build_command</span>())
     }
 
     <span class='doccomment'>/// Build a package. Will panic if required values are not set.</span>
@@ -1319,11 +1086,90 @@
     }
 }
 
-<span class='kw'>fn</span> <span class='ident'>build_package</span><span class='op'>&lt;</span><span class='ident'>M</span>: <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>Message</span><span class='op'>&gt;&gt;</span>(<span class='ident'>msg</span>: <span class='ident'>M</span>, <span class='ident'>authentication</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>UsernamePassword</span><span class='op'>&gt;</span>, <span class='ident'>correlation_id</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Uuid</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>Package</span> {
+<span class='doccomment'>/// Builder for `ReadAllEvents`.</span>
+<span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>ReadAllEventsBuilder</span> {
+    <span class='ident'>direction</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>ReadDirection</span><span class='op'>&gt;</span>,
+    <span class='ident'>commit_position</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>LogPosition</span><span class='op'>&gt;</span>,
+    <span class='ident'>prepare_position</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>LogPosition</span><span class='op'>&gt;</span>,
+    <span class='ident'>max_count</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>u8</span><span class='op'>&gt;</span>,
+    <span class='ident'>resolve_link_tos</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>bool</span><span class='op'>&gt;</span>,
+    <span class='ident'>require_master</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>bool</span><span class='op'>&gt;</span>,
+}
+
+<span class='kw'>impl</span> <span class='ident'>ReadAllEventsBuilder</span> {
+    <span class='kw'>fn</span> <span class='ident'>new</span>() <span class='op'>-&gt;</span> <span class='self'>Self</span> {
+        <span class='ident'>ReadAllEventsBuilder</span> {
+            <span class='ident'>direction</span>: <span class='prelude-val'>None</span>,
+            <span class='ident'>commit_position</span>: <span class='prelude-val'>None</span>,
+            <span class='ident'>prepare_position</span>: <span class='prelude-val'>None</span>,
+            <span class='ident'>max_count</span>: <span class='prelude-val'>None</span>,
+            <span class='ident'>resolve_link_tos</span>: <span class='prelude-val'>None</span>,
+            <span class='ident'>require_master</span>: <span class='prelude-val'>None</span>,
+        }
+    }
+
+    <span class='doccomment'>/// Set the read direction (required).</span>
+    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>direction</span><span class='op'>&lt;</span><span class='ident'>D</span>: <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>ReadDirection</span><span class='op'>&gt;&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>dir</span>: <span class='ident'>D</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
+        <span class='self'>self</span>.<span class='ident'>direction</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>dir</span>.<span class='ident'>into</span>());
+        <span class='self'>self</span>
+    }
+
+    <span class='doccomment'>/// Sets the positions to read from. These are easiest to acquire from previous ReadAllSuccess</span>
+    <span class='doccomment'>/// responses, likely persisted somewhere between reads.</span>
+    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>positions</span><span class='op'>&lt;</span><span class='ident'>N</span>: <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>LogPosition</span><span class='op'>&gt;</span>, <span class='ident'>M</span>: <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>LogPosition</span><span class='op'>&gt;&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>commit</span>: <span class='ident'>N</span>, <span class='ident'>prepare</span>: <span class='ident'>M</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
+        <span class='self'>self</span>.<span class='ident'>commit_position</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>commit</span>.<span class='ident'>into</span>());
+        <span class='self'>self</span>.<span class='ident'>prepare_position</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>prepare</span>.<span class='ident'>into</span>());
+        <span class='self'>self</span>
+    }
+
+    <span class='doccomment'>/// Sets the maximum number of events to read (required). Panics if argument is zero.</span>
+    <span class='doccomment'>/// `u8` is used as larger batches should be paged. At the moment maximum buffer requirement</span>
+    <span class='doccomment'>/// even for 255 events is 255*16MiB &gt; 4000MB.</span>
+    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>max_count</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>count</span>: <span class='ident'>u8</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
+        <span class='macro'>assert</span><span class='macro'>!</span>(<span class='ident'>count</span> <span class='op'>&gt;</span> <span class='number'>0</span>);
+        <span class='comment'>// TODO: check ClientAPI, or just use u8?</span>
+        <span class='self'>self</span>.<span class='ident'>max_count</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>count</span>);
+        <span class='self'>self</span>
+    }
+
+    <span class='doccomment'>/// Whether or not the server should resolve links found in the stream to events of other</span>
+    <span class='doccomment'>/// streams. Defaults to `true`.</span>
+    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>resolve_link_tos</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>resolve</span>: <span class='ident'>bool</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
+        <span class='self'>self</span>.<span class='ident'>resolve_link_tos</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>resolve</span>);
+        <span class='self'>self</span>
+    }
+
+    <span class='doccomment'>/// Should the server only handle the request if it is the cluster master. Master server is the</span>
+    <span class='doccomment'>/// only one which can accept writes, so reading from other members than master can result in</span>
+    <span class='doccomment'>/// some specific event not yet being replicated and thus not found.</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>/// Defaults to `false`.</span>
+    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>require_master</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>require</span>: <span class='ident'>bool</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>Self</span> {
+        <span class='self'>self</span>.<span class='ident'>require_master</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>require</span>);
+        <span class='self'>self</span>
+    }
+
+    <span class='doccomment'>/// Build a package. Will panic if required values are not set.</span>
+    <span class='doccomment'>/// Values of this builder will be moved into the package.</span>
+    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>build_package</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>authentication</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>UsernamePassword</span><span class='op'>&gt;</span>, <span class='ident'>correlation_id</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Uuid</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>Package</span> {
+        <span class='kw'>let</span> <span class='ident'>msg</span> <span class='op'>=</span> <span class='ident'>RawMessage</span>::<span class='ident'>ReadAllEvents</span>(
+            <span class='self'>self</span>.<span class='ident'>direction</span>.<span class='ident'>take</span>().<span class='ident'>expect</span>(<span class='string'>&quot;direction&quot;</span>),
+            <span class='ident'>ReadAllEvents</span> {
+                <span class='ident'>commit_position</span>: <span class='self'>self</span>.<span class='ident'>commit_position</span>.<span class='ident'>expect</span>(<span class='string'>&quot;position&quot;</span>).<span class='ident'>into</span>(),
+                <span class='ident'>prepare_position</span>: <span class='self'>self</span>.<span class='ident'>prepare_position</span>.<span class='ident'>unwrap</span>().<span class='ident'>into</span>(),
+                <span class='ident'>max_count</span>: <span class='self'>self</span>.<span class='ident'>max_count</span>.<span class='ident'>expect</span>(<span class='string'>&quot;max_count&quot;</span>) <span class='kw'>as</span> <span class='ident'>i32</span>,
+                <span class='ident'>resolve_link_tos</span>: <span class='self'>self</span>.<span class='ident'>resolve_link_tos</span>.<span class='ident'>unwrap_or</span>(<span class='bool-val'>true</span>),
+                <span class='ident'>require_master</span>: <span class='self'>self</span>.<span class='ident'>require_master</span>.<span class='ident'>unwrap_or</span>(<span class='bool-val'>true</span>)
+            });
+        <span class='ident'>build_package</span>(<span class='ident'>msg</span>, <span class='ident'>authentication</span>, <span class='ident'>correlation_id</span>)
+    }
+}
+
+<span class='kw'>fn</span> <span class='ident'>build_package</span><span class='op'>&lt;</span><span class='ident'>M</span>: <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>RawMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;&gt;</span><span class='op'>&gt;</span>(<span class='ident'>msg</span>: <span class='ident'>M</span>, <span class='ident'>authentication</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>UsernamePassword</span><span class='op'>&gt;</span>, <span class='ident'>correlation_id</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Uuid</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>Package</span> {
     <span class='ident'>Package</span> {
         <span class='ident'>authentication</span>: <span class='ident'>authentication</span>,
         <span class='ident'>correlation_id</span>: <span class='ident'>correlation_id</span>.<span class='ident'>unwrap_or_else</span>(<span class='op'>||</span> <span class='ident'>Uuid</span>::<span class='ident'>new_v4</span>()),
-        <span class='ident'>message</span>: <span class='ident'>msg</span>.<span class='ident'>into</span>()
+        <span class='ident'>message</span>: <span class='ident'>msg</span>.<span class='ident'>into</span>().<span class='ident'>into</span>()
     }
 }
 

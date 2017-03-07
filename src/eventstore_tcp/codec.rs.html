@@ -335,6 +335,13 @@
 <span id="290">290</span>
 <span id="291">291</span>
 <span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
 </pre><pre class='rust '>
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>io</span>::{<span class='self'>self</span>, <span class='ident'>Read</span>, <span class='ident'>Write</span>};
 <span class='kw'>use</span> <span class='ident'>uuid</span>::<span class='ident'>Uuid</span>;
@@ -342,8 +349,9 @@
 <span class='kw'>use</span> <span class='ident'>tokio_core</span>::<span class='ident'>io</span>::{<span class='ident'>Codec</span>, <span class='ident'>EasyBuf</span>};
 
 <span class='kw'>use</span> <span class='ident'>errors</span>::<span class='ident'>ErrorKind</span>;
-<span class='kw'>use</span> <span class='ident'>package</span>::{<span class='self'>self</span>, <span class='ident'>Package</span>, <span class='ident'>TcpFlags</span>};
-<span class='kw'>use</span> {<span class='ident'>Message</span>, <span class='ident'>UsernamePassword</span>};
+<span class='kw'>use</span> <span class='ident'>package</span>::{<span class='self'>self</span>, <span class='ident'>Package</span>, <span class='ident'>TcpFlags</span>, <span class='ident'>MessageContainer</span>};
+<span class='kw'>use</span> {<span class='ident'>UsernamePassword</span>};
+<span class='kw'>use</span> <span class='ident'>raw</span>::<span class='ident'>RawMessage</span>;
 
 <span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>PackageCodec</span>;
 
@@ -378,7 +386,7 @@
                 <span class='prelude-val'>Ok</span>(<span class='prelude-val'>Some</span>(<span class='ident'>Package</span> {
                     <span class='ident'>correlation_id</span>: <span class='ident'>c</span>,
                     <span class='ident'>authentication</span>: <span class='ident'>a</span>,
-                    <span class='ident'>message</span>: <span class='ident'>m</span>,
+                    <span class='ident'>message</span>: <span class='ident'>m</span>.<span class='ident'>into</span>(),
                 }))
             }
             <span class='prelude-val'>Err</span>(<span class='ident'>e</span>) <span class='op'>=&gt;</span> <span class='prelude-val'>Err</span>(<span class='ident'>e</span>),
@@ -387,9 +395,9 @@
 
     <span class='kw'>fn</span> <span class='ident'>decode_body</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>,
                    <span class='ident'>buf</span>: <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>EasyBuf</span>)
-                   <span class='op'>-&gt;</span> <span class='ident'>io</span>::<span class='prelude-ty'>Result</span><span class='op'>&lt;</span>(<span class='ident'>Uuid</span>, <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>UsernamePassword</span><span class='op'>&gt;</span>, <span class='ident'>Message</span>)<span class='op'>&gt;</span> {
+                   <span class='op'>-&gt;</span> <span class='ident'>io</span>::<span class='prelude-ty'>Result</span><span class='op'>&lt;</span>(<span class='ident'>Uuid</span>, <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>UsernamePassword</span><span class='op'>&gt;</span>, <span class='ident'>RawMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span>)<span class='op'>&gt;</span> {
         <span class='kw'>let</span> (<span class='ident'>d</span>, <span class='ident'>c</span>, <span class='ident'>a</span>) <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>decode_header</span>(<span class='ident'>buf</span>)<span class='question-mark'>?</span>;
-        <span class='kw'>let</span> <span class='ident'>message</span> <span class='op'>=</span> <span class='ident'>Message</span>::<span class='ident'>decode</span>(<span class='ident'>d</span>, <span class='ident'>buf</span>)<span class='question-mark'>?</span>;
+        <span class='kw'>let</span> <span class='ident'>message</span> <span class='op'>=</span> <span class='ident'>RawMessage</span>::<span class='ident'>decode</span>(<span class='ident'>d</span>, <span class='ident'>buf</span>.<span class='ident'>as_slice</span>())<span class='question-mark'>?</span>.<span class='ident'>into_owned</span>();
         <span class='prelude-val'>Ok</span>((<span class='ident'>c</span>, <span class='ident'>a</span>, <span class='ident'>message</span>))
     }
 
@@ -443,8 +451,13 @@
             <span class='ident'>flags</span>.<span class='ident'>insert</span>(<span class='ident'>package</span>::<span class='ident'>FLAG_AUTHENTICATED</span>);
         }
 
+        <span class='kw'>let</span> <span class='ident'>raw</span> <span class='op'>=</span> <span class='kw'>match</span> <span class='ident'>msg</span>.<span class='ident'>message</span> {
+            <span class='ident'>MessageContainer</span>::<span class='ident'>Raw</span>(<span class='ident'>raw</span>) <span class='op'>=&gt;</span> <span class='ident'>raw</span>,
+            <span class='ident'>MessageContainer</span>::<span class='ident'>Adapted</span>(<span class='kw-2'>ref</span> <span class='ident'>adapted</span>) <span class='op'>=&gt;</span> <span class='ident'>adapted</span>.<span class='ident'>as_raw</span>()
+        };
+
         <span class='ident'>cursor</span>.<span class='ident'>write_u32</span>::<span class='op'>&lt;</span><span class='ident'>LittleEndian</span><span class='op'>&gt;</span>(<span class='number'>0</span>)<span class='question-mark'>?</span>; <span class='comment'>// placeholder for prefix</span>
-        <span class='ident'>cursor</span>.<span class='ident'>write_u8</span>(<span class='ident'>msg</span>.<span class='ident'>message</span>.<span class='ident'>discriminator</span>())<span class='question-mark'>?</span>;
+        <span class='ident'>cursor</span>.<span class='ident'>write_u8</span>(<span class='ident'>raw</span>.<span class='ident'>discriminator</span>())<span class='question-mark'>?</span>;
         <span class='ident'>cursor</span>.<span class='ident'>write_u8</span>(<span class='ident'>flags</span>.<span class='ident'>bits</span>())<span class='question-mark'>?</span>;
         <span class='ident'>cursor</span>.<span class='ident'>write_all</span>(<span class='ident'>msg</span>.<span class='ident'>correlation_id</span>.<span class='ident'>as_bytes</span>())<span class='question-mark'>?</span>;
         <span class='kw'>if</span> <span class='ident'>flags</span>.<span class='ident'>contains</span>(<span class='ident'>package</span>::<span class='ident'>FLAG_AUTHENTICATED</span>) {
@@ -453,7 +466,7 @@
                 .<span class='ident'>encode</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>cursor</span>)<span class='question-mark'>?</span>;
         }
 
-        <span class='ident'>msg</span>.<span class='ident'>message</span>.<span class='ident'>encode</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>cursor</span>)<span class='question-mark'>?</span>;
+        <span class='ident'>raw</span>.<span class='ident'>encode</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>cursor</span>)<span class='question-mark'>?</span>;
 
         <span class='kw'>let</span> <span class='ident'>at_end</span> <span class='op'>=</span> <span class='ident'>cursor</span>.<span class='ident'>position</span>();
         <span class='kw'>let</span> <span class='ident'>len</span> <span class='op'>=</span> <span class='ident'>at_end</span> <span class='kw'>as</span> <span class='ident'>u32</span> <span class='op'>-</span> <span class='number'>4</span>;
@@ -475,8 +488,8 @@
     <span class='kw'>use</span> <span class='ident'>uuid</span>::<span class='ident'>Uuid</span>;
     <span class='kw'>use</span> <span class='kw'>super</span>::{<span class='ident'>PackageCodec</span>};
     <span class='kw'>use</span> <span class='ident'>package</span>::<span class='ident'>Package</span>;
-    <span class='kw'>use</span> <span class='ident'>errors</span>;
-    <span class='kw'>use</span> {<span class='ident'>Message</span>, <span class='ident'>WriteEventsCompleted</span>};
+    <span class='kw'>use</span> <span class='ident'>raw</span>::<span class='ident'>RawMessage</span>;
+    <span class='kw'>use</span> <span class='ident'>client_messages</span>::{<span class='ident'>WriteEventsCompleted</span>, <span class='ident'>OperationResult</span>};
 
     <span class='attribute'>#[<span class='ident'>test</span>]</span>
     <span class='kw'>fn</span> <span class='ident'>decode_ping</span>() {
@@ -486,7 +499,7 @@
                               <span class='ident'>authentication</span>: <span class='prelude-val'>None</span>,
                               <span class='ident'>correlation_id</span>:
                                   <span class='ident'>Uuid</span>::<span class='ident'>parse_str</span>(<span class='string'>&quot;7b50a1b0-34b9-224e-8f9d-708c394fab2d&quot;</span>).<span class='ident'>unwrap</span>(),
-                              <span class='ident'>message</span>: <span class='ident'>Message</span>::<span class='ident'>Ping</span>,
+                              <span class='ident'>message</span>: <span class='ident'>RawMessage</span>::<span class='ident'>Ping</span>.<span class='ident'>into</span>(),
                           });
     }
 
@@ -498,7 +511,7 @@
                               <span class='ident'>authentication</span>: <span class='prelude-val'>None</span>,
                               <span class='ident'>correlation_id</span>:
                                   <span class='ident'>Uuid</span>::<span class='ident'>parse_str</span>(<span class='string'>&quot;7b50a1b0-34b9-224e-8f9d-708c394fab2d&quot;</span>).<span class='ident'>unwrap</span>(),
-                              <span class='ident'>message</span>: <span class='ident'>Message</span>::<span class='ident'>Ping</span>,
+                              <span class='ident'>message</span>: <span class='ident'>RawMessage</span>::<span class='ident'>Ping</span>.<span class='ident'>into</span>(),
                           });
     }
 
@@ -510,32 +523,27 @@
                               <span class='ident'>authentication</span>: <span class='prelude-val'>None</span>,
                               <span class='ident'>correlation_id</span>:
                                   <span class='ident'>Uuid</span>::<span class='ident'>parse_str</span>(<span class='string'>&quot;7b50a1b0-34b9-224e-8f9d-708c394fab2d&quot;</span>).<span class='ident'>unwrap</span>(),
-                              <span class='ident'>message</span>: <span class='ident'>Message</span>::<span class='ident'>Ping</span>,
+                              <span class='ident'>message</span>: <span class='ident'>RawMessage</span>::<span class='ident'>Ping</span>.<span class='ident'>into</span>(),
                           });
     }
 
     <span class='attribute'>#[<span class='ident'>test</span>]</span>
     <span class='kw'>fn</span> <span class='ident'>decode_unknown_discriminator</span>() {
-        <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>io</span>;
+        <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>borrow</span>::<span class='ident'>Cow</span>;
 
         <span class='kw'>let</span> <span class='ident'>err</span> <span class='op'>=</span> <span class='ident'>PackageCodec</span>.<span class='ident'>decode</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> (<span class='string'>&quot;12000000ff007b50a1b034b9224e8f9d708c394fab2d&quot;</span>
                 .<span class='ident'>to_string</span>()
                 .<span class='ident'>from_hex</span>()
                 .<span class='ident'>unwrap</span>()
                 .<span class='ident'>into</span>()))
-            .<span class='ident'>unwrap_err</span>();
+            .<span class='ident'>unwrap</span>() <span class='comment'>// Result</span>
+            .<span class='ident'>unwrap</span>();<span class='comment'>// Option</span>
 
-        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>err</span>.<span class='ident'>kind</span>(), <span class='ident'>io</span>::<span class='ident'>ErrorKind</span>::<span class='ident'>Other</span>);
-        <span class='kw'>let</span> <span class='ident'>err</span> <span class='op'>=</span> <span class='ident'>err</span>.<span class='ident'>into_inner</span>();
-        <span class='kw'>match</span> <span class='ident'>err</span> {
-            <span class='prelude-val'>Some</span>(<span class='ident'>inner</span>) <span class='op'>=&gt;</span> {
-                <span class='kw'>match</span> <span class='kw-2'>*</span><span class='ident'>inner</span>.<span class='ident'>downcast</span>::<span class='op'>&lt;</span><span class='ident'>errors</span>::<span class='ident'>Error</span><span class='op'>&gt;</span>().<span class='ident'>unwrap</span>() {
-                    <span class='ident'>errors</span>::<span class='ident'>Error</span>(<span class='ident'>errors</span>::<span class='ident'>ErrorKind</span>::<span class='ident'>UnsupportedDiscriminator</span>(<span class='number'>0xff</span>), _) <span class='op'>=&gt;</span> { <span class='comment'>/* good */</span> }
-                    <span class='ident'>x</span> <span class='op'>=&gt;</span> <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;unexpected errorkind: {:?}&quot;</span>, <span class='ident'>x</span>),
-                }
-            }
-            <span class='ident'>x</span> <span class='op'>=&gt;</span> <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;unexpected inner error: {:?}&quot;</span>, <span class='ident'>x</span>),
-        }
+        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>err</span>, <span class='ident'>Package</span> {
+            <span class='ident'>authentication</span>: <span class='prelude-val'>None</span>,
+            <span class='ident'>correlation_id</span>: <span class='ident'>Uuid</span>::<span class='ident'>parse_str</span>(<span class='string'>&quot;7b50a1b0-34b9-224e-8f9d-708c394fab2d&quot;</span>).<span class='ident'>unwrap</span>(),
+            <span class='ident'>message</span>: <span class='ident'>RawMessage</span>::<span class='ident'>Unsupported</span>(<span class='number'>255</span>, <span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='macro'>vec</span><span class='macro'>!</span>[])).<span class='ident'>into</span>()
+        });
     }
 
     <span class='attribute'>#[<span class='ident'>test</span>]</span>
@@ -547,11 +555,14 @@
                               <span class='ident'>authentication</span>: <span class='prelude-val'>None</span>,
                               <span class='ident'>correlation_id</span>:
                                   <span class='ident'>Uuid</span>::<span class='ident'>parse_str</span>(<span class='string'>&quot;9b59d873-4e9f-d84e-b8a4-21f2666a3aa4&quot;</span>).<span class='ident'>unwrap</span>(),
-                              <span class='ident'>message</span>: <span class='ident'>Message</span>::<span class='ident'>WriteEventsCompleted</span>(<span class='prelude-val'>Ok</span>(<span class='ident'>WriteEventsCompleted</span> {
-                                  <span class='ident'>event_numbers</span>: <span class='number'>30</span>..<span class='number'>40</span>,
+                              <span class='ident'>message</span>: <span class='ident'>RawMessage</span>::<span class='ident'>WriteEventsCompleted</span>(<span class='ident'>WriteEventsCompleted</span> {
+                                  <span class='ident'>result</span>: <span class='prelude-val'>Some</span>(<span class='ident'>OperationResult</span>::<span class='ident'>Success</span>),
+                                  <span class='ident'>message</span>: <span class='prelude-val'>None</span>,
+                                  <span class='ident'>first_event_number</span>: <span class='number'>30</span>,
+                                  <span class='ident'>last_event_number</span>: <span class='number'>39</span>,
                                   <span class='ident'>prepare_position</span>: <span class='prelude-val'>Some</span>(<span class='number'>181349124</span>),
                                   <span class='ident'>commit_position</span>: <span class='prelude-val'>Some</span>(<span class='number'>181349124</span>)
-                              }))
+                              }).<span class='ident'>into</span>()
                           });
     }
 
@@ -563,11 +574,14 @@
                               <span class='ident'>authentication</span>: <span class='prelude-val'>None</span>,
                               <span class='ident'>correlation_id</span>:
                                   <span class='ident'>Uuid</span>::<span class='ident'>parse_str</span>(<span class='string'>&quot;9b59d873-4e9f-d84e-b8a4-21f2666a3aa4&quot;</span>).<span class='ident'>unwrap</span>(),
-                              <span class='ident'>message</span>: <span class='ident'>Message</span>::<span class='ident'>WriteEventsCompleted</span>(<span class='prelude-val'>Ok</span>(<span class='ident'>WriteEventsCompleted</span> {
-                                  <span class='ident'>event_numbers</span>: <span class='number'>30</span>..<span class='number'>40</span>,
+                              <span class='ident'>message</span>: <span class='ident'>RawMessage</span>::<span class='ident'>WriteEventsCompleted</span>(<span class='ident'>WriteEventsCompleted</span> {
+                                  <span class='ident'>result</span>: <span class='prelude-val'>Some</span>(<span class='ident'>OperationResult</span>::<span class='ident'>Success</span>),
+                                  <span class='ident'>message</span>: <span class='prelude-val'>None</span>,
+                                  <span class='ident'>first_event_number</span>: <span class='number'>30</span>,
+                                  <span class='ident'>last_event_number</span>: <span class='number'>39</span>,
                                   <span class='ident'>prepare_position</span>: <span class='prelude-val'>Some</span>(<span class='number'>181349124</span>),
                                   <span class='ident'>commit_position</span>: <span class='prelude-val'>Some</span>(<span class='number'>181349124</span>)
-                              }))
+                              }).<span class='ident'>into</span>()
                           });
 
     }

@@ -48,11 +48,11 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a class='srclink' href='../src/eventstore_tcp/package.rs.html#15-24' title='goto source code'>[src]</a></span></h1>
+               </span><a class='srclink' href='../src/eventstore_tcp/package.rs.html#18-27' title='goto source code'>[src]</a></span></h1>
 <pre class='rust struct'>pub struct Package {
     pub authentication: <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='enum core::option::Option'>Option</a>&lt;<a class='struct' href='../eventstore_tcp/struct.UsernamePassword.html' title='struct eventstore_tcp::UsernamePassword'>UsernamePassword</a>&gt;,
     pub correlation_id: <a class='struct' href='https://doc.rust-lang.org/uuid/uuid/struct.Uuid.html' title='struct uuid::Uuid'>Uuid</a>,
-    pub message: <a class='enum' href='../eventstore_tcp/enum.Message.html' title='enum eventstore_tcp::Message'>Message</a>,
+    pub message: MessageContainer&lt;'static&gt;,
 }</pre><div class='docblock'><p>Frame in the protocol. On the wire, packets are embedded in frames with length
 prefix and suffix.</p>
 </div><h2 class='fields'>Fields</h2><span id='structfield.authentication' class='structfield'>
@@ -67,12 +67,12 @@ be used to generate corresponding <code>TcpFlags</code> first bit.</p>
 <code>uuid::Uuid::new_v4()</code> and later server will respond using the same <code>correlation_id</code>.</p>
 </div><span id='structfield.message' class='structfield'>
                            <span id='message.v' class='invisible'>
-                           <code>message: <a class='enum' href='../eventstore_tcp/enum.Message.html' title='enum eventstore_tcp::Message'>Message</a></code>
+                           <code>message: MessageContainer&lt;'static&gt;</code>
                            </span></span><div class='docblock'><p>Enumeration of possible messages.</p>
-</div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html' title='trait core::fmt::Debug'>Debug</a> for <a class='struct' href='../eventstore_tcp/struct.Package.html' title='struct eventstore_tcp::Package'>Package</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/eventstore_tcp/package.rs.html#14' title='goto source code'>[src]</a></span></h3>
+</div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html' title='trait core::fmt::Debug'>Debug</a> for <a class='struct' href='../eventstore_tcp/struct.Package.html' title='struct eventstore_tcp::Package'>Package</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/eventstore_tcp/package.rs.html#17' title='goto source code'>[src]</a></span></h3>
 <div class='impl-items'><h4 id='method.fmt' class='method'><span id='fmt.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, __arg_0: &amp;mut <a class='struct' href='https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html' title='struct core::fmt::Formatter'>Formatter</a>) -&gt; <a class='type' href='https://doc.rust-lang.org/nightly/core/fmt/type.Result.html' title='type core::fmt::Result'>Result</a></code></span></h4>
 <div class='docblock'><p>Formats the value using the given formatter.</p>
-</div></div><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html' title='trait core::cmp::PartialEq'>PartialEq</a> for <a class='struct' href='../eventstore_tcp/struct.Package.html' title='struct eventstore_tcp::Package'>Package</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/eventstore_tcp/package.rs.html#14' title='goto source code'>[src]</a></span></h3>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html' title='trait core::cmp::PartialEq'>PartialEq</a> for <a class='struct' href='../eventstore_tcp/struct.Package.html' title='struct eventstore_tcp::Package'>Package</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/eventstore_tcp/package.rs.html#17' title='goto source code'>[src]</a></span></h3>
 <div class='impl-items'><h4 id='method.eq' class='method'><span id='eq.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq' class='fnname'>eq</a>(&amp;self, __arg_0: &amp;<a class='struct' href='../eventstore_tcp/struct.Package.html' title='struct eventstore_tcp::Package'>Package</a>) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></span></h4>
 <div class='docblock'><p>This method tests for <code>self</code> and <code>other</code> values to be equal, and is used by <code>==</code>. <a href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq">Read more</a></p>
 </div><h4 id='method.ne' class='method'><span id='ne.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#method.ne' class='fnname'>ne</a>(&amp;self, __arg_0: &amp;<a class='struct' href='../eventstore_tcp/struct.Package.html' title='struct eventstore_tcp::Package'>Package</a>) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></span></h4>

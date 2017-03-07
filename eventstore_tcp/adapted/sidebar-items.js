@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["AdaptedMessage","Enumeration of converted messages for more oxidized API."]],"struct":[["BadRequestMessage","Newtype for wrapping a specific message, AdaptedMessage::BadRequest"],["NotAuthenticatedMessage","Newtype for wrapping a specific message, AdaptedMessage::NotAuthenticated"],["NotHandledInfo","Placeholder for NotHandledInfo, unused."]]});

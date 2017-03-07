@@ -48,7 +48,7 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a class='srclink' href='../../src/eventstore_tcp/builder.rs.html#531-538' title='goto source code'>[src]</a></span></h1>
+               </span><a class='srclink' href='../../src/eventstore_tcp/builder.rs.html#375-382' title='goto source code'>[src]</a></span></h1>
 <pre class='rust struct'>pub struct ReadStreamEventsBuilder { /* fields omitted */ }</pre><div class='docblock'><p>Builds a package for reading multiple events from a stream in either <code>ReadDirection</code>.</p>
 
 <h1 id='example' class='section-header'><a href='#example'>Example</a></h1>
@@ -65,7 +65,7 @@
     .<span class='ident'>build_package</span>(<span class='prelude-val'>None</span>, <span class='prelude-val'>None</span>);
 
 </pre>
-</div><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class='struct' href='../../eventstore_tcp/builder/struct.ReadStreamEventsBuilder.html' title='struct eventstore_tcp::builder::ReadStreamEventsBuilder'>ReadStreamEventsBuilder</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/eventstore_tcp/builder.rs.html#540-627' title='goto source code'>[src]</a></span></h3>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class='struct' href='../../eventstore_tcp/builder/struct.ReadStreamEventsBuilder.html' title='struct eventstore_tcp::builder::ReadStreamEventsBuilder'>ReadStreamEventsBuilder</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/eventstore_tcp/builder.rs.html#384-471' title='goto source code'>[src]</a></span></h3>
 <div class='impl-items'><h4 id='method.direction' class='method'><span id='direction.v' class='invisible'><code>fn <a href='#method.direction' class='fnname'>direction</a>&lt;D:&nbsp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.Into.html' title='trait core::convert::Into'>Into</a>&lt;<a class='enum' href='../../eventstore_tcp/enum.ReadDirection.html' title='enum eventstore_tcp::ReadDirection'>ReadDirection</a>&gt;&gt;(&amp;mut self, dir: D) -&gt; &amp;mut Self</code></span></h4>
 <div class='docblock'><p>Set the read direction (required).</p>
 </div><h4 id='method.max_count' class='method'><span id='max_count.v' class='invisible'><code>fn <a href='#method.max_count' class='fnname'>max_count</a>(&amp;mut self, count: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a>) -&gt; &amp;mut Self</code></span></h4>
@@ -76,7 +76,7 @@ even for 255 events is 255*16MiB &gt; 4000MB.</p>
 <div class='docblock'><p>Sets the stream to read from. Panics if the id is an empty string. Required.</p>
 
 <p>Panics if the id is <code>$all</code>, which is currently unimplemented.</p>
-</div><h4 id='method.from_event_number' class='method'><span id='from_event_number.v' class='invisible'><code>fn <a href='#method.from_event_number' class='fnname'>from_event_number</a>&lt;N:&nbsp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.Into.html' title='trait core::convert::Into'>Into</a>&lt;<a class='enum' href='../../eventstore_tcp/builder/enum.EventNumber.html' title='enum eventstore_tcp::builder::EventNumber'>EventNumber</a>&gt;&gt;(&amp;mut self, n: N) -&gt; &amp;mut Self</code></span></h4>
+</div><h4 id='method.from_event_number' class='method'><span id='from_event_number.v' class='invisible'><code>fn <a href='#method.from_event_number' class='fnname'>from_event_number</a>&lt;N:&nbsp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.Into.html' title='trait core::convert::Into'>Into</a>&lt;<a class='enum' href='../../eventstore_tcp/enum.EventNumber.html' title='enum eventstore_tcp::EventNumber'>EventNumber</a>&gt;&gt;(&amp;mut self, n: N) -&gt; &amp;mut Self</code></span></h4>
 <div class='docblock'><p>Event number to read from to the given direction.</p>
 </div><h4 id='method.resolve_link_tos' class='method'><span id='resolve_link_tos.v' class='invisible'><code>fn <a href='#method.resolve_link_tos' class='fnname'>resolve_link_tos</a>(&amp;mut self, resolve: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; &amp;mut Self</code></span></h4>
 <div class='docblock'><p>Whether or not the server should resolve links found in the stream to events of other

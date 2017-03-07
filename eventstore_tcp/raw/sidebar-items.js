@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["RawMessage","Enumeration much like the `adapted::AdaptedMessage` for all the messages in the protocol."]],"struct":[["BadRequestPayload","Newtype for an arbitary BadRequest \"info\", which could be UTF8 string."],["NotAuthenticatedPayload","Newtype for an arbitary NotAuthenticated \"info\", which could be UTF8 string."]]});

@@ -48,7 +48,7 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a class='srclink' href='../src/eventstore_tcp/lib.rs.html#1-572' title='goto source code'>[src]</a></span></h1>
+               </span><a class='srclink' href='../src/eventstore_tcp/lib.rs.html#1-496' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>Tokio-based <a href="https://geteventstore.com/">EventStore</a> client library in it&#39;s early stages.
 Currently the most interesting API is the <code>tokio_service::service::Service</code> implemented by
 <code>client::Client</code>, which allows sending values of <code>Package</code> to get back a <code>Future</code> of a response
@@ -84,7 +84,7 @@ needed to support subscriptions.</p>
 <span class='kw'>use</span> <span class='ident'>tokio_core</span>::<span class='ident'>reactor</span>::<span class='ident'>Core</span>;
 <span class='kw'>use</span> <span class='ident'>tokio_service</span>::<span class='ident'>Service</span>;
 
-<span class='kw'>use</span> <span class='ident'>eventstore_tcp</span>::{<span class='ident'>EventStoreClient</span>, <span class='ident'>Builder</span>, <span class='ident'>Message</span>, <span class='ident'>StreamVersion</span>, <span class='ident'>ContentType</span>};
+<span class='kw'>use</span> <span class='ident'>eventstore_tcp</span>::{<span class='ident'>EventStoreClient</span>, <span class='ident'>Builder</span>, <span class='ident'>AdaptedMessage</span>, <span class='ident'>StreamVersion</span>, <span class='ident'>ContentType</span>};
 
 <span class='kw'>fn</span> <span class='ident'>main</span>() {
     <span class='kw'>let</span> <span class='ident'>addr</span> <span class='op'>=</span> <span class='string'>&quot;127.0.0.1:1113&quot;</span>.<span class='ident'>parse</span>::<span class='op'>&lt;</span><span class='ident'>SocketAddr</span><span class='op'>&gt;</span>().<span class='ident'>unwrap</span>();
@@ -109,10 +109,12 @@ needed to support subscriptions.</p>
 
         <span class='comment'>// call returns a future representing the response</span>
     }).<span class='ident'>and_then</span>(<span class='op'>|</span><span class='ident'>resp</span><span class='op'>|</span> {
-        <span class='kw'>match</span> <span class='ident'>resp</span>.<span class='ident'>message</span> {
-            <span class='ident'>Message</span>::<span class='ident'>WriteEventsCompleted</span>(<span class='prelude-val'>Ok</span>(_)) <span class='op'>=&gt;</span>
+        <span class='comment'>// By default, `resp` is a `Package` that contains the raw protobuf defined message</span>
+        <span class='comment'>// (`RawMessage`). It is possible to refine it into AdaptedMessage which can fail:</span>
+        <span class='kw'>match</span> <span class='ident'>resp</span>.<span class='ident'>message</span>.<span class='ident'>try_adapt</span>().<span class='ident'>unwrap</span>() {
+            <span class='ident'>AdaptedMessage</span>::<span class='ident'>WriteEventsCompleted</span>(<span class='prelude-val'>Ok</span>(_)) <span class='op'>=&gt;</span>
                 <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;Event was written successfully&quot;</span>),
-            <span class='ident'>Message</span>::<span class='ident'>WriteEventsCompleted</span>(<span class='prelude-val'>Err</span>(<span class='ident'>fail</span>)) <span class='op'>=&gt;</span>
+            <span class='ident'>AdaptedMessage</span>::<span class='ident'>WriteEventsCompleted</span>(<span class='prelude-val'>Err</span>(<span class='ident'>fail</span>)) <span class='op'>=&gt;</span>
                 <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;Event writing failed: {:?}&quot;</span>, <span class='ident'>fail</span>),
             <span class='ident'>unexpected</span> <span class='op'>=&gt;</span> <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;Unexpected response: {:#?}&quot;</span>, <span class='ident'>unexpected</span>),
         };
@@ -125,16 +127,40 @@ needed to support subscriptions.</p>
 
 <p>More examples can be found in the aspiring command line tool under <code>examples/testclient</code>.</p>
 </div><h2 id='reexports' class='section-header'><a href="#reexports">Reexports</a></h2>
-<table><tr><td><code>pub use builder::<a class='struct' href='../eventstore_tcp/builder/struct.Builder.html' title='struct eventstore_tcp::builder::Builder'>Builder</a>;</code></td></tr><tr><td><code>pub use builder::<a class='enum' href='../eventstore_tcp/builder/enum.ExpectedVersion.html' title='enum eventstore_tcp::builder::ExpectedVersion'>ExpectedVersion</a>;</code></td></tr><tr><td><code>pub use builder::<a class='struct' href='../eventstore_tcp/builder/struct.StreamVersion.html' title='struct eventstore_tcp::builder::StreamVersion'>StreamVersion</a>;</code></td></tr><tr><td><code>pub use builder::<a class='enum' href='../eventstore_tcp/builder/enum.EventNumber.html' title='enum eventstore_tcp::builder::EventNumber'>EventNumber</a>;</code></td></tr><tr><td><code>pub use builder::<a class='enum' href='../eventstore_tcp/builder/enum.ContentType.html' title='enum eventstore_tcp::builder::ContentType'>ContentType</a>;</code></td></tr></table><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+<table><tr><td><code>pub use raw::<a class='enum' href='../eventstore_tcp/raw/enum.RawMessage.html' title='enum eventstore_tcp::raw::RawMessage'>RawMessage</a>;</code></td></tr><tr><td><code>pub use adapted::<a class='enum' href='../eventstore_tcp/adapted/enum.AdaptedMessage.html' title='enum eventstore_tcp::adapted::AdaptedMessage'>AdaptedMessage</a>;</code></td></tr><tr><td><code>pub use builder::<a class='struct' href='../eventstore_tcp/builder/struct.Builder.html' title='struct eventstore_tcp::builder::Builder'>Builder</a>;</code></td></tr></table><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
 <table>
+                       <tr class=' module-item'>
+                           <td><a class='mod' href='adapted/index.html'
+                                  title='mod eventstore_tcp::adapted'>adapted</a></td>
+                           <td class='docblock-short'>
+                                <p>Adapted or refined types providing a much more oxidized API for handling the messages in the
+protocol.</p>
+                           </td>
+                       </tr>
                        <tr class=' module-item'>
                            <td><a class='mod' href='builder/index.html'
                                   title='mod eventstore_tcp::builder'>builder</a></td>
                            <td class='docblock-short'>
                                 <p>Builders to help building requests.</p>
                            </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='mod' href='raw/index.html'
+                                  title='mod eventstore_tcp::raw'>raw</a></td>
+                           <td class='docblock-short'>
+                                <p>Raw module contains the enumeration <code>RawMessage</code> and raw decoding and encoding functionality.
+There should not be need to handle <code>RawMessage</code> values directly but if there is ever a bug,
+using the raw messages should still work.</p>
+                           </td>
                        </tr></table><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
 <table>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.EventRecord.html'
+                                  title='struct eventstore_tcp::EventRecord'>EventRecord</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
                        <tr class=' module-item'>
                            <td><a class='struct' href='struct.EventStoreClient.html'
                                   title='struct eventstore_tcp::EventStoreClient'>EventStoreClient</a></td>
@@ -158,8 +184,22 @@ prefix and suffix.</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='struct' href='struct.ReadStreamSuccess.html'
-                                  title='struct eventstore_tcp::ReadStreamSuccess'>ReadStreamSuccess</a></td>
+                           <td><a class='struct' href='struct.ReadAllCompleted.html'
+                                  title='struct eventstore_tcp::ReadAllCompleted'>ReadAllCompleted</a></td>
+                           <td class='docblock-short'>
+                                <p>Successful response to <code>Message::ReadAllEvents</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.ReadAllEvents.html'
+                                  title='struct eventstore_tcp::ReadAllEvents'>ReadAllEvents</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.ReadStreamCompleted.html'
+                                  title='struct eventstore_tcp::ReadStreamCompleted'>ReadStreamCompleted</a></td>
                            <td class='docblock-short'>
                                 <p>Successful response to a <code>Message::ReadStreamEvents</code>.</p>
                            </td>
@@ -169,6 +209,16 @@ prefix and suffix.</p>
                                   title='struct eventstore_tcp::ResolvedIndexedEvent'>ResolvedIndexedEvent</a></td>
                            <td class='docblock-short'>
                                 
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.StreamVersion.html'
+                                  title='struct eventstore_tcp::StreamVersion'>StreamVersion</a></td>
+                           <td class='docblock-short'>
+                                <p><code>StreamVersion</code> represents the valid values for a stream version which is the same as the
+event number of the latest event. As such, values are non-negative integers up to
+<code>i32::max_value</code>. Negative values of <code>i32</code> have special meaning in the protocol, and are
+restricted from being used with this type.</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
@@ -195,11 +245,35 @@ session in the TCP protocol, every request must be authenticated.</p>
                        </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
 <table>
                        <tr class=' module-item'>
-                           <td><a class='enum' href='enum.Message.html'
-                                  title='enum eventstore_tcp::Message'>Message</a></td>
+                           <td><a class='enum' href='enum.ContentType.html'
+                                  title='enum eventstore_tcp::ContentType'>ContentType</a></td>
                            <td class='docblock-short'>
-                                <p>Enumeration of currently supported messages. The plan is to include every defined message while trying
-to decode responses into <code>Result</code> alike messages, such as <code>ReadEventCompleted</code>.</p>
+                                <p>Content type of the event <code>data</code> or <code>metadata</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='enum' href='enum.EventNumber.html'
+                                  title='enum eventstore_tcp::EventNumber'>EventNumber</a></td>
+                           <td class='docblock-short'>
+                                <p><code>EventNumber</code> is similar to <code>StreamVersion</code> and <code>ExpectedVersion</code> but is used when specifying a
+position to read from in the stream. Allows specifying the first or last (when reading
+backwards) event in addition to exact event number.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='enum' href='enum.ExpectedVersion.html'
+                                  title='enum eventstore_tcp::ExpectedVersion'>ExpectedVersion</a></td>
+                           <td class='docblock-short'>
+                                <p><code>ExpectedVersion</code> represents the different modes of optimistic locking when writing to a stream
+using <code>WriteEventsBuilder</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='enum' href='enum.LogPosition.html'
+                                  title='enum eventstore_tcp::LogPosition'>LogPosition</a></td>
+                           <td class='docblock-short'>
+                                <p>Global unique position in the EventStore, used when reading all events.
+Range -1..i64::max_value()</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
@@ -210,6 +284,13 @@ to decode responses into <code>Result</code> alike messages, such as <code>ReadE
                            </td>
                        </tr>
                        <tr class=' module-item'>
+                           <td><a class='enum' href='enum.ReadAllError.html'
+                                  title='enum eventstore_tcp::ReadAllError'>ReadAllError</a></td>
+                           <td class='docblock-short'>
+                                <p>Failure cases of wire enum <code>ReadAllResult</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
                            <td><a class='enum' href='enum.ReadDirection.html'
                                   title='enum eventstore_tcp::ReadDirection'>ReadDirection</a></td>
                            <td class='docblock-short'>
@@ -217,15 +298,15 @@ to decode responses into <code>Result</code> alike messages, such as <code>ReadE
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='enum' href='enum.ReadEventFailure.html'
-                                  title='enum eventstore_tcp::ReadEventFailure'>ReadEventFailure</a></td>
+                           <td><a class='enum' href='enum.ReadEventError.html'
+                                  title='enum eventstore_tcp::ReadEventError'>ReadEventError</a></td>
                            <td class='docblock-short'>
-                                <p><code>ReadEventFailure</code> maps to non-success of <code>ReadEventResult</code></p>
+                                <p><code>ReadEventError</code> maps to non-success of <code>ReadEventResult</code></p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='enum' href='enum.ReadStreamFailure.html'
-                                  title='enum eventstore_tcp::ReadStreamFailure'>ReadStreamFailure</a></td>
+                           <td><a class='enum' href='enum.ReadStreamError.html'
+                                  title='enum eventstore_tcp::ReadStreamError'>ReadStreamError</a></td>
                            <td class='docblock-short'>
                                 <p>Non-success projection of the <code>ReadStreamResult</code> enum on the wire representing
 a failed <code>ReadStreamCompleted</code> request.</p>

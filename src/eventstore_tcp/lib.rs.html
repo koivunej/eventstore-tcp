@@ -539,82 +539,6 @@
 <span id="494">494</span>
 <span id="495">495</span>
 <span id="496">496</span>
-<span id="497">497</span>
-<span id="498">498</span>
-<span id="499">499</span>
-<span id="500">500</span>
-<span id="501">501</span>
-<span id="502">502</span>
-<span id="503">503</span>
-<span id="504">504</span>
-<span id="505">505</span>
-<span id="506">506</span>
-<span id="507">507</span>
-<span id="508">508</span>
-<span id="509">509</span>
-<span id="510">510</span>
-<span id="511">511</span>
-<span id="512">512</span>
-<span id="513">513</span>
-<span id="514">514</span>
-<span id="515">515</span>
-<span id="516">516</span>
-<span id="517">517</span>
-<span id="518">518</span>
-<span id="519">519</span>
-<span id="520">520</span>
-<span id="521">521</span>
-<span id="522">522</span>
-<span id="523">523</span>
-<span id="524">524</span>
-<span id="525">525</span>
-<span id="526">526</span>
-<span id="527">527</span>
-<span id="528">528</span>
-<span id="529">529</span>
-<span id="530">530</span>
-<span id="531">531</span>
-<span id="532">532</span>
-<span id="533">533</span>
-<span id="534">534</span>
-<span id="535">535</span>
-<span id="536">536</span>
-<span id="537">537</span>
-<span id="538">538</span>
-<span id="539">539</span>
-<span id="540">540</span>
-<span id="541">541</span>
-<span id="542">542</span>
-<span id="543">543</span>
-<span id="544">544</span>
-<span id="545">545</span>
-<span id="546">546</span>
-<span id="547">547</span>
-<span id="548">548</span>
-<span id="549">549</span>
-<span id="550">550</span>
-<span id="551">551</span>
-<span id="552">552</span>
-<span id="553">553</span>
-<span id="554">554</span>
-<span id="555">555</span>
-<span id="556">556</span>
-<span id="557">557</span>
-<span id="558">558</span>
-<span id="559">559</span>
-<span id="560">560</span>
-<span id="561">561</span>
-<span id="562">562</span>
-<span id="563">563</span>
-<span id="564">564</span>
-<span id="565">565</span>
-<span id="566">566</span>
-<span id="567">567</span>
-<span id="568">568</span>
-<span id="569">569</span>
-<span id="570">570</span>
-<span id="571">571</span>
-<span id="572">572</span>
 </pre><pre class='rust '>
 <span class='doccomment'>//! Tokio-based [EventStore](https://geteventstore.com/) client library in it&#39;s early stages.</span>
 <span class='doccomment'>//! Currently the most interesting API is the `tokio_service::service::Service` implemented by</span>
@@ -651,7 +575,7 @@
 <span class='doccomment'>//! use tokio_core::reactor::Core;</span>
 <span class='doccomment'>//! use tokio_service::Service;</span>
 <span class='doccomment'>//!</span>
-<span class='doccomment'>//! use eventstore_tcp::{EventStoreClient, Builder, Message, StreamVersion, ContentType};</span>
+<span class='doccomment'>//! use eventstore_tcp::{EventStoreClient, Builder, AdaptedMessage, StreamVersion, ContentType};</span>
 <span class='doccomment'>//!</span>
 <span class='doccomment'>//! fn main() {</span>
 <span class='doccomment'>//!     let addr = &quot;127.0.0.1:1113&quot;.parse::&lt;SocketAddr&gt;().unwrap();</span>
@@ -676,10 +600,12 @@
 <span class='doccomment'>//!</span>
 <span class='doccomment'>//!         // call returns a future representing the response</span>
 <span class='doccomment'>//!     }).and_then(|resp| {</span>
-<span class='doccomment'>//!         match resp.message {</span>
-<span class='doccomment'>//!             Message::WriteEventsCompleted(Ok(_)) =&gt;</span>
+<span class='doccomment'>//!         // By default, `resp` is a `Package` that contains the raw protobuf defined message</span>
+<span class='doccomment'>//!         // (`RawMessage`). It is possible to refine it into AdaptedMessage which can fail:</span>
+<span class='doccomment'>//!         match resp.message.try_adapt().unwrap() {</span>
+<span class='doccomment'>//!             AdaptedMessage::WriteEventsCompleted(Ok(_)) =&gt;</span>
 <span class='doccomment'>//!                 println!(&quot;Event was written successfully&quot;),</span>
-<span class='doccomment'>//!             Message::WriteEventsCompleted(Err(fail)) =&gt;</span>
+<span class='doccomment'>//!             AdaptedMessage::WriteEventsCompleted(Err(fail)) =&gt;</span>
 <span class='doccomment'>//!                 println!(&quot;Event writing failed: {:?}&quot;, fail),</span>
 <span class='doccomment'>//!             unexpected =&gt; println!(&quot;Unexpected response: {:#?}&quot;, unexpected),</span>
 <span class='doccomment'>//!         };</span>
@@ -709,19 +635,31 @@
 <span class='attribute'>#[<span class='ident'>cfg</span>(<span class='ident'>test</span>)]</span>
 <span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>rustc_serialize</span>;
 
-<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>io</span>;
-<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>ops</span>::{<span class='ident'>Deref</span>, <span class='ident'>Range</span>};
-<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>borrow</span>::<span class='ident'>Cow</span>;
-<span class='kw'>use</span> <span class='ident'>tokio_core</span>::<span class='ident'>io</span>::<span class='ident'>EasyBuf</span>;
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>str</span>;
 
 <span class='kw'>mod</span> <span class='ident'>client_messages</span>;
-<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>client_messages</span>::{<span class='ident'>WriteEvents</span>, <span class='ident'>ResolvedIndexedEvent</span>};
+<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>client_messages</span>::{<span class='ident'>WriteEvents</span>, <span class='ident'>ResolvedIndexedEvent</span>, <span class='ident'>EventRecord</span>, <span class='ident'>ReadAllEvents</span>};
 <span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>client_messages</span>::<span class='ident'>mod_NotHandled</span>::{<span class='ident'>NotHandledReason</span>, <span class='ident'>MasterInfo</span>};
 
 <span class='kw'>mod</span> <span class='ident'>client_messages_ext</span>;
 
-<span class='kw'>mod</span> <span class='ident'>failures</span>;
-<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>failures</span>::{<span class='ident'>WriteEventsFailure</span>, <span class='ident'>ReadEventFailure</span>, <span class='ident'>ReadStreamFailure</span>};
+<span class='kw'>pub</span> <span class='kw'>mod</span> <span class='ident'>raw</span>;
+<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>raw</span>::<span class='ident'>RawMessage</span>;
+
+<span class='kw'>pub</span> <span class='kw'>mod</span> <span class='ident'>adapted</span>;
+<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>adapted</span>::<span class='ident'>AdaptedMessage</span>;
+
+<span class='kw'>mod</span> <span class='ident'>write_events</span>;
+<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>write_events</span>::{<span class='ident'>WriteEventsCompleted</span>, <span class='ident'>WriteEventsFailure</span>};
+
+<span class='kw'>mod</span> <span class='ident'>read_event</span>;
+<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>read_event</span>::{<span class='ident'>ReadEventError</span>};
+
+<span class='kw'>mod</span> <span class='ident'>read_stream</span>;
+<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>read_stream</span>::{<span class='ident'>ReadStreamCompleted</span>, <span class='ident'>ReadStreamError</span>};
+
+<span class='kw'>mod</span> <span class='ident'>read_all</span>;
+<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>read_all</span>::{<span class='ident'>ReadAllCompleted</span>, <span class='ident'>ReadAllError</span>};
 
 <span class='kw'>mod</span> <span class='ident'>package</span>;
 <span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>package</span>::<span class='ident'>Package</span>;
@@ -732,7 +670,7 @@
 <span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>client</span>::<span class='ident'>EventStoreClient</span>;
 
 <span class='kw'>pub</span> <span class='kw'>mod</span> <span class='ident'>builder</span>;
-<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>builder</span>::{<span class='ident'>Builder</span>, <span class='ident'>ExpectedVersion</span>, <span class='ident'>StreamVersion</span>, <span class='ident'>EventNumber</span>, <span class='ident'>ContentType</span>};
+<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>builder</span>::<span class='ident'>Builder</span>;
 
 <span class='kw'>mod</span> <span class='ident'>auth</span>;
 <span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>auth</span>::<span class='ident'>UsernamePassword</span>;
@@ -740,14 +678,59 @@
 <span class='kw'>mod</span> <span class='ident'>errors</span> {
     <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>str</span>;
     <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>io</span>;
+    <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>fmt</span>;
+
+    <span class='doccomment'>/// Enum describing the locations where a result value can be missing</span>
+    <span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>PartialEq</span>)]</span>
+    <span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>ResultStatusKind</span> {
+        <span class='doccomment'>/// Missing from WriteEventsCompleted</span>
+        <span class='ident'>WriteEvents</span>,
+        <span class='doccomment'>/// Missing from ReadEventCompleted</span>
+        <span class='ident'>ReadEvent</span>,
+        <span class='doccomment'>/// Missing from ReadStreamEventsCompleted</span>
+        <span class='ident'>ReadStream</span>,
+    }
+
+    <span class='kw'>impl</span> <span class='ident'>fmt</span>::<span class='ident'>Display</span> <span class='kw'>for</span> <span class='ident'>ResultStatusKind</span> {
+        <span class='kw'>fn</span> <span class='ident'>fmt</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>fmt</span>: <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>fmt</span>::<span class='ident'>Formatter</span>) <span class='op'>-&gt;</span> <span class='ident'>fmt</span>::<span class='prelude-ty'>Result</span> {
+            <span class='kw'>use</span> <span class='self'>self</span>::<span class='ident'>ResultStatusKind</span>::<span class='kw-2'>*</span>;
+            <span class='macro'>write</span><span class='macro'>!</span>(<span class='ident'>fmt</span>, <span class='string'>&quot;{}&quot;</span>, <span class='kw'>match</span> <span class='self'>self</span> {
+                <span class='kw-2'>&amp;</span><span class='ident'>WriteEvents</span> <span class='op'>=&gt;</span> <span class='string'>&quot;WriteEventsCompleted::result&quot;</span>,
+                <span class='kw-2'>&amp;</span><span class='ident'>ReadEvent</span> <span class='op'>=&gt;</span> <span class='string'>&quot;ReadEventCompleted::result&quot;</span>,
+                <span class='kw-2'>&amp;</span><span class='ident'>ReadStream</span> <span class='op'>=&gt;</span> <span class='string'>&quot;ReadStreamEventsCompleted::result&quot;</span>,
+            })
+        }
+    }
 
     <span class='macro'>error_chain</span><span class='macro'>!</span> {
+        <span class='ident'>foreign_links</span> {
+            <span class='ident'>InvalidUtf8</span>(<span class='ident'>str</span>::<span class='ident'>Utf8Error</span>);
+        }
+
         <span class='ident'>errors</span> {
             <span class='ident'>InvalidFlags</span>(<span class='ident'>flags</span>: <span class='ident'>u8</span>) {
                 <span class='ident'>display</span>(<span class='string'>&quot;Invalid flags: 0x{:02x}&quot;</span>, <span class='ident'>flags</span>)
             }
+            <span class='ident'>MissingResultField</span>(<span class='ident'>which</span>: <span class='ident'>ResultStatusKind</span>) {
+                <span class='ident'>display</span>(<span class='string'>&quot;Missing result field: {}&quot;</span>, <span class='ident'>which</span>)
+            }
+            <span class='ident'>InvalidStreamVersion</span>(<span class='ident'>value</span>: <span class='ident'>i32</span>) {
+                <span class='ident'>display</span>(<span class='string'>&quot;Invalid StreamVersion: {}&quot;</span>, <span class='ident'>value</span>)
+            }
+            <span class='ident'>InvalidEventNumber</span>(<span class='ident'>value</span>: <span class='ident'>i32</span>) {
+                <span class='ident'>display</span>(<span class='string'>&quot;Invalid EventNumber: {}&quot;</span>, <span class='ident'>value</span>)
+            }
+            <span class='ident'>InvalidLogPosition</span>(<span class='ident'>value</span>: <span class='ident'>i64</span>) {
+                <span class='ident'>display</span>(<span class='string'>&quot;Invalid LogPosition: {}&quot;</span>, <span class='ident'>value</span>)
+            }
             <span class='ident'>UnsupportedDiscriminator</span>(<span class='ident'>d</span>: <span class='ident'>u8</span>) {
-                <span class='ident'>display</span>(<span class='string'>&quot;Unsupported discriminator: 0x{:02x}&quot;</span>, <span class='ident'>d</span>)
+                <span class='ident'>display</span>(<span class='string'>&quot;Unsupported discriminator 0x{:02x}&quot;</span>, <span class='ident'>d</span>)
+            }
+            <span class='ident'>UnimplementedConversion</span> {
+                <span class='ident'>display</span>(<span class='string'>&quot;Unimplemented conversion&quot;</span>)
+            }
+            <span class='ident'>WriteEventsInvalidTransaction</span> {
+                <span class='ident'>display</span>(<span class='string'>&quot;Unexpected WriteEvents result: InvalidTransaction&quot;</span>)
             }
         }
     }
@@ -767,7 +750,7 @@
     }
 }
 
-<span class='kw'>use</span> <span class='self'>self</span>::<span class='ident'>errors</span>::<span class='ident'>ErrorKind</span>;
+<span class='kw'>use</span> <span class='self'>self</span>::<span class='ident'>errors</span>::{<span class='ident'>Error</span>, <span class='ident'>ErrorKind</span>};
 
 <span class='doccomment'>/// The direction in which events are read.</span>
 <span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>PartialEq</span>, <span class='ident'>Eq</span>, <span class='ident'>Clone</span>)]</span>
@@ -780,412 +763,277 @@
 
 <span class='kw'>impl</span> <span class='ident'>Copy</span> <span class='kw'>for</span> <span class='ident'>ReadDirection</span> {}
 
-<span class='doccomment'>/// Enumeration of currently supported messages. The plan is to include every defined message while trying</span>
-<span class='doccomment'>/// to decode responses into `Result` alike messages, such as `ReadEventCompleted`.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>PartialEq</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>Message</span> {
-    <span class='doccomment'>/// Requests heartbeat from the other side. Unsure if clients or server sends these.</span>
-    <span class='ident'>HeartbeatRequest</span>,
-    <span class='doccomment'>/// Response to a heartbeat request.</span>
-    <span class='ident'>HeartbeatResponse</span>,
-
-    <span class='doccomment'>/// Ping request, similar to heartbeat.</span>
-    <span class='ident'>Ping</span>,
-    <span class='doccomment'>/// Ping response.</span>
-    <span class='ident'>Pong</span>,
-
-    <span class='doccomment'>/// Append to stream request</span>
-    <span class='ident'>WriteEvents</span>(<span class='ident'>WriteEvents</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span>),
-    <span class='doccomment'>/// Append to stream response, which can fail for a number of reasons</span>
-    <span class='ident'>WriteEventsCompleted</span>(<span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>WriteEventsCompleted</span>, <span class='ident'>WriteEventsFailure</span><span class='op'>&gt;</span>),
-
-    <span class='doccomment'>/// Request to read a single event from a stream</span>
-    <span class='ident'>ReadEvent</span>(<span class='ident'>client_messages</span>::<span class='ident'>ReadEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span>),
-    <span class='doccomment'>/// Response to a single event read</span>
-    <span class='ident'>ReadEventCompleted</span>(<span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>client_messages</span>::<span class='ident'>ResolvedIndexedEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span>, <span class='ident'>ReadEventFailure</span><span class='op'>&gt;</span>),
-
-    <span class='doccomment'>/// Request to read a stream from a point forward or backward</span>
-    <span class='ident'>ReadStreamEvents</span>(<span class='ident'>ReadDirection</span>, <span class='ident'>client_messages</span>::<span class='ident'>ReadStreamEvents</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span>),
-    <span class='doccomment'>/// Response to a stream read in given direction</span>
-    <span class='ident'>ReadStreamEventsCompleted</span>(<span class='ident'>ReadDirection</span>, <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>ReadStreamSuccess</span>, <span class='ident'>ReadStreamFailure</span><span class='op'>&gt;</span>),
-
-    <span class='doccomment'>/// Request was not understood. Please open an issue!</span>
-    <span class='ident'>BadRequest</span>(<span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>String</span><span class='op'>&gt;</span>),
-
-    <span class='doccomment'>/// Correlated request was not handled. This is the likely response to requests where</span>
-    <span class='doccomment'>/// `require_master` is `true`, but the connected endpoint is not master and cannot reach it.</span>
-    <span class='ident'>NotHandled</span>(<span class='ident'>NotHandledReason</span>, <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>MasterInfo</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;&gt;</span>),
-
-    <span class='doccomment'>/// Request to authenticate attached credentials.</span>
-    <span class='ident'>Authenticate</span>,
-
-    <span class='doccomment'>/// Positive authentication response. The credentials used to `Authenticate` previously can be</span>
-    <span class='doccomment'>/// used in successive requests.</span>
-    <span class='ident'>Authenticated</span>,
-
-    <span class='doccomment'>/// Negative authentication response, or response to any sent request for which used</span>
-    <span class='doccomment'>/// authentication was not accepted.</span>
-    <span class='ident'>NotAuthenticated</span>
+<span class='doccomment'>/// `ExpectedVersion` represents the different modes of optimistic locking when writing to a stream</span>
+<span class='doccomment'>/// using `WriteEventsBuilder`.</span>
+<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>Clone</span>, <span class='ident'>Eq</span>, <span class='ident'>PartialEq</span>)]</span>
+<span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>ExpectedVersion</span> {
+    <span class='doccomment'>/// No optimistic locking</span>
+    <span class='ident'>Any</span>,
+    <span class='doccomment'>/// Expect a stream not to exist</span>
+    <span class='ident'>NewStream</span>,
+    <span class='doccomment'>/// Expect exact number of events in the stream</span>
+    <span class='ident'>Exact</span>(<span class='ident'>StreamVersion</span>)
 }
 
-<span class='doccomment'>/// Successful response to `Message::WriteEvents`</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>Clone</span>, <span class='ident'>PartialEq</span>, <span class='ident'>Eq</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>WriteEventsCompleted</span> {
-    <span class='doccomment'>/// The event number range assigned to the written events</span>
-    <span class='kw'>pub</span> <span class='ident'>event_numbers</span>: <span class='ident'>Range</span><span class='op'>&lt;</span><span class='ident'>i32</span><span class='op'>&gt;</span>,
+<span class='kw'>impl</span> <span class='ident'>Copy</span> <span class='kw'>for</span> <span class='ident'>ExpectedVersion</span> {}
 
-    <span class='doccomment'>/// Not public: missing type for positive i64</span>
-    <span class='ident'>prepare_position</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>i64</span><span class='op'>&gt;</span>,
-
-    <span class='doccomment'>/// Not public: missing type for positive i64</span>
-    <span class='ident'>commit_position</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>i64</span><span class='op'>&gt;</span>,
-}
-
-<span class='doccomment'>/// Trait allows converting values to wire structs that borrow data from the implementing type.</span>
-<span class='doccomment'>/// Does not work as well as hoped if there is some data to borrow.</span>
-<span class='kw'>trait</span> <span class='ident'>AsMessageWrite</span><span class='op'>&lt;</span><span class='ident'>M</span>: <span class='ident'>quick_protobuf</span>::<span class='ident'>MessageWrite</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>as_message_write</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>M</span>;
-
-    <span class='kw'>fn</span> <span class='ident'>encode</span><span class='op'>&lt;</span><span class='ident'>W</span>: <span class='ident'>io</span>::<span class='ident'>Write</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>out</span>: <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>W</span>) <span class='op'>-&gt;</span> <span class='ident'>io</span>::<span class='prelude-ty'>Result</span><span class='op'>&lt;</span>()<span class='op'>&gt;</span> {
-        <span class='kw'>let</span> <span class='ident'>conv</span> <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>as_message_write</span>();
-        <span class='ident'>conv</span>.<span class='ident'>write_message</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>quick_protobuf</span>::<span class='ident'>writer</span>::<span class='ident'>Writer</span>::<span class='ident'>new</span>(<span class='ident'>out</span>)).<span class='ident'>map_err</span>(<span class='ident'>convert_qp_err</span>)
-    }
-}
-
-<span class='kw'>impl</span> <span class='ident'>AsMessageWrite</span><span class='op'>&lt;</span><span class='ident'>client_messages</span>::<span class='ident'>WriteEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;&gt;</span> <span class='kw'>for</span> <span class='ident'>WriteEventsCompleted</span> {
-    <span class='kw'>fn</span> <span class='ident'>as_message_write</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>WriteEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
-        <span class='ident'>client_messages</span>::<span class='ident'>WriteEventsCompleted</span> {
-            <span class='ident'>result</span>: <span class='prelude-val'>Some</span>(<span class='ident'>client_messages</span>::<span class='ident'>OperationResult</span>::<span class='ident'>Success</span>),
-            <span class='ident'>message</span>: <span class='prelude-val'>None</span>,
-            <span class='ident'>first_event_number</span>: <span class='self'>self</span>.<span class='ident'>event_numbers</span>.<span class='ident'>start</span>,
-            <span class='ident'>last_event_number</span>: <span class='self'>self</span>.<span class='ident'>event_numbers</span>.<span class='ident'>end</span> <span class='op'>-</span> <span class='number'>1</span>,
-            <span class='ident'>prepare_position</span>: <span class='self'>self</span>.<span class='ident'>prepare_position</span>,
-            <span class='ident'>commit_position</span>: <span class='self'>self</span>.<span class='ident'>commit_position</span>
+<span class='kw'>impl</span> <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>i32</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>ExpectedVersion</span> {
+    <span class='doccomment'>/// Returns the wire representation.</span>
+    <span class='kw'>fn</span> <span class='ident'>into</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>i32</span> {
+        <span class='kw'>use</span> <span class='self'>self</span>::<span class='ident'>ExpectedVersion</span>::<span class='kw-2'>*</span>;
+        <span class='kw'>match</span> <span class='self'>self</span> {
+            <span class='ident'>Any</span> <span class='op'>=&gt;</span> <span class='op'>-</span><span class='number'>2</span>,
+            <span class='ident'>NewStream</span> <span class='op'>=&gt;</span> <span class='op'>-</span><span class='number'>1</span>,
+            <span class='ident'>Exact</span>(<span class='ident'>ver</span>) <span class='op'>=&gt;</span> <span class='ident'>ver</span>.<span class='ident'>into</span>()
         }
     }
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>From</span><span class='op'>&lt;</span>(<span class='ident'>ReadDirection</span>, <span class='ident'>client_messages</span>::<span class='ident'>ReadStreamEvents</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>)<span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>Message</span> {
-    <span class='kw'>fn</span> <span class='ident'>from</span>((<span class='ident'>dir</span>, <span class='ident'>body</span>): (<span class='ident'>ReadDirection</span>, <span class='ident'>client_messages</span>::<span class='ident'>ReadStreamEvents</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>)) <span class='op'>-&gt;</span> <span class='ident'>Message</span> {
-        <span class='kw'>use</span> <span class='ident'>client_messages_ext</span>::<span class='ident'>ReadStreamEventsExt</span>;
-        <span class='ident'>Message</span>::<span class='ident'>ReadStreamEvents</span>(<span class='ident'>dir</span>, <span class='ident'>body</span>.<span class='ident'>into_owned</span>())
+<span class='kw'>impl</span> <span class='ident'>From</span><span class='op'>&lt;</span><span class='ident'>StreamVersion</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>ExpectedVersion</span> {
+    <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>ver</span>: <span class='ident'>StreamVersion</span>) <span class='op'>-&gt;</span> <span class='self'>Self</span> {
+        <span class='ident'>ExpectedVersion</span>::<span class='ident'>Exact</span>(<span class='ident'>ver</span>)
     }
 }
 
-<span class='doccomment'>/// Successful response to a `Message::ReadStreamEvents`.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>PartialEq</span>, <span class='ident'>Clone</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>ReadStreamSuccess</span> {
-    <span class='doccomment'>/// The actual events returned by the server. Subject to `resolve_link_tos` setting on the read</span>
-    <span class='doccomment'>/// request.</span>
-    <span class='kw'>pub</span> <span class='ident'>events</span>: <span class='ident'>Vec</span><span class='op'>&lt;</span><span class='ident'>ResolvedIndexedEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;&gt;</span>,
-    <span class='doccomment'>/// `EventNumber` for a query for the next page in the same direction, `None` if start has been</span>
-    <span class='doccomment'>/// reached when reading backwards. When reading forwards, this will never be `None` as new</span>
-    <span class='doccomment'>/// events might have appeared while receiving this response.</span>
-    <span class='kw'>pub</span> <span class='ident'>next_page</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>EventNumber</span><span class='op'>&gt;</span>,
-    <span class='doccomment'>/// Event number of the last event</span>
-    <span class='kw'>pub</span> <span class='ident'>last_event_number</span>: <span class='ident'>StreamVersion</span>,
-    <span class='doccomment'>/// Has the end of the stream been reached (or could more events be read immediatedly)</span>
-    <span class='kw'>pub</span> <span class='ident'>end_of_stream</span>: <span class='ident'>bool</span>,
+<span class='kw'>impl</span> <span class='ident'>CustomTryFrom</span><span class='op'>&lt;</span><span class='ident'>i32</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>ExpectedVersion</span> {
+    <span class='kw'>type</span> <span class='prelude-val'>Err</span> <span class='op'>=</span> <span class='ident'>Error</span>;
 
-    <span class='doccomment'>/// Last commit position of the last event. Not public as there is currently no type for an</span>
-    <span class='doccomment'>/// positive i64 (0 &lt; x &lt; i64). Also, not sure how to explain the use of this property.</span>
-    <span class='ident'>last_commit_position</span>: <span class='ident'>i64</span>,
+    <span class='kw'>fn</span> <span class='ident'>try_from</span>(<span class='ident'>val</span>: <span class='ident'>i32</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>ExpectedVersion</span>, (<span class='ident'>i32</span>, <span class='self'>Self</span>::<span class='prelude-val'>Err</span>)<span class='op'>&gt;</span> {
+        <span class='kw'>let</span> <span class='ident'>ver</span> <span class='op'>=</span> <span class='ident'>StreamVersion</span>::<span class='ident'>try_from</span>(<span class='ident'>val</span>)<span class='question-mark'>?</span>;
+        <span class='prelude-val'>Ok</span>(<span class='ident'>ExpectedVersion</span>::<span class='ident'>from</span>(<span class='ident'>ver</span>))
+    }
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>From</span><span class='op'>&lt;</span>(<span class='ident'>ReadDirection</span>, <span class='ident'>client_messages</span>::<span class='ident'>ReadStreamEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>)<span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>Message</span> {
-    <span class='kw'>fn</span> <span class='ident'>from</span>((<span class='ident'>dir</span>, <span class='ident'>completed</span>): (<span class='ident'>ReadDirection</span>, <span class='ident'>client_messages</span>::<span class='ident'>ReadStreamEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>)) <span class='op'>-&gt;</span> <span class='ident'>Message</span> {
-        <span class='kw'>use</span> <span class='ident'>client_messages</span>::<span class='ident'>mod_ReadStreamEventsCompleted</span>::<span class='ident'>ReadStreamResult</span>;
-        <span class='kw'>use</span> <span class='ident'>client_messages_ext</span>::<span class='ident'>ResolvedIndexedEventExt</span>;
+<span class='doccomment'>/// `StreamVersion` represents the valid values for a stream version which is the same as the</span>
+<span class='doccomment'>/// event number of the latest event. As such, values are non-negative integers up to</span>
+<span class='doccomment'>/// `i32::max_value`. Negative values of `i32` have special meaning in the protocol, and are</span>
+<span class='doccomment'>/// restricted from being used with this type.</span>
+<span class='doccomment'>///</span>
+<span class='doccomment'>/// Conversions to StreamVersion are quite horrible until TryFrom is stabilized.</span>
+<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>Clone</span>, <span class='ident'>Eq</span>, <span class='ident'>PartialEq</span>)]</span>
+<span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>StreamVersion</span>(<span class='ident'>u32</span>);
 
-        <span class='kw'>match</span> <span class='ident'>completed</span>.<span class='ident'>result</span> {
-            <span class='prelude-val'>Some</span>(<span class='ident'>ReadStreamResult</span>::<span class='ident'>Success</span>) <span class='op'>=&gt;</span> {
-                <span class='kw'>let</span> <span class='ident'>next_page</span> <span class='op'>=</span> <span class='kw'>if</span> <span class='ident'>dir</span> <span class='op'>==</span> <span class='ident'>ReadDirection</span>::<span class='ident'>Backward</span> <span class='op'>&amp;&amp;</span> <span class='ident'>completed</span>.<span class='ident'>next_event_number</span> <span class='op'>&lt;</span> <span class='number'>0</span> {
-                    <span class='prelude-val'>None</span>
-                } <span class='kw'>else</span> {
-                    <span class='ident'>EventNumber</span>::<span class='ident'>from_i32_opt</span>(<span class='ident'>completed</span>.<span class='ident'>next_event_number</span>)
-                };
+<span class='kw'>impl</span> <span class='ident'>Copy</span> <span class='kw'>for</span> <span class='ident'>StreamVersion</span> {}
 
-                <span class='comment'>// TODO: from_i32 can still panic but haven&#39;t found a legitimate situation</span>
+<span class='kw'>impl</span> <span class='ident'>StreamVersion</span> {
+    <span class='doccomment'>/// Converts the value to a StreamVersion or panics if the value is out of range</span>
+    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>version</span>: <span class='ident'>u32</span>) <span class='op'>-&gt;</span> <span class='self'>Self</span> {
+        <span class='self'>Self</span>::<span class='ident'>from_opt</span>(<span class='ident'>version</span>).<span class='ident'>expect</span>(<span class='string'>&quot;StreamVersion overflow&quot;</span>)
+    }
 
-                <span class='ident'>Message</span>::<span class='ident'>ReadStreamEventsCompleted</span>(<span class='ident'>dir</span>, <span class='prelude-val'>Ok</span>(<span class='ident'>ReadStreamSuccess</span> {
-                    <span class='ident'>events</span>: <span class='ident'>completed</span>.<span class='ident'>events</span>.<span class='ident'>into_iter</span>().<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>x</span>.<span class='ident'>into_owned</span>()).<span class='ident'>collect</span>(),
-                    <span class='ident'>next_page</span>: <span class='ident'>next_page</span>,
-                    <span class='ident'>last_event_number</span>: <span class='ident'>StreamVersion</span>::<span class='ident'>from_i32</span>(<span class='ident'>completed</span>.<span class='ident'>last_event_number</span>),
-                    <span class='ident'>end_of_stream</span>: <span class='ident'>completed</span>.<span class='ident'>is_end_of_stream</span>,
-                    <span class='ident'>last_commit_position</span>: <span class='ident'>completed</span>.<span class='ident'>last_commit_position</span>,
-                }))
-            },
-
-            <span class='prelude-val'>Some</span>(<span class='ident'>err</span>) <span class='op'>=&gt;</span> {
-                <span class='comment'>// TODO: last_commit_position has readable value which is discarded here</span>
-                <span class='ident'>Message</span>::<span class='ident'>ReadStreamEventsCompleted</span>(<span class='ident'>dir</span>, <span class='prelude-val'>Err</span>((<span class='ident'>err</span>, <span class='ident'>completed</span>.<span class='ident'>error</span>).<span class='ident'>into</span>()))
-            },
-
-            <span class='prelude-val'>None</span> <span class='op'>=&gt;</span> <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;No result found from ReadStreamEventsCompleted&quot;</span>),
+    <span class='doccomment'>/// Converts the value to a StreamVersion returning None if the input is out of range.</span>
+    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>from_opt</span>(<span class='ident'>version</span>: <span class='ident'>u32</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='self'>Self</span><span class='op'>&gt;</span> {
+        <span class='comment'>// TODO: MAX_VALUE might be some magical value, should be lower?</span>
+        <span class='kw'>if</span> <span class='ident'>version</span> <span class='op'>&lt;</span> <span class='ident'>i32</span>::<span class='ident'>max_value</span>() <span class='kw'>as</span> <span class='ident'>u32</span> {
+            <span class='prelude-val'>Some</span>(<span class='ident'>StreamVersion</span>(<span class='ident'>version</span>))
+        } <span class='kw'>else</span> {
+            <span class='prelude-val'>None</span>
         }
     }
-}
 
-<span class='kw'>impl</span> <span class='ident'>ReadStreamSuccess</span> {
     <span class='attribute'>#[<span class='ident'>doc</span>(<span class='ident'>hidden</span>)]</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>as_read_stream_events_completed</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ReadStreamEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-        <span class='kw'>use</span> <span class='ident'>client_messages</span>::<span class='ident'>mod_ReadStreamEventsCompleted</span>::<span class='ident'>ReadStreamResult</span>;
-        <span class='kw'>use</span> <span class='ident'>client_messages_ext</span>::<span class='ident'>ResolvedIndexedEventExt</span>;
+    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>from_i32</span>(<span class='ident'>version</span>: <span class='ident'>i32</span>) <span class='op'>-&gt;</span> <span class='self'>Self</span> {
+        <span class='self'>Self</span>::<span class='ident'>try_from</span>(<span class='ident'>version</span>).<span class='ident'>unwrap</span>()
 
-        <span class='ident'>client_messages</span>::<span class='ident'>ReadStreamEventsCompleted</span> {
-            <span class='ident'>events</span>: <span class='self'>self</span>.<span class='ident'>events</span>.<span class='ident'>iter</span>().<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>x</span>.<span class='ident'>borrowed</span>()).<span class='ident'>collect</span>(),
-            <span class='ident'>result</span>: <span class='prelude-val'>Some</span>(<span class='ident'>ReadStreamResult</span>::<span class='ident'>Success</span>),
-            <span class='ident'>next_event_number</span>: <span class='self'>self</span>.<span class='ident'>next_page</span>.<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>x</span>.<span class='ident'>into</span>()).<span class='ident'>unwrap_or</span>(<span class='op'>-</span><span class='number'>1</span>),
-            <span class='ident'>last_event_number</span>: <span class='self'>self</span>.<span class='ident'>last_event_number</span>.<span class='ident'>into</span>(),
-            <span class='ident'>is_end_of_stream</span>: <span class='self'>self</span>.<span class='ident'>end_of_stream</span>,
-            <span class='ident'>last_commit_position</span>: <span class='self'>self</span>.<span class='ident'>last_commit_position</span>,
-            <span class='ident'>error</span>: <span class='prelude-val'>None</span>,
+    }
+
+    <span class='attribute'>#[<span class='ident'>doc</span>(<span class='ident'>hidden</span>)]</span>
+    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>from_i32_opt</span>(<span class='ident'>version</span>: <span class='ident'>i32</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='self'>Self</span><span class='op'>&gt;</span> {
+        <span class='self'>Self</span>::<span class='ident'>try_from</span>(<span class='ident'>version</span>).<span class='ident'>ok</span>()
+    }
+}
+
+<span class='kw'>impl</span> <span class='ident'>CustomTryFrom</span><span class='op'>&lt;</span><span class='ident'>i32</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>StreamVersion</span> {
+    <span class='kw'>type</span> <span class='prelude-val'>Err</span> <span class='op'>=</span> <span class='ident'>Error</span>;
+
+    <span class='kw'>fn</span> <span class='ident'>try_from</span>(<span class='ident'>val</span>: <span class='ident'>i32</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='self'>Self</span>, (<span class='ident'>i32</span>, <span class='self'>Self</span>::<span class='prelude-val'>Err</span>)<span class='op'>&gt;</span> {
+        <span class='kw'>if</span> <span class='ident'>val</span> <span class='op'>&lt;</span> <span class='number'>0</span> {
+            <span class='prelude-val'>Err</span>((<span class='ident'>val</span>, <span class='ident'>ErrorKind</span>::<span class='ident'>InvalidStreamVersion</span>(<span class='ident'>val</span>).<span class='ident'>into</span>()))
+        } <span class='kw'>else</span> {
+            <span class='prelude-val'>Ok</span>(<span class='ident'>StreamVersion</span>(<span class='ident'>val</span> <span class='kw'>as</span> <span class='ident'>u32</span>))
         }
     }
 }
 
-<span class='kw'>fn</span> <span class='ident'>convert_qp_err</span>(<span class='ident'>e</span>: ::<span class='ident'>quick_protobuf</span>::<span class='ident'>errors</span>::<span class='ident'>Error</span>) <span class='op'>-&gt;</span> <span class='ident'>io</span>::<span class='ident'>Error</span> {
-    <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>io</span>::{<span class='ident'>Error</span> <span class='kw'>as</span> <span class='ident'>IoError</span>, <span class='ident'>ErrorKind</span> <span class='kw'>as</span> <span class='ident'>IoErrorKind</span>};
-    <span class='kw'>use</span> <span class='ident'>quick_protobuf</span>::<span class='ident'>errors</span>::{<span class='ident'>Error</span>, <span class='ident'>ErrorKind</span>};
-
-    <span class='comment'>// TODO: investigate why this is still needed</span>
-    <span class='kw'>match</span> <span class='ident'>e</span> {
-        <span class='ident'>Error</span>(<span class='ident'>ErrorKind</span>::<span class='ident'>Io</span>(<span class='ident'>e</span>), _) <span class='op'>=&gt;</span> <span class='ident'>e</span>,
-        <span class='ident'>Error</span>(<span class='ident'>ErrorKind</span>::<span class='ident'>Utf8</span>(<span class='ident'>e</span>), _) <span class='op'>=&gt;</span> <span class='ident'>IoError</span>::<span class='ident'>new</span>(<span class='ident'>IoErrorKind</span>::<span class='ident'>InvalidData</span>, <span class='ident'>e</span>.<span class='ident'>utf8_error</span>()),
-        <span class='ident'>Error</span>(<span class='ident'>ErrorKind</span>::<span class='ident'>StrUtf8</span>(<span class='ident'>e</span>), _) <span class='op'>=&gt;</span> <span class='ident'>IoError</span>::<span class='ident'>new</span>(<span class='ident'>IoErrorKind</span>::<span class='ident'>InvalidData</span>, <span class='ident'>e</span>),
-        <span class='ident'>x</span> <span class='op'>=&gt;</span> <span class='ident'>IoError</span>::<span class='ident'>new</span>(<span class='ident'>IoErrorKind</span>::<span class='ident'>Other</span>, <span class='ident'>x</span>)
+<span class='kw'>impl</span> <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>i32</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>StreamVersion</span> {
+    <span class='doccomment'>/// Returns the wire representation.</span>
+    <span class='kw'>fn</span> <span class='ident'>into</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>i32</span> {
+        <span class='self'>self</span>.<span class='number'>0</span> <span class='kw'>as</span> <span class='ident'>i32</span>
     }
 }
 
-<span class='kw'>impl</span> <span class='ident'>Message</span> {
-    <span class='kw'>fn</span> <span class='ident'>decode</span>(<span class='ident'>discriminator</span>: <span class='ident'>u8</span>, <span class='ident'>buf</span>: <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>EasyBuf</span>) <span class='op'>-&gt;</span> <span class='ident'>io</span>::<span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>Message</span><span class='op'>&gt;</span> {
-        <span class='kw'>use</span> <span class='ident'>client_messages_ext</span>::<span class='ident'>MasterInfoExt</span>;
+<span class='doccomment'>/// `EventNumber` is similar to `StreamVersion` and `ExpectedVersion` but is used when specifying a</span>
+<span class='doccomment'>/// position to read from in the stream. Allows specifying the first or last (when reading</span>
+<span class='doccomment'>/// backwards) event in addition to exact event number.</span>
+<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>Clone</span>, <span class='ident'>Eq</span>)]</span>
+<span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>EventNumber</span> {
+    <span class='doccomment'>/// The first event in a stream</span>
+    <span class='ident'>First</span>,
+    <span class='doccomment'>/// Exactly the given event number</span>
+    <span class='ident'>Exact</span>(<span class='ident'>StreamVersion</span>),
+    <span class='doccomment'>/// The last event in a stream</span>
+    <span class='ident'>Last</span>,
+}
 
-        <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>parse</span> {
-            (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>x</span>:<span class='ident'>ty</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>buf</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {
-                {
-                    <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>reader</span> <span class='op'>=</span> ::<span class='ident'>quick_protobuf</span>::<span class='ident'>reader</span>::<span class='ident'>BytesReader</span>::<span class='ident'>from_bytes</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>buf</span>);
-                    <span class='kw'>let</span> <span class='ident'>res</span> <span class='op'>=</span> <span class='op'>&lt;</span><span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>x</span><span class='op'>&gt;</span>::<span class='ident'>from_reader</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>reader</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>buf</span>).<span class='ident'>map_err</span>(<span class='ident'>convert_qp_err</span>);
-                    <span class='macro'>assert</span><span class='macro'>!</span>(<span class='ident'>reader</span>.<span class='ident'>is_eof</span>());
-                    <span class='ident'>res</span>
+<span class='kw'>impl</span> <span class='ident'>Copy</span> <span class='kw'>for</span> <span class='ident'>EventNumber</span> {}
+
+<span class='kw'>impl</span> <span class='ident'>PartialEq</span><span class='op'>&lt;</span><span class='ident'>EventNumber</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>EventNumber</span> {
+    <span class='kw'>fn</span> <span class='ident'>eq</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>other</span>: <span class='kw-2'>&amp;</span><span class='ident'>EventNumber</span>) <span class='op'>-&gt;</span> <span class='ident'>bool</span> {
+        <span class='kw'>let</span> <span class='ident'>val</span>: <span class='ident'>i32</span> <span class='op'>=</span> (<span class='kw-2'>*</span><span class='self'>self</span>).<span class='ident'>into</span>();
+        <span class='kw'>let</span> <span class='ident'>other</span>: <span class='ident'>i32</span> <span class='op'>=</span> (<span class='kw-2'>*</span><span class='ident'>other</span>).<span class='ident'>into</span>();
+        <span class='ident'>val</span> <span class='op'>==</span> <span class='ident'>other</span>
+    }
+}
+
+<span class='kw'>impl</span> <span class='ident'>From</span><span class='op'>&lt;</span><span class='ident'>StreamVersion</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>EventNumber</span> {
+    <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>ver</span>: <span class='ident'>StreamVersion</span>) <span class='op'>-&gt;</span> <span class='self'>Self</span> {
+        <span class='ident'>EventNumber</span>::<span class='ident'>Exact</span>(<span class='ident'>ver</span>)
+    }
+}
+
+<span class='kw'>impl</span> <span class='ident'>CustomTryFrom</span><span class='op'>&lt;</span><span class='ident'>i32</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>EventNumber</span> {
+    <span class='kw'>type</span> <span class='prelude-val'>Err</span> <span class='op'>=</span> <span class='ident'>Error</span>;
+
+    <span class='kw'>fn</span> <span class='ident'>try_from</span>(<span class='ident'>val</span>: <span class='ident'>i32</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='self'>Self</span>, (<span class='ident'>i32</span>, <span class='self'>Self</span>::<span class='prelude-val'>Err</span>)<span class='op'>&gt;</span> {
+        <span class='kw'>match</span> <span class='ident'>val</span> {
+            <span class='number'>0</span> <span class='op'>=&gt;</span> <span class='prelude-val'>Ok</span>(<span class='ident'>EventNumber</span>::<span class='ident'>First</span>),
+            <span class='op'>-</span><span class='number'>1</span> <span class='op'>=&gt;</span> <span class='prelude-val'>Ok</span>(<span class='ident'>EventNumber</span>::<span class='ident'>Last</span>),
+            <span class='ident'>x</span> <span class='kw'>if</span> <span class='ident'>x</span> <span class='op'>&gt;</span> <span class='number'>0</span> <span class='op'>=&gt;</span> <span class='prelude-val'>Ok</span>(<span class='ident'>EventNumber</span>::<span class='ident'>Exact</span>(<span class='ident'>StreamVersion</span>::<span class='ident'>from_i32</span>(<span class='ident'>x</span>))),
+            <span class='ident'>invalid</span> <span class='op'>=&gt;</span> {
+                <span class='prelude-val'>Err</span>((<span class='ident'>invalid</span>, <span class='ident'>ErrorKind</span>::<span class='ident'>InvalidEventNumber</span>(<span class='ident'>val</span>).<span class='ident'>into</span>()))
+            }
+        }
+    }
+}
+
+<span class='kw'>impl</span> <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>i32</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>EventNumber</span> {
+    <span class='doccomment'>/// Returns the wire representation.</span>
+    <span class='kw'>fn</span> <span class='ident'>into</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>i32</span> {
+        <span class='kw'>match</span> <span class='self'>self</span> {
+            <span class='ident'>EventNumber</span>::<span class='ident'>First</span> <span class='op'>=&gt;</span> <span class='number'>0</span>,
+            <span class='ident'>EventNumber</span>::<span class='ident'>Exact</span>(<span class='ident'>x</span>) <span class='op'>=&gt;</span> <span class='ident'>x</span>.<span class='ident'>into</span>(),
+            <span class='ident'>EventNumber</span>::<span class='ident'>Last</span> <span class='op'>=&gt;</span> <span class='op'>-</span><span class='number'>1</span>
+        }
+    }
+}
+
+<span class='doccomment'>/// Content type of the event `data` or `metadata`.</span>
+<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>PartialEq</span>, <span class='ident'>Eq</span>, <span class='ident'>Clone</span>)]</span>
+<span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>ContentType</span> {
+    <span class='doccomment'>/// Raw bytes</span>
+    <span class='ident'>Bytes</span>,
+    <span class='doccomment'>/// JSON values usable with projections in EventStore</span>
+    <span class='ident'>Json</span>
+}
+
+<span class='kw'>impl</span> <span class='ident'>Copy</span> <span class='kw'>for</span> <span class='ident'>ContentType</span> {}
+
+<span class='kw'>impl</span> <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>i32</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>ContentType</span> {
+    <span class='kw'>fn</span> <span class='ident'>into</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>i32</span> {
+        <span class='kw'>match</span> <span class='self'>self</span> {
+            <span class='ident'>ContentType</span>::<span class='ident'>Bytes</span> <span class='op'>=&gt;</span> <span class='number'>0</span>,
+            <span class='ident'>ContentType</span>::<span class='ident'>Json</span> <span class='op'>=&gt;</span> <span class='number'>1</span>,
+        }
+    }
+}
+
+<span class='doccomment'>/// Global unique position in the EventStore, used when reading all events.</span>
+<span class='doccomment'>/// Range -1..i64::max_value()</span>
+<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>Clone</span>, <span class='ident'>Eq</span>, <span class='ident'>PartialOrd</span>, <span class='ident'>Ord</span>)]</span>
+<span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>LogPosition</span> {
+    <span class='doccomment'>/// The first event ever</span>
+    <span class='ident'>First</span>,
+    <span class='doccomment'>/// Exact position</span>
+    <span class='ident'>Exact</span>(<span class='ident'>u64</span>),
+    <span class='doccomment'>/// The last event written to the database at the moment</span>
+    <span class='ident'>Last</span>,
+}
+
+<span class='kw'>impl</span> <span class='ident'>Copy</span> <span class='kw'>for</span> <span class='ident'>LogPosition</span> {}
+
+<span class='kw'>impl</span> <span class='ident'>PartialEq</span><span class='op'>&lt;</span><span class='ident'>LogPosition</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>LogPosition</span> {
+    <span class='kw'>fn</span> <span class='ident'>eq</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>other</span>: <span class='kw-2'>&amp;</span><span class='ident'>LogPosition</span>) <span class='op'>-&gt;</span> <span class='ident'>bool</span> {
+        <span class='kw'>let</span> <span class='ident'>left</span>: <span class='ident'>i64</span> <span class='op'>=</span> (<span class='kw-2'>*</span><span class='self'>self</span>).<span class='ident'>into</span>();
+        <span class='kw'>let</span> <span class='ident'>right</span>: <span class='ident'>i64</span> <span class='op'>=</span> (<span class='kw-2'>*</span><span class='ident'>other</span>).<span class='ident'>into</span>();
+        <span class='ident'>left</span> <span class='op'>==</span> <span class='ident'>right</span>
+    }
+}
+
+<span class='kw'>impl</span> <span class='ident'>From</span><span class='op'>&lt;</span><span class='ident'>i64</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>LogPosition</span> {
+    <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>val</span>: <span class='ident'>i64</span>) <span class='op'>-&gt;</span> <span class='ident'>LogPosition</span> {
+        <span class='kw'>match</span> <span class='ident'>LogPosition</span>::<span class='ident'>from_i64_opt</span>(<span class='ident'>val</span>) {
+            <span class='prelude-val'>Some</span>(<span class='ident'>x</span>) <span class='op'>=&gt;</span> <span class='ident'>x</span>,
+            <span class='prelude-val'>None</span> <span class='op'>=&gt;</span> <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;LogPosition undeflow: {}&quot;</span>, <span class='ident'>val</span>),
+        }
+    }
+}
+
+<span class='kw'>impl</span> <span class='ident'>CustomTryFrom</span><span class='op'>&lt;</span><span class='ident'>i64</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>LogPosition</span> {
+    <span class='kw'>type</span> <span class='prelude-val'>Err</span> <span class='op'>=</span> <span class='ident'>Error</span>;
+
+    <span class='kw'>fn</span> <span class='ident'>try_from</span>(<span class='ident'>val</span>: <span class='ident'>i64</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='self'>Self</span>, (<span class='ident'>i64</span>, <span class='self'>Self</span>::<span class='prelude-val'>Err</span>)<span class='op'>&gt;</span> {
+        <span class='kw'>match</span> <span class='ident'>val</span> {
+            <span class='number'>0</span> <span class='op'>=&gt;</span> <span class='prelude-val'>Ok</span>(<span class='ident'>LogPosition</span>::<span class='ident'>First</span>),
+            <span class='op'>-</span><span class='number'>1</span> <span class='op'>=&gt;</span> <span class='prelude-val'>Ok</span>(<span class='ident'>LogPosition</span>::<span class='ident'>Last</span>),
+            <span class='ident'>pos</span> <span class='op'>=&gt;</span> {
+                <span class='kw'>if</span> <span class='ident'>pos</span> <span class='op'>&gt;</span> <span class='number'>0</span> {
+                    <span class='prelude-val'>Ok</span>(<span class='ident'>LogPosition</span>::<span class='ident'>Exact</span>(<span class='ident'>pos</span> <span class='kw'>as</span> <span class='ident'>u64</span>))
+                } <span class='kw'>else</span> {
+                    <span class='prelude-val'>Err</span>((<span class='ident'>pos</span>, <span class='ident'>ErrorKind</span>::<span class='ident'>InvalidLogPosition</span>(<span class='ident'>pos</span>).<span class='ident'>into</span>()))
                 }
             }
         }
+    }
+}
 
-        <span class='prelude-val'>Ok</span>(<span class='kw'>match</span> <span class='ident'>discriminator</span> {
-            <span class='comment'>// these hold no data</span>
-            <span class='number'>0x01</span> <span class='op'>=&gt;</span> <span class='self'>Self</span>::<span class='ident'>without_data</span>(<span class='ident'>Message</span>::<span class='ident'>HeartbeatRequest</span>, <span class='ident'>buf</span>),
-            <span class='number'>0x02</span> <span class='op'>=&gt;</span> <span class='self'>Self</span>::<span class='ident'>without_data</span>(<span class='ident'>Message</span>::<span class='ident'>HeartbeatResponse</span>, <span class='ident'>buf</span>),
-            <span class='number'>0x03</span> <span class='op'>=&gt;</span> <span class='self'>Self</span>::<span class='ident'>without_data</span>(<span class='ident'>Message</span>::<span class='ident'>Ping</span>, <span class='ident'>buf</span>),
-            <span class='number'>0x04</span> <span class='op'>=&gt;</span> <span class='self'>Self</span>::<span class='ident'>without_data</span>(<span class='ident'>Message</span>::<span class='ident'>Pong</span>, <span class='ident'>buf</span>),
+<span class='kw'>impl</span> <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>i64</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>LogPosition</span> {
+    <span class='kw'>fn</span> <span class='ident'>into</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>i64</span> {
+        <span class='kw'>match</span> <span class='self'>self</span> {
+            <span class='ident'>LogPosition</span>::<span class='ident'>First</span> <span class='op'>=&gt;</span> <span class='number'>0</span>,
+            <span class='ident'>LogPosition</span>::<span class='ident'>Exact</span>(<span class='ident'>x</span>) <span class='op'>=&gt;</span> <span class='ident'>x</span> <span class='kw'>as</span> <span class='ident'>i64</span>,
+            <span class='ident'>LogPosition</span>::<span class='ident'>Last</span> <span class='op'>=&gt;</span> <span class='op'>-</span><span class='number'>1</span>,
+        }
+    }
+}
 
-            <span class='number'>0x82</span> <span class='op'>=&gt;</span> <span class='macro'>parse</span><span class='macro'>!</span>(<span class='ident'>client_messages</span>::<span class='ident'>WriteEvents</span>, <span class='ident'>buf</span>.<span class='ident'>as_slice</span>())<span class='question-mark'>?</span>.<span class='ident'>into</span>(),
-            <span class='number'>0x83</span> <span class='op'>=&gt;</span> <span class='macro'>parse</span><span class='macro'>!</span>(<span class='ident'>client_messages</span>::<span class='ident'>WriteEventsCompleted</span>, <span class='ident'>buf</span>.<span class='ident'>as_slice</span>())<span class='question-mark'>?</span>.<span class='ident'>into</span>(),
-
-            <span class='number'>0xB0</span> <span class='op'>=&gt;</span> <span class='macro'>parse</span><span class='macro'>!</span>(<span class='ident'>client_messages</span>::<span class='ident'>ReadEvent</span>, <span class='ident'>buf</span>.<span class='ident'>as_slice</span>())<span class='question-mark'>?</span>.<span class='ident'>into</span>(),
-            <span class='number'>0xB1</span> <span class='op'>=&gt;</span> <span class='macro'>parse</span><span class='macro'>!</span>(<span class='ident'>client_messages</span>::<span class='ident'>ReadEventCompleted</span>, <span class='ident'>buf</span>.<span class='ident'>as_slice</span>())<span class='question-mark'>?</span>.<span class='ident'>into</span>(),
-
-            <span class='number'>0xB2</span> <span class='op'>=&gt;</span> (<span class='ident'>ReadDirection</span>::<span class='ident'>Forward</span>, <span class='macro'>parse</span><span class='macro'>!</span>(<span class='ident'>client_messages</span>::<span class='ident'>ReadStreamEvents</span>, <span class='ident'>buf</span>.<span class='ident'>as_slice</span>())<span class='question-mark'>?</span>).<span class='ident'>into</span>(),
-            <span class='number'>0xB3</span> <span class='op'>=&gt;</span> (<span class='ident'>ReadDirection</span>::<span class='ident'>Forward</span>, <span class='macro'>parse</span><span class='macro'>!</span>(<span class='ident'>client_messages</span>::<span class='ident'>ReadStreamEventsCompleted</span>, <span class='ident'>buf</span>.<span class='ident'>as_slice</span>())<span class='question-mark'>?</span>).<span class='ident'>into</span>(),
-            <span class='number'>0xB4</span> <span class='op'>=&gt;</span> (<span class='ident'>ReadDirection</span>::<span class='ident'>Backward</span>, <span class='macro'>parse</span><span class='macro'>!</span>(<span class='ident'>client_messages</span>::<span class='ident'>ReadStreamEvents</span>, <span class='ident'>buf</span>.<span class='ident'>as_slice</span>())<span class='question-mark'>?</span>).<span class='ident'>into</span>(),
-            <span class='number'>0xB5</span> <span class='op'>=&gt;</span> (<span class='ident'>ReadDirection</span>::<span class='ident'>Backward</span>, <span class='macro'>parse</span><span class='macro'>!</span>(<span class='ident'>client_messages</span>::<span class='ident'>ReadStreamEventsCompleted</span>, <span class='ident'>buf</span>.<span class='ident'>as_slice</span>())<span class='question-mark'>?</span>).<span class='ident'>into</span>(),
-
-            <span class='comment'>/*
-            0xB6 =&gt; { /* readalleventsfwd */ }
-            0xB7 =&gt; { /* readalleventsfwdcompleted */ }
-            0xB8 =&gt; { /* readalleventsbackwrd */ }
-            0xB9 =&gt; { /* readalleventsbackwrdcompleted */ }
-            */</span>
-
-            <span class='number'>0xF0</span> <span class='op'>=&gt;</span> {
-                <span class='kw'>let</span> <span class='ident'>info</span> <span class='op'>=</span> <span class='kw'>if</span> <span class='ident'>buf</span>.<span class='ident'>len</span>() <span class='op'>&gt;</span> <span class='number'>0</span> {
-                    <span class='prelude-val'>Some</span>(<span class='ident'>String</span>::<span class='ident'>from_utf8_lossy</span>(<span class='ident'>buf</span>.<span class='ident'>as_slice</span>()).<span class='ident'>into_owned</span>())
+<span class='kw'>impl</span> <span class='ident'>LogPosition</span> {
+    <span class='doccomment'>/// Wraps the value into LogPosition or None, if it is larger than i64</span>
+    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>from_opt</span>(<span class='ident'>pos</span>: <span class='ident'>u64</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>LogPosition</span><span class='op'>&gt;</span> {
+        <span class='kw'>match</span> <span class='ident'>pos</span> {
+            <span class='number'>0</span> <span class='op'>=&gt;</span> <span class='prelude-val'>Some</span>(<span class='ident'>LogPosition</span>::<span class='ident'>First</span>),
+            <span class='ident'>pos</span> <span class='op'>=&gt;</span> {
+                <span class='kw'>if</span> <span class='ident'>pos</span> <span class='op'>&lt;</span> <span class='ident'>i64</span>::<span class='ident'>max_value</span>() <span class='kw'>as</span> <span class='ident'>u64</span> {
+                    <span class='prelude-val'>Some</span>(<span class='ident'>LogPosition</span>::<span class='ident'>Exact</span>(<span class='ident'>pos</span>))
                 } <span class='kw'>else</span> {
                     <span class='prelude-val'>None</span>
-                };
-                <span class='ident'>Message</span>::<span class='ident'>BadRequest</span>(<span class='ident'>info</span>)
-            },
-
-            <span class='number'>0xF1</span> <span class='op'>=&gt;</span> {
-                <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>reason</span> <span class='op'>=</span> <span class='macro'>parse</span><span class='macro'>!</span>(<span class='ident'>client_messages</span>::<span class='ident'>NotHandled</span>, <span class='ident'>buf</span>.<span class='ident'>as_slice</span>())<span class='question-mark'>?</span>;
-
-                <span class='kw'>let</span> <span class='ident'>master_info</span> <span class='op'>=</span> <span class='ident'>reason</span>.<span class='ident'>additional_info</span>.<span class='ident'>take</span>()
-                    .<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>bytes</span><span class='op'>|</span> {
-                         <span class='macro'>parse</span><span class='macro'>!</span>(<span class='ident'>MasterInfo</span>, <span class='ident'>bytes</span>.<span class='ident'>deref</span>())
-                             .<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>x</span>.<span class='ident'>into_owned</span>())
-                             .<span class='ident'>map</span>(<span class='prelude-ty'>Option</span>::<span class='prelude-val'>Some</span>)
-                             .<span class='ident'>unwrap_or</span>(<span class='prelude-val'>None</span>)
-                    })
-                    .<span class='ident'>and_then</span>(<span class='op'>|</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>x</span>);
-
-                <span class='ident'>Message</span>::<span class='ident'>NotHandled</span>(<span class='ident'>reason</span>.<span class='ident'>reason</span>.<span class='ident'>unwrap</span>(), <span class='ident'>master_info</span>)
-            },
-
-            <span class='number'>0xF2</span> <span class='op'>=&gt;</span> <span class='self'>Self</span>::<span class='ident'>without_data</span>(<span class='ident'>Message</span>::<span class='ident'>Authenticate</span>, <span class='ident'>buf</span>),
-
-            <span class='number'>0xF3</span> <span class='op'>=&gt;</span> <span class='self'>Self</span>::<span class='ident'>without_data</span>(<span class='ident'>Message</span>::<span class='ident'>Authenticated</span>, <span class='ident'>buf</span>),
-
-            <span class='comment'>// server might send some reason here</span>
-            <span class='number'>0xF4</span> <span class='op'>=&gt;</span> <span class='self'>Self</span>::<span class='ident'>without_data</span>(<span class='ident'>Message</span>::<span class='ident'>NotAuthenticated</span>, <span class='ident'>buf</span>),
-
-            <span class='ident'>x</span> <span class='op'>=&gt;</span> <span class='macro'>bail</span><span class='macro'>!</span>(<span class='ident'>ErrorKind</span>::<span class='ident'>UnsupportedDiscriminator</span>(<span class='ident'>x</span>)),
-        })
-    }
-
-    <span class='kw'>fn</span> <span class='ident'>without_data</span>(<span class='ident'>ret</span>: <span class='ident'>Message</span>, _: <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>EasyBuf</span>) <span class='op'>-&gt;</span> <span class='ident'>Message</span> {
-        <span class='comment'>// Not sure what to do, currently just be lenient</span>
-        <span class='comment'>// let len = buf.len();</span>
-        <span class='comment'>//</span>
-        <span class='comment'>// if len != 0 {</span>
-        <span class='comment'>//     println!(&quot;Decoding {:?}: Discarding {} bytes of junk payload&quot;,</span>
-        <span class='comment'>//              ret,</span>
-        <span class='comment'>//              len);</span>
-        <span class='comment'>// }</span>
-        <span class='ident'>ret</span>
-    }
-
-    <span class='kw'>fn</span> <span class='ident'>encode</span><span class='op'>&lt;</span><span class='ident'>W</span>: <span class='ident'>io</span>::<span class='ident'>Write</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>w</span>: <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>W</span>) <span class='op'>-&gt;</span> <span class='ident'>io</span>::<span class='prelude-ty'>Result</span><span class='op'>&lt;</span>()<span class='op'>&gt;</span> {
-        <span class='kw'>use</span> <span class='ident'>Message</span>::<span class='kw-2'>*</span>;
-        <span class='kw'>use</span> <span class='ident'>quick_protobuf</span>::<span class='ident'>MessageWrite</span>;
-        <span class='kw'>use</span> <span class='ident'>client_messages_ext</span>::<span class='ident'>ResolvedIndexedEventExt</span>;
-
-        <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>encode</span> {
-            (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>x</span>: <span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>w</span>: <span class='ident'>ident</span>) <span class='op'>=&gt;</span> {
-                <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>x</span>.<span class='ident'>write_message</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>quick_protobuf</span>::<span class='ident'>writer</span>::<span class='ident'>Writer</span>::<span class='ident'>new</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>w</span>)).<span class='ident'>map_err</span>(<span class='ident'>convert_qp_err</span>)
+                }
             }
         }
-
-        <span class='prelude-val'>Ok</span>(<span class='kw'>match</span> <span class='kw-2'>*</span><span class='self'>self</span> {
-            <span class='ident'>HeartbeatRequest</span> <span class='op'>|</span>
-            <span class='ident'>HeartbeatResponse</span> <span class='op'>|</span>
-            <span class='ident'>Ping</span> <span class='op'>|</span>
-            <span class='ident'>Pong</span> <span class='op'>|</span>
-            <span class='ident'>Authenticate</span> <span class='op'>|</span>
-            <span class='ident'>Authenticated</span> <span class='op'>|</span>
-            <span class='ident'>NotAuthenticated</span> <span class='op'>=&gt;</span> (),
-
-            <span class='ident'>WriteEvents</span>(<span class='kw-2'>ref</span> <span class='ident'>x</span>) <span class='op'>=&gt;</span> <span class='macro'>encode</span><span class='macro'>!</span>(<span class='ident'>x</span>, <span class='ident'>w</span>)<span class='question-mark'>?</span>,
-
-            <span class='ident'>WriteEventsCompleted</span>(<span class='prelude-val'>Ok</span>(<span class='kw-2'>ref</span> <span class='ident'>x</span>)) <span class='op'>=&gt;</span> <span class='macro'>encode</span><span class='macro'>!</span>(<span class='ident'>x</span>.<span class='ident'>as_message_write</span>(), <span class='ident'>w</span>)<span class='question-mark'>?</span>,
-            <span class='ident'>WriteEventsCompleted</span>(<span class='prelude-val'>Err</span>(<span class='kw-2'>ref</span> <span class='ident'>x</span>)) <span class='op'>=&gt;</span> <span class='macro'>encode</span><span class='macro'>!</span>(<span class='ident'>x</span>.<span class='ident'>as_message_write</span>(), <span class='ident'>w</span>)<span class='question-mark'>?</span>,
-
-            <span class='ident'>ReadEvent</span>(<span class='kw-2'>ref</span> <span class='ident'>re</span>) <span class='op'>=&gt;</span> <span class='macro'>encode</span><span class='macro'>!</span>(<span class='ident'>re</span>, <span class='ident'>w</span>)<span class='question-mark'>?</span>,
-            <span class='ident'>ReadEventCompleted</span>(<span class='prelude-val'>Ok</span>(<span class='kw-2'>ref</span> <span class='ident'>rie</span>)) <span class='op'>=&gt;</span> <span class='macro'>encode</span><span class='macro'>!</span>(<span class='ident'>rie</span>.<span class='ident'>as_read_event_completed</span>(), <span class='ident'>w</span>)<span class='question-mark'>?</span>,
-            <span class='ident'>ReadEventCompleted</span>(<span class='prelude-val'>Err</span>(<span class='kw-2'>ref</span> <span class='ident'>fail</span>)) <span class='op'>=&gt;</span> <span class='macro'>encode</span><span class='macro'>!</span>(<span class='ident'>fail</span>.<span class='ident'>as_read_event_completed</span>(), <span class='ident'>w</span>)<span class='question-mark'>?</span>,
-
-            <span class='ident'>ReadStreamEvents</span>(_, <span class='kw-2'>ref</span> <span class='ident'>body</span>) <span class='op'>=&gt;</span> <span class='macro'>encode</span><span class='macro'>!</span>(<span class='ident'>body</span>, <span class='ident'>w</span>)<span class='question-mark'>?</span>,
-            <span class='ident'>ReadStreamEventsCompleted</span>(_, <span class='prelude-val'>Ok</span>(<span class='kw-2'>ref</span> <span class='ident'>success</span>)) <span class='op'>=&gt;</span> <span class='macro'>encode</span><span class='macro'>!</span>(<span class='ident'>success</span>.<span class='ident'>as_read_stream_events_completed</span>(), <span class='ident'>w</span>)<span class='question-mark'>?</span>,
-            <span class='ident'>ReadStreamEventsCompleted</span>(_, <span class='prelude-val'>Err</span>(<span class='kw-2'>ref</span> <span class='ident'>why</span>)) <span class='op'>=&gt;</span> <span class='macro'>encode</span><span class='macro'>!</span>(<span class='ident'>why</span>.<span class='ident'>as_read_stream_events_completed</span>(), <span class='ident'>w</span>)<span class='question-mark'>?</span>,
-
-            <span class='ident'>BadRequest</span>(<span class='prelude-val'>Some</span>(<span class='kw-2'>ref</span> <span class='ident'>info</span>)) <span class='op'>=&gt;</span> <span class='ident'>w</span>.<span class='ident'>write_all</span>(<span class='ident'>info</span>.<span class='ident'>as_bytes</span>())<span class='question-mark'>?</span>,
-            <span class='ident'>BadRequest</span>(<span class='prelude-val'>None</span>) <span class='op'>=&gt;</span> (),
-            <span class='ident'>NotHandled</span>(<span class='kw-2'>ref</span> <span class='ident'>reason</span>, <span class='kw-2'>ref</span> <span class='ident'>x</span>) <span class='op'>=&gt;</span> {
-
-                <span class='kw'>let</span> <span class='ident'>additional_info</span> <span class='op'>=</span> <span class='kw'>match</span> <span class='ident'>x</span> {
-                    <span class='kw-2'>&amp;</span><span class='prelude-val'>Some</span>(<span class='kw-2'>ref</span> <span class='ident'>info</span>) <span class='op'>=&gt;</span> {
-                        <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>buf</span> <span class='op'>=</span> <span class='ident'>Vec</span>::<span class='ident'>new</span>();
-                        <span class='ident'>info</span>.<span class='ident'>write_message</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>quick_protobuf</span>::<span class='ident'>writer</span>::<span class='ident'>Writer</span>::<span class='ident'>new</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>buf</span>))
-                            .<span class='ident'>map</span>(<span class='kw'>move</span> <span class='op'>|</span>_<span class='op'>|</span> <span class='ident'>buf</span>)
-                            .<span class='ident'>map</span>(<span class='ident'>Cow</span>::<span class='ident'>Owned</span>)
-                            .<span class='ident'>map</span>(<span class='prelude-ty'>Option</span>::<span class='prelude-val'>Some</span>)
-                            .<span class='ident'>map_err</span>(<span class='ident'>convert_qp_err</span>)<span class='question-mark'>?</span>
-                    },
-                    <span class='kw-2'>&amp;</span><span class='prelude-val'>None</span> <span class='op'>=&gt;</span> <span class='prelude-val'>None</span>
-                };
-
-                <span class='kw'>let</span> <span class='ident'>msg</span> <span class='op'>=</span> <span class='ident'>client_messages</span>::<span class='ident'>NotHandled</span> {
-                    <span class='ident'>reason</span>: <span class='prelude-val'>Some</span>(<span class='kw-2'>*</span><span class='ident'>reason</span>),
-                    <span class='ident'>additional_info</span>: <span class='ident'>additional_info</span>,
-                };
-
-                <span class='macro'>encode</span><span class='macro'>!</span>(<span class='ident'>msg</span>, <span class='ident'>w</span>)<span class='question-mark'>?</span>
-            },
-        })
     }
 
-    <span class='doccomment'>/// In the header of each Package there is single byte discriminator value for the type of the</span>
-    <span class='doccomment'>/// body.</span>
-    <span class='kw'>fn</span> <span class='ident'>discriminator</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>u8</span> {
-        <span class='kw'>use</span> <span class='ident'>Message</span>::<span class='kw-2'>*</span>;
-        <span class='kw'>match</span> <span class='kw-2'>*</span><span class='self'>self</span> {
-            <span class='ident'>HeartbeatRequest</span> <span class='op'>=&gt;</span> <span class='number'>0x01</span>,
-            <span class='ident'>HeartbeatResponse</span> <span class='op'>=&gt;</span> <span class='number'>0x02</span>,
-            <span class='ident'>Ping</span> <span class='op'>=&gt;</span> <span class='number'>0x03</span>,
-            <span class='ident'>Pong</span> <span class='op'>=&gt;</span> <span class='number'>0x04</span>,
-
-            <span class='ident'>WriteEvents</span>(_) <span class='op'>=&gt;</span> <span class='number'>0x82</span>,
-            <span class='ident'>WriteEventsCompleted</span>(_) <span class='op'>=&gt;</span> <span class='number'>0x83</span>,
-
-            <span class='ident'>ReadEvent</span>(_) <span class='op'>=&gt;</span> <span class='number'>0xB0</span>,
-            <span class='ident'>ReadEventCompleted</span>(_) <span class='op'>=&gt;</span> <span class='number'>0xB1</span>,
-
-            <span class='ident'>ReadStreamEvents</span>(<span class='ident'>ReadDirection</span>::<span class='ident'>Forward</span>, _) <span class='op'>=&gt;</span> <span class='number'>0xB2</span>,
-            <span class='ident'>ReadStreamEventsCompleted</span>(<span class='ident'>ReadDirection</span>::<span class='ident'>Forward</span>, _) <span class='op'>=&gt;</span> <span class='number'>0xB3</span>,
-
-            <span class='ident'>ReadStreamEvents</span>(<span class='ident'>ReadDirection</span>::<span class='ident'>Backward</span>, _) <span class='op'>=&gt;</span> <span class='number'>0xB4</span>,
-            <span class='ident'>ReadStreamEventsCompleted</span>(<span class='ident'>ReadDirection</span>::<span class='ident'>Backward</span>, _) <span class='op'>=&gt;</span> <span class='number'>0xB5</span>,
-
-            <span class='ident'>BadRequest</span>(_) <span class='op'>=&gt;</span> <span class='number'>0xf0</span>,
-            <span class='ident'>NotHandled</span>(..) <span class='op'>=&gt;</span> <span class='number'>0xf1</span>,
-            <span class='ident'>Authenticate</span> <span class='op'>=&gt;</span> <span class='number'>0xf2</span>,
-            <span class='ident'>Authenticated</span> <span class='op'>=&gt;</span> <span class='number'>0xf3</span>,
-            <span class='ident'>NotAuthenticated</span> <span class='op'>=&gt;</span> <span class='number'>0xf4</span>
-        }
+    <span class='attribute'>#[<span class='ident'>doc</span>(<span class='ident'>hidden</span>)]</span>
+    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>from_i64_opt</span>(<span class='ident'>pos</span>: <span class='ident'>i64</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>LogPosition</span><span class='op'>&gt;</span> {
+        <span class='self'>Self</span>::<span class='ident'>try_from</span>(<span class='ident'>pos</span>).<span class='ident'>ok</span>()
     }
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>From</span><span class='op'>&lt;</span><span class='ident'>WriteEvents</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;&gt;</span> <span class='kw'>for</span> <span class='ident'>Message</span> {
-    <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>we</span>: <span class='ident'>WriteEvents</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='self'>Self</span> {
-        <span class='kw'>use</span> <span class='ident'>client_messages_ext</span>::<span class='ident'>WriteEventsExt</span>;
-        <span class='ident'>Message</span>::<span class='ident'>WriteEvents</span>(<span class='ident'>we</span>.<span class='ident'>into_owned</span>())
-    }
+<span class='kw'>trait</span> <span class='ident'>CustomTryFrom</span><span class='op'>&lt;</span><span class='ident'>T</span>: <span class='ident'>Sized</span><span class='op'>&gt;</span>: <span class='ident'>Sized</span> {
+    <span class='kw'>type</span> <span class='prelude-val'>Err</span>;
+
+    <span class='kw'>fn</span> <span class='ident'>try_from</span>(<span class='ident'>t</span>: <span class='ident'>T</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='self'>Self</span>, (<span class='ident'>T</span>, <span class='self'>Self</span>::<span class='prelude-val'>Err</span>)<span class='op'>&gt;</span>;
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>From</span><span class='op'>&lt;</span><span class='ident'>client_messages</span>::<span class='ident'>ReadEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;&gt;</span> <span class='kw'>for</span> <span class='ident'>Message</span> {
-    <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>re</span>: <span class='ident'>client_messages</span>::<span class='ident'>ReadEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='self'>Self</span> {
-        <span class='kw'>use</span> <span class='ident'>client_messages_ext</span>::<span class='ident'>ReadEventExt</span>;
-        <span class='ident'>Message</span>::<span class='ident'>ReadEvent</span>(<span class='ident'>re</span>.<span class='ident'>into_owned</span>())
-    }
+<span class='kw'>trait</span> <span class='ident'>CustomTryInto</span><span class='op'>&lt;</span><span class='ident'>T</span>: <span class='ident'>Sized</span><span class='op'>&gt;</span>: <span class='ident'>Sized</span> {
+    <span class='kw'>type</span> <span class='prelude-val'>Err</span>;
+
+    <span class='kw'>fn</span> <span class='ident'>try_into</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>T</span>, (<span class='self'>Self</span>, <span class='self'>Self</span>::<span class='prelude-val'>Err</span>)<span class='op'>&gt;</span>;
 }
 
-<span class='comment'>// these two are problematic and would probably be best served by using tryfrom</span>
-<span class='comment'>// but as it&#39;s not yet stable, just use From with panics.</span>
+<span class='kw'>impl</span><span class='op'>&lt;</span><span class='ident'>T</span>, <span class='ident'>U</span><span class='op'>&gt;</span> <span class='ident'>CustomTryInto</span><span class='op'>&lt;</span><span class='ident'>U</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>T</span> <span class='kw'>where</span> <span class='ident'>U</span>: <span class='ident'>CustomTryFrom</span><span class='op'>&lt;</span><span class='ident'>T</span><span class='op'>&gt;</span> {
+    <span class='kw'>type</span> <span class='prelude-val'>Err</span> <span class='op'>=</span> <span class='ident'>U</span>::<span class='prelude-val'>Err</span>;
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>From</span><span class='op'>&lt;</span><span class='ident'>client_messages</span>::<span class='ident'>WriteEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;&gt;</span> <span class='kw'>for</span> <span class='ident'>Message</span> {
-    <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>wec</span>: <span class='ident'>client_messages</span>::<span class='ident'>WriteEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='self'>Self</span> {
-        <span class='kw'>use</span> <span class='ident'>client_messages</span>::<span class='ident'>OperationResult</span>::<span class='kw-2'>*</span>;
-
-        <span class='comment'>// FIXME: can panic</span>
-        <span class='kw'>let</span> <span class='ident'>res</span> <span class='op'>=</span> <span class='kw'>match</span> <span class='ident'>wec</span>.<span class='ident'>result</span> {
-            <span class='prelude-val'>Some</span>(<span class='ident'>Success</span>) <span class='op'>=&gt;</span> {
-                <span class='prelude-val'>Ok</span>(<span class='ident'>WriteEventsCompleted</span> {
-                    <span class='comment'>// off-by one: Range is [start, end)</span>
-                    <span class='ident'>event_numbers</span>: <span class='ident'>wec</span>.<span class='ident'>first_event_number</span>..<span class='ident'>wec</span>.<span class='ident'>last_event_number</span> <span class='op'>+</span> <span class='number'>1</span>,
-                    <span class='ident'>prepare_position</span>: <span class='ident'>wec</span>.<span class='ident'>prepare_position</span>,
-                    <span class='ident'>commit_position</span>: <span class='ident'>wec</span>.<span class='ident'>commit_position</span>,
-                })
-            }
-            <span class='prelude-val'>Some</span>(<span class='ident'>other</span>) <span class='op'>=&gt;</span> <span class='prelude-val'>Err</span>(<span class='ident'>other</span>.<span class='ident'>into</span>()),
-            <span class='prelude-val'>None</span> <span class='op'>=&gt;</span> <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;OperationResult was not found in the received message&quot;</span>),
-        };
-
-        <span class='ident'>Message</span>::<span class='ident'>WriteEventsCompleted</span>(<span class='ident'>res</span>)
-    }
-}
-
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>From</span><span class='op'>&lt;</span><span class='ident'>client_messages</span>::<span class='ident'>ReadEventCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;&gt;</span> <span class='kw'>for</span> <span class='ident'>Message</span> {
-    <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>rec</span>: <span class='ident'>client_messages</span>::<span class='ident'>ReadEventCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='self'>Self</span> {
-        <span class='kw'>use</span> <span class='ident'>client_messages</span>::<span class='ident'>mod_ReadEventCompleted</span>::<span class='ident'>ReadEventResult</span>;
-        <span class='kw'>use</span> <span class='ident'>client_messages_ext</span>::<span class='ident'>ResolvedIndexedEventExt</span>;
-
-        <span class='comment'>// FIXME: can panic</span>
-        <span class='kw'>let</span> <span class='ident'>res</span> <span class='op'>=</span> <span class='kw'>match</span> <span class='ident'>rec</span>.<span class='ident'>result</span> {
-            <span class='prelude-val'>Some</span>(<span class='ident'>ReadEventResult</span>::<span class='ident'>Success</span>) <span class='op'>=&gt;</span> <span class='prelude-val'>Ok</span>(<span class='ident'>rec</span>.<span class='ident'>event</span>.<span class='ident'>into_owned</span>()),
-            <span class='prelude-val'>Some</span>(<span class='ident'>other</span>) <span class='op'>=&gt;</span> <span class='prelude-val'>Err</span>((<span class='ident'>other</span>, <span class='ident'>rec</span>.<span class='ident'>error</span>).<span class='ident'>into</span>()),
-            <span class='prelude-val'>None</span> <span class='op'>=&gt;</span> <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;ReadEventResult was not found in the received message&quot;</span>),
-        };
-
-        <span class='ident'>Message</span>::<span class='ident'>ReadEventCompleted</span>(<span class='ident'>res</span>)
+    <span class='kw'>fn</span> <span class='ident'>try_into</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>U</span>, (<span class='ident'>T</span>, <span class='self'>Self</span>::<span class='prelude-val'>Err</span>)<span class='op'>&gt;</span> {
+        <span class='ident'>U</span>::<span class='ident'>try_from</span>(<span class='self'>self</span>)
     }
 }
 </pre>
