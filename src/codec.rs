@@ -143,8 +143,8 @@ mod tests {
     use uuid::Uuid;
     use super::{PackageCodec};
     use package::Package;
-    use errors;
-    use {Message, WriteEventsCompleted, StreamVersion};
+    use raw::RawMessage;
+    use client_messages::{WriteEventsCompleted, OperationResult};
 
     #[test]
     fn decode_ping() {
@@ -154,7 +154,7 @@ mod tests {
                               authentication: None,
                               correlation_id:
                                   Uuid::parse_str("7b50a1b0-34b9-224e-8f9d-708c394fab2d").unwrap(),
-                              message: Message::Ping,
+                              message: RawMessage::Ping.into(),
                           });
     }
 
@@ -166,7 +166,7 @@ mod tests {
                               authentication: None,
                               correlation_id:
                                   Uuid::parse_str("7b50a1b0-34b9-224e-8f9d-708c394fab2d").unwrap(),
-                              message: Message::Ping,
+                              message: RawMessage::Ping.into(),
                           });
     }
 
@@ -178,32 +178,27 @@ mod tests {
                               authentication: None,
                               correlation_id:
                                   Uuid::parse_str("7b50a1b0-34b9-224e-8f9d-708c394fab2d").unwrap(),
-                              message: Message::Ping,
+                              message: RawMessage::Ping.into(),
                           });
     }
 
     #[test]
     fn decode_unknown_discriminator() {
-        use std::io;
+        use std::borrow::Cow;
 
         let err = PackageCodec.decode(&mut ("12000000ff007b50a1b034b9224e8f9d708c394fab2d"
                 .to_string()
                 .from_hex()
                 .unwrap()
                 .into()))
-            .unwrap_err();
+            .unwrap() // Result
+            .unwrap();// Option
 
-        assert_eq!(err.kind(), io::ErrorKind::Other);
-        let err = err.into_inner();
-        match err {
-            Some(inner) => {
-                match *inner.downcast::<errors::Error>().unwrap() {
-                    errors::Error(errors::ErrorKind::UnsupportedDiscriminator(0xff), _) => { /* good */ }
-                    x => panic!("unexpected errorkind: {:?}", x),
-                }
-            }
-            x => panic!("unexpected inner error: {:?}", x),
-        }
+        assert_eq!(err, Package {
+            authentication: None,
+            correlation_id: Uuid::parse_str("7b50a1b0-34b9-224e-8f9d-708c394fab2d").unwrap(),
+            message: RawMessage::Unsupported(255, Cow::Owned(vec![])).into()
+        });
     }
 
     #[test]
@@ -215,11 +210,14 @@ mod tests {
                               authentication: None,
                               correlation_id:
                                   Uuid::parse_str("9b59d873-4e9f-d84e-b8a4-21f2666a3aa4").unwrap(),
-                              message: Message::WriteEventsCompleted(Ok(WriteEventsCompleted {
-                                  event_numbers: StreamVersion::from(30)..StreamVersion::from(40),
-                                  prepare_position: Some(181349124.into()),
-                                  commit_position: Some(181349124.into())
-                              }))
+                              message: RawMessage::WriteEventsCompleted(WriteEventsCompleted {
+                                  result: Some(OperationResult::Success),
+                                  message: None,
+                                  first_event_number: 30,
+                                  last_event_number: 39,
+                                  prepare_position: Some(181349124),
+                                  commit_position: Some(181349124)
+                              }).into()
                           });
     }
 
@@ -231,11 +229,14 @@ mod tests {
                               authentication: None,
                               correlation_id:
                                   Uuid::parse_str("9b59d873-4e9f-d84e-b8a4-21f2666a3aa4").unwrap(),
-                              message: Message::WriteEventsCompleted(Ok(WriteEventsCompleted {
-                                  event_numbers: StreamVersion::from(30)..StreamVersion::from(40),
-                                  prepare_position: Some(181349124.into()),
-                                  commit_position: Some(181349124.into())
-                              }))
+                              message: RawMessage::WriteEventsCompleted(WriteEventsCompleted {
+                                  result: Some(OperationResult::Success),
+                                  message: None,
+                                  first_event_number: 30,
+                                  last_event_number: 39,
+                                  prepare_position: Some(181349124),
+                                  commit_position: Some(181349124)
+                              }).into()
                           });
 
     }
