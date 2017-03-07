@@ -18,8 +18,89 @@ use std::borrow::Cow;
 use uuid::Uuid;
 use package::Package;
 use {UsernamePassword, ReadDirection, ExpectedVersion, EventNumber, LogPosition, ContentType};
-use raw::client_messages::{WriteEvents, NewEvent, ReadEvent, ReadStreamEvents, ReadAllEvents};
+use raw::client_messages::{WriteEvents, NewEvent, ReadEvent, ReadStreamEvents, ReadAllEvents, DeleteStream};
 use raw::RawMessage;
+
+macro_rules! common_stream_id {
+    () => {
+        /// Panics if the id is an empty string
+        pub fn stream_id<S: Into<Cow<'static, str>>>(&mut self, id: S) -> &mut Self {
+            let id = id.into();
+            assert!(id.len() > 0);
+            self.event_stream_id = Some(id);
+            self
+        }
+    }
+}
+
+macro_rules! common_expected_version {
+    () => {
+        /// Sets the expected version of the stream as an optimistic locking mechanism.
+        pub fn expected_version<V: Into<ExpectedVersion>>(&mut self, version: V) -> &mut Self {
+            self.expected_version = Some(version.into());
+            self
+        }
+    }
+}
+
+macro_rules! common_require_master {
+    () => {
+        /// Should the server only handle the request if it is the cluster master. Note that while only
+        /// the master server can accept writes, other cluster members can forward requests to the master.
+        ///
+        /// Defaults to `false`.
+        pub fn require_master(&mut self, require: bool) -> &mut Self {
+            self.require_master = Some(require);
+            self
+        }
+    }
+}
+
+macro_rules! common_direction {
+    () => {
+        /// Set the read direction (required).
+        pub fn direction<D: Into<ReadDirection>>(&mut self, dir: D) -> &mut Self {
+            self.direction = Some(dir.into());
+            self
+        }
+    }
+}
+
+macro_rules! common_max_count {
+    () => {
+        /// Sets the maximum number of events to read (required). Panics if argument is zero.
+        /// `u8` is used as larger batches should be paged. At the moment maximum buffer requirement
+        /// even for 255 events is 255*16MiB > 4000MB.
+        pub fn max_count(&mut self, count: u8) -> &mut Self {
+            assert!(count > 0);
+            // TODO: check ClientAPI, or just use u8?
+            self.max_count = Some(count);
+            self
+        }
+    }
+}
+
+macro_rules! common_resolve_link_tos {
+    () => {
+        /// Whether or not the server should resolve links found in the stream to events of other
+        /// streams. Defaults to `true`.
+        pub fn resolve_link_tos(&mut self, resolve: bool) -> &mut Self {
+            self.resolve_link_tos = Some(resolve);
+            self
+        }
+    }
+}
+
+macro_rules! common_build_package {
+    () => {
+        /// Build a package. Will panic if required values are not set.
+        /// Values of this builder will be moved into the package.
+        pub fn build_package(&mut self, authentication: Option<UsernamePassword>, correlation_id: Option<Uuid>) -> Package {
+            build_package(self.build_message(), authentication, correlation_id)
+        }
+    }
+}
+
 
 /// Factory factory for creating builders.
 pub struct Builder;
@@ -40,6 +121,11 @@ impl Builder {
     /// current version of the stream.
     pub fn write_events() -> WriteEventsBuilder {
         WriteEventsBuilder::new()
+    }
+
+    /// Builder for `DeleteStream` which allows deleting a stream.
+    pub fn delete_stream() -> DeleteStreamBuilder {
+        DeleteStreamBuilder::new()
     }
 
     /// Builder for `ReadEvent` which allows reading a single event off a stream.
@@ -76,9 +162,7 @@ impl SimpleBuilder {
 ///
 /// ```rust
 /// use eventstore_tcp::{Builder, ExpectedVersion, StreamVersion, ContentType};
-/// # use eventstore_tcp::Package;
 ///
-/// # fn example() -> Package {
 /// let package = Builder::write_events()
 ///     .stream_id("my_stream-1")
 ///     .expected_version(StreamVersion::from(42))
@@ -94,8 +178,6 @@ impl SimpleBuilder {
 ///     .done()
 ///     .require_master(false) // default
 ///     .build_package(None, None);
-/// # package
-/// # }
 /// ```
 pub struct WriteEventsBuilder {
     event_stream_id: Option<Cow<'static, str>>,
@@ -115,28 +197,11 @@ impl WriteEventsBuilder {
         }
     }
 
-    /// Panics if the id is an empty string
-    pub fn stream_id<S: Into<Cow<'static, str>>>(&mut self, id: S) -> &mut Self {
-        let id = id.into();
-        assert!(id.len() > 0);
-        self.event_stream_id = Some(id);
-        self
-    }
+    common_stream_id!();
 
-    /// Sets the expected version of the stream as an optimistic locking mechanism.
-    pub fn expected_version<V: Into<ExpectedVersion>>(&mut self, version: V) -> &mut Self {
-        self.expected_version = Some(version.into());
-        self
-    }
+    common_expected_version!();
 
-    /// Should the server only handle the request if it is the cluster master. Note that while only
-    /// the master server can accept writes, other cluster members can forward requests to the master.
-    ///
-    /// Defaults to `false`.
-    pub fn require_master(&mut self, require: bool) -> &mut Self {
-        self.require_master = Some(require);
-        self
-    }
+    common_require_master!();
 
     /// Start creating a new event using `NewEventBuilder`.
     pub fn new_event<'b>(&'b mut self) -> NewEventBuilder<'b> {
@@ -163,11 +228,7 @@ impl WriteEventsBuilder {
         self.build_command().into()
     }
 
-    /// Build a package. Will panic if required values are not set.
-    /// Values of this builder will be moved into the package.
-    pub fn build_package(&mut self, authentication: Option<UsernamePassword>, correlation_id: Option<Uuid>) -> Package {
-        build_package(self.build_message(), authentication, correlation_id)
-    }
+    common_build_package!();
 }
 
 /// Builder for specifying an event when using `WriteEventsBuilder`.
@@ -268,18 +329,13 @@ impl<'a> NewEventBuilder<'a> {
 ///
 /// ```rust
 /// use eventstore_tcp::{Builder, StreamVersion};
-/// # use eventstore_tcp::Package;
 ///
-/// # fn example() -> Package {
 /// let package = Builder::read_event()
 ///     .stream_id("my_stream-1")
 ///     .event_number(StreamVersion::from(42))
 ///     .resolve_link_tos(true) // default
 ///     .require_master(false)  // default
 ///     .build_package(None, None);
-///
-/// # package
-/// # }
 ///
 /// ```
 pub struct ReadEventBuilder {
@@ -299,13 +355,7 @@ impl ReadEventBuilder {
         }
     }
 
-    /// Panics if the id is an empty string
-    pub fn stream_id<S: Into<Cow<'static, str>>>(&mut self, id: S) -> &mut Self {
-        let id = id.into();
-        assert!(id.len() > 0);
-        self.event_stream_id = Some(id);
-        self
-    }
+    common_stream_id!();
 
     /// Event number to be read.
     pub fn event_number<N: Into<EventNumber>>(&mut self, number: N) -> &mut Self {
@@ -313,22 +363,9 @@ impl ReadEventBuilder {
         self
     }
 
-    /// Whether or not the server should resolve links found in the stream to events of other
-    /// streams. Defaults to `true`.
-    pub fn resolve_link_tos(&mut self, resolve: bool) -> &mut Self {
-        self.resolve_link_tos = Some(resolve);
-        self
-    }
+    common_resolve_link_tos!();
 
-    /// Should the server only handle the request if it is the cluster master. Master server is the
-    /// only one which can accept writes, so reading from other members than master can result in
-    /// some specific event not yet being replicated and thus not found.
-    ///
-    /// Defaults to `false`.
-    pub fn require_master(&mut self, require: bool) -> &mut Self {
-        self.require_master = Some(require);
-        self
-    }
+    common_require_master!();
 
     fn build_command(&mut self) -> ReadEvent<'static> {
         ReadEvent {
@@ -343,11 +380,7 @@ impl ReadEventBuilder {
         self.build_command().into()
     }
 
-    /// Build a package. Will panic if required values are not set.
-    /// Values of this builder will be moved into the package.
-    pub fn build_package(&mut self, authentication: Option<UsernamePassword>, correlation_id: Option<Uuid>) -> Package {
-        build_package(self.build_message(), authentication, correlation_id)
-    }
+    common_build_package!();
 }
 
 /// Builds a package for reading multiple events from a stream in either `ReadDirection`.
@@ -356,9 +389,7 @@ impl ReadEventBuilder {
 ///
 /// ```rust
 /// use eventstore_tcp::{Builder, ReadDirection, StreamVersion};
-/// # use eventstore_tcp::Package;
 ///
-/// # fn example() -> Package {
 /// let package = Builder::read_stream_events()
 ///     .direction(ReadDirection::Forward)
 ///     .stream_id("my_stream-1")
@@ -367,9 +398,6 @@ impl ReadEventBuilder {
 ///     .resolve_link_tos(true) // default
 ///     .require_master(false)  // default
 ///     .build_package(None, None);
-///
-/// # package
-/// # }
 ///
 /// ```
 pub struct ReadStreamEventsBuilder {
@@ -393,35 +421,11 @@ impl ReadStreamEventsBuilder {
         }
     }
 
-    /// Set the read direction (required).
-    pub fn direction<D: Into<ReadDirection>>(&mut self, dir: D) -> &mut Self {
-        self.direction = Some(dir.into());
-        self
-    }
+    common_direction!();
 
-    /// Sets the maximum number of events to read (required). Panics if argument is zero.
-    /// `u8` is used as larger batches should be paged. At the moment maximum buffer requirement
-    /// even for 255 events is 255*16MiB > 4000MB.
-    pub fn max_count(&mut self, count: u8) -> &mut Self {
-        assert!(count > 0);
-        // TODO: check ClientAPI, or just use u8?
-        self.max_count = Some(count);
-        self
-    }
+    common_max_count!();
 
-    /// Sets the stream to read from. Panics if the id is an empty string. Required.
-    ///
-    /// Panics if the id is `$all`, which is currently unimplemented.
-    pub fn stream_id<S: Into<Cow<'static, str>>>(&mut self, id: S) -> &mut Self {
-        let id = id.into();
-        if id == "$all" {
-            // ReadAll is not yet implemented
-            unimplemented!()
-        }
-        assert!(id.len() > 0);
-        self.event_stream_id = Some(id);
-        self
-    }
+    common_stream_id!();
 
     /// Event number to read from to the given direction.
     pub fn from_event_number<N: Into<EventNumber>>(&mut self, n: N) -> &mut Self {
@@ -429,22 +433,9 @@ impl ReadStreamEventsBuilder {
         self
     }
 
-    /// Whether or not the server should resolve links found in the stream to events of other
-    /// streams. Defaults to `true`.
-    pub fn resolve_link_tos(&mut self, resolve: bool) -> &mut Self {
-        self.resolve_link_tos = Some(resolve);
-        self
-    }
+    common_resolve_link_tos!();
 
-    /// Should the server only handle the request if it is the cluster master. Master server is the
-    /// only one which can accept writes, so reading from other members than master can result in
-    /// some specific event not yet being replicated and thus not found.
-    ///
-    /// Defaults to `false`.
-    pub fn require_master(&mut self, require: bool) -> &mut Self {
-        self.require_master = Some(require);
-        self
-    }
+    common_require_master!();
 
     fn build_command(&mut self) -> ReadStreamEvents<'static> {
         ReadStreamEvents {
@@ -460,14 +451,7 @@ impl ReadStreamEventsBuilder {
         RawMessage::ReadStreamEvents(self.direction.expect("direction not set"), self.build_command())
     }
 
-    /// Build a package. Will panic if required values are not set.
-    /// Values of this builder will be moved into the package.
-    ///
-    /// Note that this method can start panicing in future if an unsupported combination of `ReadDirection`
-    /// and `from_event_number` is specified.
-    pub fn build_package(&mut self, authentication: Option<UsernamePassword>, correlation_id: Option<Uuid>) -> Package {
-        build_package(self.build_message(), authentication, correlation_id)
-    }
+    common_build_package!();
 }
 
 /// Builder for `ReadAllEvents`.
@@ -492,11 +476,7 @@ impl ReadAllEventsBuilder {
         }
     }
 
-    /// Set the read direction (required).
-    pub fn direction<D: Into<ReadDirection>>(&mut self, dir: D) -> &mut Self {
-        self.direction = Some(dir.into());
-        self
-    }
+    common_direction!();
 
     /// Sets the positions to read from. These are easiest to acquire from previous ReadAllSuccess
     /// responses, likely persisted somewhere between reads.
@@ -506,37 +486,14 @@ impl ReadAllEventsBuilder {
         self
     }
 
-    /// Sets the maximum number of events to read (required). Panics if argument is zero.
-    /// `u8` is used as larger batches should be paged. At the moment maximum buffer requirement
-    /// even for 255 events is 255*16MiB > 4000MB.
-    pub fn max_count(&mut self, count: u8) -> &mut Self {
-        assert!(count > 0);
-        // TODO: check ClientAPI, or just use u8?
-        self.max_count = Some(count);
-        self
-    }
+    common_max_count!();
 
-    /// Whether or not the server should resolve links found in the stream to events of other
-    /// streams. Defaults to `true`.
-    pub fn resolve_link_tos(&mut self, resolve: bool) -> &mut Self {
-        self.resolve_link_tos = Some(resolve);
-        self
-    }
+    common_resolve_link_tos!();
 
-    /// Should the server only handle the request if it is the cluster master. Master server is the
-    /// only one which can accept writes, so reading from other members than master can result in
-    /// some specific event not yet being replicated and thus not found.
-    ///
-    /// Defaults to `false`.
-    pub fn require_master(&mut self, require: bool) -> &mut Self {
-        self.require_master = Some(require);
-        self
-    }
+    common_require_master!();
 
-    /// Build a package. Will panic if required values are not set.
-    /// Values of this builder will be moved into the package.
-    pub fn build_package(&mut self, authentication: Option<UsernamePassword>, correlation_id: Option<Uuid>) -> Package {
-        let msg = RawMessage::ReadAllEvents(
+    fn build_message(&mut self) -> RawMessage<'static> {
+        RawMessage::ReadAllEvents(
             self.direction.take().expect("direction"),
             ReadAllEvents {
                 commit_position: self.commit_position.expect("position").into(),
@@ -544,9 +501,68 @@ impl ReadAllEventsBuilder {
                 max_count: self.max_count.expect("max_count") as i32,
                 resolve_link_tos: self.resolve_link_tos.unwrap_or(true),
                 require_master: self.require_master.unwrap_or(true)
-            });
-        build_package(msg, authentication, correlation_id)
+            })
     }
+
+    common_build_package!();
+}
+
+/// Builder for `DeleteStream`.
+///
+/// # Example
+///
+/// ```
+/// use eventstore_tcp::{Builder, StreamVersion};
+///
+/// let package = Builder::delete_stream()
+///     .stream_id("hello_world")
+///     .expected_version(StreamVersion::from(42))
+///     .require_master(false) // default
+///     .hard_delete(false)    // default
+///     .build_package(None, None);
+/// ```
+pub struct DeleteStreamBuilder {
+    event_stream_id: Option<Cow<'static, str>>,
+    expected_version: Option<ExpectedVersion>,
+    require_master: Option<bool>,
+    hard_delete: Option<bool>
+}
+
+impl DeleteStreamBuilder {
+    fn new() -> Self {
+        DeleteStreamBuilder {
+            event_stream_id: None,
+            expected_version: None,
+            require_master: None,
+            hard_delete: None,
+        }
+    }
+
+    common_stream_id!();
+
+    common_expected_version!();
+
+    common_require_master!();
+
+    /// Set to `true` to actually delete data instead of just marking the stream as deleted.
+    /// Data may be deleted in the next scavenge operation.
+    ///
+    /// Defaults to `false`.
+    pub fn hard_delete(&mut self, hard_delete: bool) -> &mut Self {
+        self.hard_delete = Some(hard_delete);
+        self
+    }
+
+    fn build_message(&mut self) -> RawMessage<'static> {
+        RawMessage::DeleteStream(DeleteStream {
+            event_stream_id: self.event_stream_id.take().unwrap(),
+            expected_version: self.expected_version.take().unwrap().into(),
+            require_master: self.require_master.unwrap_or(false),
+            hard_delete: Some(self.hard_delete.unwrap_or(false)),
+        })
+    }
+
+    common_build_package!();
 }
 
 fn build_package<M: Into<RawMessage<'static>>>(msg: M, authentication: Option<UsernamePassword>, correlation_id: Option<Uuid>) -> Package {
