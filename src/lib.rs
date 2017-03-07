@@ -14,8 +14,7 @@
 //!
 //! # Panics
 //!
-//!   * members of `builder` module can panic in a number of places (documented)
-//!   * panics when decoding missing protobuf `required` values
+//! There should not be any panicing now that `adapted` and `raw` are separate.
 //!
 //! # Simplest example
 //!
