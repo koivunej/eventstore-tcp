@@ -8,7 +8,7 @@ use std::borrow::Cow;
 use quick_protobuf;
 
 pub mod client_messages;
-pub use self::client_messages::{EventRecord, WriteEvents, WriteEventsCompleted, ReadEvent, ReadEventCompleted, ReadStreamEvents, ReadStreamEventsCompleted, ReadAllEvents, ReadAllEventsCompleted, NotHandled};
+pub use self::client_messages::{EventRecord, WriteEvents, WriteEventsCompleted, ReadEvent, ReadEventCompleted, ReadStreamEvents, ReadStreamEventsCompleted, ReadAllEvents, ReadAllEventsCompleted, NotHandled, DeleteStream, DeleteStreamCompleted};
 
 mod client_messages_ext;
 
@@ -32,6 +32,11 @@ pub enum RawMessage<'a> {
     WriteEvents(WriteEvents<'a>),
     /// Append to stream response, which can fail for a number of reasons
     WriteEventsCompleted(WriteEventsCompleted<'a>),
+
+    /// Request to delete a stream
+    DeleteStream(DeleteStream<'a>),
+    /// Response to previous stream deletion request
+    DeleteStreamCompleted(DeleteStreamCompleted<'a>),
 
     /// Request to read a single event from a stream
     ReadEvent(ReadEvent<'a>),
@@ -185,6 +190,8 @@ wrapup!(BadRequestPayload<'a>, RawMessage::BadRequest);
 wrapup!(NotAuthenticatedPayload<'a>, RawMessage::NotAuthenticated);
 wrapup!(WriteEvents<'a>, RawMessage::WriteEvents);
 wrapup!(WriteEventsCompleted<'a>, RawMessage::WriteEventsCompleted);
+wrapup!(DeleteStream<'a>, RawMessage::DeleteStream);
+wrapup!(DeleteStreamCompleted<'a>, RawMessage::DeleteStreamCompleted);
 wrapup!(ReadEvent<'a>, RawMessage::ReadEvent);
 wrapup!(ReadEventCompleted<'a>, RawMessage::ReadEventCompleted);
 wrapup!(NotHandled<'a>, RawMessage::NotHandled);
@@ -203,7 +210,7 @@ impl<'a> RawMessage<'a> {
     /// Turns possibly borrowed value of `self` into one that owns all of it's data.
     pub fn into_owned(self) -> RawMessage<'static> {
         use self::RawMessage::*;
-        use self::client_messages_ext::{WriteEventsExt, WriteEventsCompletedExt, ReadEventExt, ReadEventCompletedExt, ReadStreamEventsExt, ReadStreamEventsCompletedExt, ReadAllEventsCompletedExt, NotHandledExt};
+        use self::client_messages_ext::*;
 
         match self {
             HeartbeatRequest => HeartbeatRequest,
@@ -217,6 +224,9 @@ impl<'a> RawMessage<'a> {
 
             WriteEvents(e) => WriteEvents(e.into_owned()),
             WriteEventsCompleted(e) => WriteEventsCompleted(e.into_owned()),
+
+            DeleteStream(e) => DeleteStream(e.into_owned()),
+            DeleteStreamCompleted(e) => DeleteStreamCompleted(e.into_owned()),
 
             ReadEvent(e) => ReadEvent(e.into_owned()),
             ReadEventCompleted(e) => ReadEventCompleted(e.into_owned()),
@@ -282,6 +292,9 @@ impl<'a> RawMessage<'a> {
             0x82 => decoded!(WriteEvents, buf, RawMessage::WriteEvents),
             0x83 => decoded!(WriteEventsCompleted, buf, RawMessage::WriteEventsCompleted),
 
+            0x8A => decoded!(DeleteStream, buf, RawMessage::DeleteStream),
+            0x8B => decoded!(DeleteStreamCompleted, buf, RawMessage::DeleteStreamCompleted),
+
             0xB0 => decoded!(ReadEvent, buf, RawMessage::ReadEvent),
             0xB1 => decoded!(ReadEventCompleted, buf, RawMessage::ReadEventCompleted),
 
@@ -331,6 +344,9 @@ impl<'a> RawMessage<'a> {
             WriteEvents(ref x) => encode!(x, w),
             WriteEventsCompleted(ref x) => encode!(x, w),
 
+            DeleteStream(ref x) => encode!(x, w),
+            DeleteStreamCompleted(ref x) => encode!(x, w),
+
             ReadEvent(ref x) => encode!(x, w),
             ReadEventCompleted(ref x) => encode!(x, w),
 
@@ -359,6 +375,9 @@ impl<'a> RawMessage<'a> {
 
             WriteEvents(_) => 0x82,
             WriteEventsCompleted(_) => 0x83,
+
+            DeleteStream(_) => 0x8A,
+            DeleteStreamCompleted(_) => 0x8B,
 
             ReadEvent(_) => 0xB0,
             ReadEventCompleted(_) => 0xB1,

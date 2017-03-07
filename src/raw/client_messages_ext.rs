@@ -306,6 +306,36 @@ impl<'a> ReadAllEventsCompletedExt<'a> for client_messages::ReadAllEventsComplet
     }
 }
 
+pub trait DeleteStreamExt<'a> {
+    fn into_owned(self) -> client_messages::DeleteStream<'static>;
+}
+
+impl<'a> DeleteStreamExt<'a> for client_messages::DeleteStream<'a> {
+    fn into_owned(self) -> client_messages::DeleteStream<'static> {
+        client_messages::DeleteStream {
+            event_stream_id: Cow::Owned(self.event_stream_id.into_owned()),
+            expected_version: self.expected_version,
+            require_master: self.require_master,
+            hard_delete: self.hard_delete,
+        }
+    }
+}
+
+pub trait DeleteStreamCompletedExt<'a> {
+    fn into_owned(self) -> client_messages::DeleteStreamCompleted<'static>;
+}
+
+impl<'a> DeleteStreamCompletedExt<'a> for client_messages::DeleteStreamCompleted<'a> {
+    fn into_owned(self) -> client_messages::DeleteStreamCompleted<'static> {
+        client_messages::DeleteStreamCompleted {
+            result: self.result,
+            message: owned_opt_cow(self.message),
+            commit_position: self.commit_position,
+            prepare_position: self.prepare_position,
+        }
+    }
+}
+
 fn owned_opt_cow<'a, T: ToOwned + ?Sized>(opt_cow: Option<Cow<'a, T>>) -> Option<Cow<'static, T>> {
     opt_cow.map(|x| Cow::Owned(x.into_owned()))
 }

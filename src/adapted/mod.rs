@@ -121,6 +121,7 @@ impl<'a> CustomTryFrom<raw::RawMessage<'a>> for AdaptedMessage<'a> {
             RawMessage::Authenticated                     => Ok(AdaptedMessage::Authenticated),
             RawMessage::NotAuthenticated(reason)          => into_str_or_rebuild!(reason, NotAuthenticatedMessage::from),
             RawMessage::Unsupported(d, bytes)             => Err(((d, bytes).into(), ErrorKind::UnsupportedDiscriminator(d).into())),
+            unimpl => Err((unimpl, ErrorKind::UnimplementedConversion.into())),
         }
     }
 }
