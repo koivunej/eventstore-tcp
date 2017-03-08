@@ -1,3 +1,6 @@
+//! `codec` module contains the `Package` (frame) decoding and an `tokio_core::io::Codec`
+//! implementation.
+
 use std::io::{self, Read, Write};
 use uuid::Uuid;
 use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
@@ -9,13 +12,17 @@ use {UsernamePassword};
 use raw::RawMessage;
 
 bitflags!{
+    /// `TcpFlags` describes if optional fields (authentication) is present.
     pub flags TcpFlags: u8 {
+        /// No authentication information present
         const FLAG_NONE = 0x00,
+        /// Package contains authentication
         const FLAG_AUTHENTICATED = 0x01,
         //const FLAG_TRUSTED_WRITE = 0x02, // only in core
     }
 }
 
+/// Stateless simple PackageCodec
 pub struct PackageCodec;
 
 impl PackageCodec {

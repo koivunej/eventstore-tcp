@@ -105,7 +105,7 @@ pub use adapted::AdaptedMessage;
 pub mod package;
 pub use package::Package;
 
-mod codec;
+pub mod codec;
 
 mod client;
 pub use client::EventStoreClient;
