@@ -21,7 +21,6 @@ impl Command for Delete {
 
     fn execute(&self, config: &Config, client: EventStoreClient) -> Box<Future<Item = (), Error = io::Error>> {
         use eventstore_tcp::RawMessage;
-        use eventstore_tcp::package::MessageContainer;
         use eventstore_tcp::raw::OperationResult;
 
         let package = self.builder.borrow_mut().take().unwrap().build_package(config.credentials.clone(), None);
@@ -30,7 +29,7 @@ impl Command for Delete {
 
         let ret = send.and_then(move |resp| {
             match resp.message {
-                MessageContainer::Raw(RawMessage::DeleteStreamCompleted(body)) => {
+                RawMessage::DeleteStreamCompleted(body) => {
                     if body.result.is_none() {
                         return Err(io::Error::new(io::ErrorKind::Other, format!("No result in response: {:#?}", body)));
                     }

@@ -7,7 +7,7 @@ use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 use tokio_core::io::{Codec, EasyBuf};
 
 use errors::ErrorKind;
-use package::{Package, MessageContainer};
+use package::Package;
 use {UsernamePassword};
 use raw::RawMessage;
 
@@ -121,10 +121,7 @@ impl Codec for PackageCodec {
             flags.insert(FLAG_AUTHENTICATED);
         }
 
-        let raw = match msg.message {
-            MessageContainer::Raw(raw) => raw,
-            MessageContainer::Adapted(ref adapted) => adapted.as_raw()
-        };
+        let raw = msg.message;
 
         cursor.write_u32::<LittleEndian>(0)?; // placeholder for prefix
         cursor.write_u8(raw.discriminator())?;

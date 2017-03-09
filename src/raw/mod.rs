@@ -11,6 +11,7 @@ pub mod client_messages;
 pub use self::client_messages::{EventRecord, WriteEvents, WriteEventsCompleted, ReadEvent, ReadEventCompleted, ReadStreamEvents, ReadStreamEventsCompleted, ReadAllEvents, ReadAllEventsCompleted, NotHandled, DeleteStream, DeleteStreamCompleted, OperationResult};
 
 mod client_messages_ext;
+use adapted;
 
 use errors::Error;
 use ReadDirection;
@@ -207,6 +208,13 @@ impl<'a> From<(u8, Cow<'a, [u8]>)> for RawMessage<'a> {
 }
 
 impl<'a> RawMessage<'a> {
+
+    /// Attempt to convert a raw message into an adapted one
+    pub fn try_adapt(self) -> Result<adapted::AdaptedMessage<'a>, (Self, Error)> {
+        use CustomTryInto;
+        self.try_into()
+    }
+
     /// Turns possibly borrowed value of `self` into one that owns all of it's data.
     pub fn into_owned(self) -> RawMessage<'static> {
         use self::RawMessage::*;
