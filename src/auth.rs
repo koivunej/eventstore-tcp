@@ -52,3 +52,9 @@ impl UsernamePassword {
         Ok(1 + self.0.len() + 1 + self.1.len())
     }
 }
+
+impl Into<(String, String)> for UsernamePassword {
+    fn into(self) -> (String, String) {
+        (self.0.into_owned(), self.1.into_owned())
+    }
+}
