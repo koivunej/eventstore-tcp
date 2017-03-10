@@ -448,409 +448,425 @@
 <span id="403">403</span>
 <span id="404">404</span>
 <span id="405">405</span>
-</pre><pre class='rust '>
-<span class='doccomment'>//! Raw module contains the enumeration `RawMessage` and raw decoding and encoding functionality.</span>
-<span class='doccomment'>//! There should not be need to handle `RawMessage` values directly but if there is ever a bug,</span>
-<span class='doccomment'>//! using the raw messages should still work.</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+</pre><pre class="rust ">
+<span class="doccomment">//! Raw module contains the enumeration `RawMessage` and raw decoding and encoding functionality.</span>
+<span class="doccomment">//! There should not be need to handle `RawMessage` values directly but if there is ever a bug,</span>
+<span class="doccomment">//! using the raw messages should still work.</span>
 
-<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>io</span>;
-<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>str</span>;
-<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>borrow</span>::<span class='ident'>Cow</span>;
-<span class='kw'>use</span> <span class='ident'>quick_protobuf</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">str</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">borrow</span>::<span class="ident">Cow</span>;
+<span class="kw">use</span> <span class="ident">quick_protobuf</span>;
 
-<span class='kw'>pub</span> <span class='kw'>mod</span> <span class='ident'>client_messages</span>;
-<span class='kw'>pub</span> <span class='kw'>use</span> <span class='self'>self</span>::<span class='ident'>client_messages</span>::{<span class='ident'>EventRecord</span>, <span class='ident'>WriteEvents</span>, <span class='ident'>WriteEventsCompleted</span>, <span class='ident'>ReadEvent</span>, <span class='ident'>ReadEventCompleted</span>, <span class='ident'>ReadStreamEvents</span>, <span class='ident'>ReadStreamEventsCompleted</span>, <span class='ident'>ReadAllEvents</span>, <span class='ident'>ReadAllEventsCompleted</span>, <span class='ident'>NotHandled</span>, <span class='ident'>DeleteStream</span>, <span class='ident'>DeleteStreamCompleted</span>, <span class='ident'>OperationResult</span>};
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">client_messages</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::<span class="ident">client_messages</span>::{<span class="ident">EventRecord</span>, <span class="ident">WriteEvents</span>, <span class="ident">WriteEventsCompleted</span>, <span class="ident">ReadEvent</span>, <span class="ident">ReadEventCompleted</span>, <span class="ident">ReadStreamEvents</span>, <span class="ident">ReadStreamEventsCompleted</span>, <span class="ident">ReadAllEvents</span>, <span class="ident">ReadAllEventsCompleted</span>, <span class="ident">NotHandled</span>, <span class="ident">DeleteStream</span>, <span class="ident">DeleteStreamCompleted</span>, <span class="ident">OperationResult</span>};
 
-<span class='kw'>mod</span> <span class='ident'>client_messages_ext</span>;
+<span class="kw">mod</span> <span class="ident">client_messages_ext</span>;
+<span class="kw">use</span> <span class="ident">adapted</span>;
 
-<span class='kw'>use</span> <span class='ident'>errors</span>::<span class='ident'>Error</span>;
-<span class='kw'>use</span> <span class='ident'>ReadDirection</span>;
+<span class="kw">use</span> <span class="ident">errors</span>::<span class="ident">Error</span>;
+<span class="kw">use</span> <span class="ident">ReadDirection</span>;
 
-<span class='doccomment'>/// Enumeration much like the `adapted::AdaptedMessage` for all the messages in the protocol.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>PartialEq</span>, <span class='ident'>Clone</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>RawMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='doccomment'>/// Requests heartbeat from the other side. Unsure if clients or server sends these.</span>
-    <span class='ident'>HeartbeatRequest</span>,
-    <span class='doccomment'>/// Response to a heartbeat request.</span>
-    <span class='ident'>HeartbeatResponse</span>,
+<span class="doccomment">/// Enumeration much like the `adapted::AdaptedMessage` for all the messages in the protocol.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">RawMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Requests heartbeat from the other side. Unsure if clients or server sends these.</span>
+    <span class="ident">HeartbeatRequest</span>,
+    <span class="doccomment">/// Response to a heartbeat request.</span>
+    <span class="ident">HeartbeatResponse</span>,
 
-    <span class='doccomment'>/// Ping request, similar to heartbeat.</span>
-    <span class='ident'>Ping</span>,
-    <span class='doccomment'>/// Ping response.</span>
-    <span class='ident'>Pong</span>,
+    <span class="doccomment">/// Ping request, similar to heartbeat.</span>
+    <span class="ident">Ping</span>,
+    <span class="doccomment">/// Ping response.</span>
+    <span class="ident">Pong</span>,
 
-    <span class='doccomment'>/// Append to stream request</span>
-    <span class='ident'>WriteEvents</span>(<span class='ident'>WriteEvents</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>),
-    <span class='doccomment'>/// Append to stream response, which can fail for a number of reasons</span>
-    <span class='ident'>WriteEventsCompleted</span>(<span class='ident'>WriteEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>),
+    <span class="doccomment">/// Append to stream request</span>
+    <span class="ident">WriteEvents</span>(<span class="ident">WriteEvents</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>),
+    <span class="doccomment">/// Append to stream response, which can fail for a number of reasons</span>
+    <span class="ident">WriteEventsCompleted</span>(<span class="ident">WriteEventsCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>),
 
-    <span class='doccomment'>/// Request to delete a stream</span>
-    <span class='ident'>DeleteStream</span>(<span class='ident'>DeleteStream</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>),
-    <span class='doccomment'>/// Response to previous stream deletion request</span>
-    <span class='ident'>DeleteStreamCompleted</span>(<span class='ident'>DeleteStreamCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>),
+    <span class="doccomment">/// Request to delete a stream</span>
+    <span class="ident">DeleteStream</span>(<span class="ident">DeleteStream</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>),
+    <span class="doccomment">/// Response to previous stream deletion request</span>
+    <span class="ident">DeleteStreamCompleted</span>(<span class="ident">DeleteStreamCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>),
 
-    <span class='doccomment'>/// Request to read a single event from a stream</span>
-    <span class='ident'>ReadEvent</span>(<span class='ident'>ReadEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>),
-    <span class='doccomment'>/// Response to a single event read</span>
-    <span class='ident'>ReadEventCompleted</span>(<span class='ident'>ReadEventCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>),
+    <span class="doccomment">/// Request to read a single event from a stream</span>
+    <span class="ident">ReadEvent</span>(<span class="ident">ReadEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>),
+    <span class="doccomment">/// Response to a single event read</span>
+    <span class="ident">ReadEventCompleted</span>(<span class="ident">ReadEventCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>),
 
-    <span class='doccomment'>/// Request to read a stream from a point forward or backward</span>
-    <span class='ident'>ReadStreamEvents</span>(<span class='ident'>ReadDirection</span>, <span class='ident'>ReadStreamEvents</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>),
-    <span class='doccomment'>/// Response to a stream read in given direction</span>
-    <span class='ident'>ReadStreamEventsCompleted</span>(<span class='ident'>ReadDirection</span>, <span class='ident'>ReadStreamEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>),
+    <span class="doccomment">/// Request to read a stream from a point forward or backward</span>
+    <span class="ident">ReadStreamEvents</span>(<span class="ident">ReadDirection</span>, <span class="ident">ReadStreamEvents</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>),
+    <span class="doccomment">/// Response to a stream read in given direction</span>
+    <span class="ident">ReadStreamEventsCompleted</span>(<span class="ident">ReadDirection</span>, <span class="ident">ReadStreamEventsCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>),
 
-    <span class='doccomment'>/// Request to read a stream of all events from a position forward or backward</span>
-    <span class='ident'>ReadAllEvents</span>(<span class='ident'>ReadDirection</span>, <span class='ident'>ReadAllEvents</span>),
-    <span class='doccomment'>/// Response to a read all in given direction</span>
-    <span class='ident'>ReadAllEventsCompleted</span>(<span class='ident'>ReadDirection</span>, <span class='ident'>ReadAllEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>),
+    <span class="doccomment">/// Request to read a stream of all events from a position forward or backward</span>
+    <span class="ident">ReadAllEvents</span>(<span class="ident">ReadDirection</span>, <span class="ident">ReadAllEvents</span>),
+    <span class="doccomment">/// Response to a read all in given direction</span>
+    <span class="ident">ReadAllEventsCompleted</span>(<span class="ident">ReadDirection</span>, <span class="ident">ReadAllEventsCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>),
 
-    <span class='doccomment'>/// Request was not understood. Please open an issue!</span>
-    <span class='ident'>BadRequest</span>(<span class='ident'>BadRequestPayload</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>),
+    <span class="doccomment">/// Request was not understood. Please open an issue!</span>
+    <span class="ident">BadRequest</span>(<span class="ident">BadRequestPayload</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>),
 
-    <span class='doccomment'>/// Correlated request was not handled. This is the likely response to requests where</span>
-    <span class='doccomment'>/// `require_master` is `true`, but the connected endpoint is not master and cannot reach it.</span>
-    <span class='ident'>NotHandled</span>(<span class='ident'>NotHandled</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>),
+    <span class="doccomment">/// Correlated request was not handled. This is the likely response to requests where</span>
+    <span class="doccomment">/// `require_master` is `true`, but the connected endpoint is not master and cannot reach it.</span>
+    <span class="ident">NotHandled</span>(<span class="ident">NotHandled</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>),
 
-    <span class='doccomment'>/// Request to authenticate attached credentials.</span>
-    <span class='ident'>Authenticate</span>,
+    <span class="doccomment">/// Request to authenticate attached credentials.</span>
+    <span class="ident">Authenticate</span>,
 
-    <span class='doccomment'>/// Positive authentication response. The credentials used to `Authenticate` previously can be</span>
-    <span class='doccomment'>/// used in successive requests.</span>
-    <span class='ident'>Authenticated</span>,
+    <span class="doccomment">/// Positive authentication response. The credentials used to `Authenticate` previously can be</span>
+    <span class="doccomment">/// used in successive requests.</span>
+    <span class="ident">Authenticated</span>,
 
-    <span class='doccomment'>/// Negative authentication response, or response to any sent request for which used</span>
-    <span class='doccomment'>/// authentication was not accepted. May contain a reason.</span>
-    <span class='ident'>NotAuthenticated</span>(<span class='ident'>NotAuthenticatedPayload</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>),
+    <span class="doccomment">/// Negative authentication response, or response to any sent request for which used</span>
+    <span class="doccomment">/// authentication was not accepted. May contain a reason.</span>
+    <span class="ident">NotAuthenticated</span>(<span class="ident">NotAuthenticatedPayload</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>),
 
-    <span class='doccomment'>/// Placeholder for a discriminator and the undecoded bytes</span>
-    <span class='ident'>Unsupported</span>(<span class='ident'>u8</span>, <span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, [<span class='ident'>u8</span>]<span class='op'>&gt;</span>),
+    <span class="doccomment">/// Placeholder for a discriminator and the undecoded bytes</span>
+    <span class="ident">Unsupported</span>(<span class="ident">u8</span>, <span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, [<span class="ident">u8</span>]<span class="op">&gt;</span>),
 }
 
-<span class='doccomment'>/// Trait for facilitating fallible Cow&lt;&#39;a, [u8]&gt; -&gt; Cow&lt;&#39;a, str&gt; conversion.</span>
-<span class='attribute'>#[<span class='ident'>doc</span>(<span class='ident'>hidden</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>ByteWrapper</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>: <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, [<span class='ident'>u8</span>]<span class='op'>&gt;&gt;</span> <span class='op'>+</span> <span class='ident'>From</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, [<span class='ident'>u8</span>]<span class='op'>&gt;&gt;</span> {
-    <span class='kw'>type</span> <span class='ident'>ConversionErr</span>: <span class='ident'>From</span><span class='op'>&lt;</span><span class='ident'>str</span>::<span class='ident'>Utf8Error</span><span class='op'>&gt;</span>;
+<span class="doccomment">/// Trait for facilitating fallible Cow&lt;&#39;a, [u8]&gt; -&gt; Cow&lt;&#39;a, str&gt; conversion.</span>
+<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ByteWrapper</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, [<span class="ident">u8</span>]<span class="op">&gt;&gt;</span> <span class="op">+</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, [<span class="ident">u8</span>]<span class="op">&gt;&gt;</span> {
+    <span class="kw">type</span> <span class="ident">ConversionErr</span>: <span class="ident">From</span><span class="op">&lt;</span><span class="ident">str</span>::<span class="ident">Utf8Error</span><span class="op">&gt;</span>;
 
-    <span class='kw'>fn</span> <span class='ident'>into_str_wrapper</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, <span class='ident'>str</span><span class='op'>&gt;</span>, (<span class='self'>Self</span>, <span class='self'>Self</span>::<span class='ident'>ConversionErr</span>)<span class='op'>&gt;</span> {
-        <span class='kw'>let</span> <span class='ident'>plain</span>: <span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, [<span class='ident'>u8</span>]<span class='op'>&gt;</span> <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>into</span>();
-        <span class='kw'>match</span> <span class='ident'>plain</span> {
-            <span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='ident'>vec</span>) <span class='op'>=&gt;</span>
-                <span class='ident'>String</span>::<span class='ident'>from_utf8</span>(<span class='ident'>vec</span>)
-                    .<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>s</span><span class='op'>|</span> <span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='ident'>s</span>))
-                    .<span class='ident'>map_err</span>(<span class='op'>|</span><span class='ident'>e</span><span class='op'>|</span> {
-                        <span class='kw'>let</span> <span class='ident'>narrowed</span> <span class='op'>=</span> <span class='ident'>e</span>.<span class='ident'>utf8_error</span>();
-                        <span class='kw'>let</span> <span class='ident'>revived</span> <span class='op'>=</span> <span class='self'>Self</span>::<span class='ident'>from</span>(<span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='ident'>e</span>.<span class='ident'>into_bytes</span>()));
+    <span class="kw">fn</span> <span class="ident">into_str_wrapper</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">str</span><span class="op">&gt;</span>, (<span class="self">Self</span>, <span class="self">Self</span>::<span class="ident">ConversionErr</span>)<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">plain</span>: <span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, [<span class="ident">u8</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">into</span>();
+        <span class="kw">match</span> <span class="ident">plain</span> {
+            <span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="ident">vec</span>) <span class="op">=&gt;</span>
+                <span class="ident">String</span>::<span class="ident">from_utf8</span>(<span class="ident">vec</span>)
+                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="ident">s</span>))
+                    .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> {
+                        <span class="kw">let</span> <span class="ident">narrowed</span> <span class="op">=</span> <span class="ident">e</span>.<span class="ident">utf8_error</span>();
+                        <span class="kw">let</span> <span class="ident">revived</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">from</span>(<span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="ident">e</span>.<span class="ident">into_bytes</span>()));
 
-                        (<span class='ident'>revived</span>, <span class='ident'>narrowed</span>.<span class='ident'>into</span>())
+                        (<span class="ident">revived</span>, <span class="ident">narrowed</span>.<span class="ident">into</span>())
                     }),
-            <span class='ident'>Cow</span>::<span class='ident'>Borrowed</span>(<span class='ident'>buf</span>) <span class='op'>=&gt;</span>
-                <span class='ident'>str</span>::<span class='ident'>from_utf8</span>(<span class='ident'>buf</span>)
-                    .<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>s</span><span class='op'>|</span> <span class='ident'>Cow</span>::<span class='ident'>Borrowed</span>(<span class='ident'>s</span>))
-                    .<span class='ident'>map_err</span>(<span class='op'>|</span><span class='ident'>e</span><span class='op'>|</span> (<span class='self'>Self</span>::<span class='ident'>from</span>(<span class='ident'>Cow</span>::<span class='ident'>Borrowed</span>(<span class='ident'>buf</span>)), <span class='ident'>e</span>.<span class='ident'>into</span>()))
+            <span class="ident">Cow</span>::<span class="ident">Borrowed</span>(<span class="ident">buf</span>) <span class="op">=&gt;</span>
+                <span class="ident">str</span>::<span class="ident">from_utf8</span>(<span class="ident">buf</span>)
+                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">Cow</span>::<span class="ident">Borrowed</span>(<span class="ident">s</span>))
+                    .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> (<span class="self">Self</span>::<span class="ident">from</span>(<span class="ident">Cow</span>::<span class="ident">Borrowed</span>(<span class="ident">buf</span>)), <span class="ident">e</span>.<span class="ident">into</span>()))
         }
     }
 }
 
-<span class='doccomment'>/// Newtype for an arbitary NotAuthenticated &quot;info&quot;, which could be</span>
-<span class='doccomment'>/// UTF8 string.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>PartialEq</span>, <span class='ident'>Clone</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>NotAuthenticatedPayload</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>(<span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, [<span class='ident'>u8</span>]<span class='op'>&gt;</span>);
+<span class="doccomment">/// Newtype for an arbitary NotAuthenticated &quot;info&quot;, which could be</span>
+<span class="doccomment">/// UTF8 string.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NotAuthenticatedPayload</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, [<span class="ident">u8</span>]<span class="op">&gt;</span>);
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>NotAuthenticatedPayload</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>NotAuthenticatedPayload</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
-        <span class='ident'>NotAuthenticatedPayload</span>(<span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='self'>self</span>.<span class='number'>0</span>.<span class='ident'>into_owned</span>()))
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">NotAuthenticatedPayload</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">NotAuthenticatedPayload</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
+        <span class="ident">NotAuthenticatedPayload</span>(<span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">into_owned</span>()))
     }
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>AsRef</span><span class='op'>&lt;</span>[<span class='ident'>u8</span>]<span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>NotAuthenticatedPayload</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>as_ref</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span>[<span class='ident'>u8</span>] {
-        <span class='self'>self</span>.<span class='number'>0</span>.<span class='ident'>as_ref</span>()
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">AsRef</span><span class="op">&lt;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">NotAuthenticatedPayload</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">as_ref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] {
+        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">as_ref</span>()
     }
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>ByteWrapper</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>NotAuthenticatedPayload</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>type</span> <span class='ident'>ConversionErr</span> <span class='op'>=</span> <span class='ident'>Error</span>;
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">ByteWrapper</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">NotAuthenticatedPayload</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">type</span> <span class="ident">ConversionErr</span> <span class="op">=</span> <span class="ident">Error</span>;
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>From</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, [<span class='ident'>u8</span>]<span class='op'>&gt;&gt;</span> <span class='kw'>for</span> <span class='ident'>NotAuthenticatedPayload</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>data</span>: <span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, [<span class='ident'>u8</span>]<span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>NotAuthenticatedPayload</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-        <span class='ident'>NotAuthenticatedPayload</span>(<span class='ident'>data</span>)
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, [<span class="ident">u8</span>]<span class="op">&gt;&gt;</span> <span class="kw">for</span> <span class="ident">NotAuthenticatedPayload</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">data</span>: <span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, [<span class="ident">u8</span>]<span class="op">&gt;</span>) <span class="op">-&gt;</span> <span class="ident">NotAuthenticatedPayload</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+        <span class="ident">NotAuthenticatedPayload</span>(<span class="ident">data</span>)
     }
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, [<span class='ident'>u8</span>]<span class='op'>&gt;&gt;</span> <span class='kw'>for</span> <span class='ident'>NotAuthenticatedPayload</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, [<span class='ident'>u8</span>]<span class='op'>&gt;</span> {
-        <span class='self'>self</span>.<span class='number'>0</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, [<span class="ident">u8</span>]<span class="op">&gt;&gt;</span> <span class="kw">for</span> <span class="ident">NotAuthenticatedPayload</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, [<span class="ident">u8</span>]<span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="number">0</span>
     }
 }
 
-<span class='doccomment'>/// Newtype for an arbitary BadRequest &quot;info&quot;, which could be</span>
-<span class='doccomment'>/// UTF8 string.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>PartialEq</span>, <span class='ident'>Clone</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>BadRequestPayload</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>(<span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, [<span class='ident'>u8</span>]<span class='op'>&gt;</span>);
+<span class="doccomment">/// Newtype for an arbitary BadRequest &quot;info&quot;, which could be</span>
+<span class="doccomment">/// UTF8 string.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BadRequestPayload</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, [<span class="ident">u8</span>]<span class="op">&gt;</span>);
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>BadRequestPayload</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>BadRequestPayload</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
-        <span class='ident'>BadRequestPayload</span>(<span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='self'>self</span>.<span class='number'>0</span>.<span class='ident'>into_owned</span>()))
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">BadRequestPayload</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">BadRequestPayload</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
+        <span class="ident">BadRequestPayload</span>(<span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">into_owned</span>()))
     }
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>AsRef</span><span class='op'>&lt;</span>[<span class='ident'>u8</span>]<span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>BadRequestPayload</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>as_ref</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='kw-2'>&amp;</span>[<span class='ident'>u8</span>] {
-        <span class='self'>self</span>.<span class='number'>0</span>.<span class='ident'>as_ref</span>()
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">AsRef</span><span class="op">&lt;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">BadRequestPayload</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">as_ref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] {
+        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">as_ref</span>()
     }
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>ByteWrapper</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>BadRequestPayload</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>type</span> <span class='ident'>ConversionErr</span> <span class='op'>=</span> <span class='ident'>Error</span>;
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">ByteWrapper</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">BadRequestPayload</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">type</span> <span class="ident">ConversionErr</span> <span class="op">=</span> <span class="ident">Error</span>;
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>From</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, [<span class='ident'>u8</span>]<span class='op'>&gt;&gt;</span> <span class='kw'>for</span> <span class='ident'>BadRequestPayload</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>data</span>: <span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, [<span class='ident'>u8</span>]<span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>BadRequestPayload</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-        <span class='ident'>BadRequestPayload</span>(<span class='ident'>data</span>)
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, [<span class="ident">u8</span>]<span class="op">&gt;&gt;</span> <span class="kw">for</span> <span class="ident">BadRequestPayload</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">data</span>: <span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, [<span class="ident">u8</span>]<span class="op">&gt;</span>) <span class="op">-&gt;</span> <span class="ident">BadRequestPayload</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+        <span class="ident">BadRequestPayload</span>(<span class="ident">data</span>)
     }
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, [<span class='ident'>u8</span>]<span class='op'>&gt;&gt;</span> <span class='kw'>for</span> <span class='ident'>BadRequestPayload</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, [<span class='ident'>u8</span>]<span class='op'>&gt;</span> {
-        <span class='self'>self</span>.<span class='number'>0</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, [<span class="ident">u8</span>]<span class="op">&gt;&gt;</span> <span class="kw">for</span> <span class="ident">BadRequestPayload</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, [<span class="ident">u8</span>]<span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="number">0</span>
     }
 }
 
-<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>wrapup</span> {
-    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>x</span>:<span class='ident'>ty</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>f</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {
-        <span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>From</span><span class='op'>&lt;</span><span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>x</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>RawMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-            <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>x</span>: <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>x</span>) <span class='op'>-&gt;</span> <span class='ident'>RawMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-                <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>f</span>(<span class='ident'>x</span>)
+<span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">wrapup</span> {
+    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>:<span class="ident">ty</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">f</span>:<span class="ident">expr</span>) <span class="op">=&gt;</span> {
+        <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">RawMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+            <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">x</span>: <span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>) <span class="op">-&gt;</span> <span class="ident">RawMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+                <span class="macro-nonterminal">$</span><span class="macro-nonterminal">f</span>(<span class="ident">x</span>)
             }
         }
     };
 }
 
-<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>wrapup_directed</span> {
-    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>x</span>: <span class='ident'>ty</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>f</span>: <span class='ident'>expr</span>) <span class='op'>=&gt;</span> {
-        <span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>From</span><span class='op'>&lt;</span>(<span class='ident'>ReadDirection</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>x</span>)<span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>RawMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-            <span class='kw'>fn</span> <span class='ident'>from</span>((<span class='ident'>x</span>, <span class='ident'>y</span>): (<span class='ident'>ReadDirection</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>x</span>)) <span class='op'>-&gt;</span> <span class='ident'>RawMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-                <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>f</span>(<span class='ident'>x</span>, <span class='ident'>y</span>)
+<span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">wrapup_directed</span> {
+    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>: <span class="ident">ty</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">f</span>: <span class="ident">expr</span>) <span class="op">=&gt;</span> {
+        <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span>(<span class="ident">ReadDirection</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">RawMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+            <span class="kw">fn</span> <span class="ident">from</span>((<span class="ident">x</span>, <span class="ident">y</span>): (<span class="ident">ReadDirection</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>)) <span class="op">-&gt;</span> <span class="ident">RawMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+                <span class="macro-nonterminal">$</span><span class="macro-nonterminal">f</span>(<span class="ident">x</span>, <span class="ident">y</span>)
             }
         }
     };
 }
 
-<span class='macro'>wrapup</span><span class='macro'>!</span>(<span class='ident'>BadRequestPayload</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>, <span class='ident'>RawMessage</span>::<span class='ident'>BadRequest</span>);
-<span class='macro'>wrapup</span><span class='macro'>!</span>(<span class='ident'>NotAuthenticatedPayload</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>, <span class='ident'>RawMessage</span>::<span class='ident'>NotAuthenticated</span>);
-<span class='macro'>wrapup</span><span class='macro'>!</span>(<span class='ident'>WriteEvents</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>, <span class='ident'>RawMessage</span>::<span class='ident'>WriteEvents</span>);
-<span class='macro'>wrapup</span><span class='macro'>!</span>(<span class='ident'>WriteEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>, <span class='ident'>RawMessage</span>::<span class='ident'>WriteEventsCompleted</span>);
-<span class='macro'>wrapup</span><span class='macro'>!</span>(<span class='ident'>DeleteStream</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>, <span class='ident'>RawMessage</span>::<span class='ident'>DeleteStream</span>);
-<span class='macro'>wrapup</span><span class='macro'>!</span>(<span class='ident'>DeleteStreamCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>, <span class='ident'>RawMessage</span>::<span class='ident'>DeleteStreamCompleted</span>);
-<span class='macro'>wrapup</span><span class='macro'>!</span>(<span class='ident'>ReadEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>, <span class='ident'>RawMessage</span>::<span class='ident'>ReadEvent</span>);
-<span class='macro'>wrapup</span><span class='macro'>!</span>(<span class='ident'>ReadEventCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>, <span class='ident'>RawMessage</span>::<span class='ident'>ReadEventCompleted</span>);
-<span class='macro'>wrapup</span><span class='macro'>!</span>(<span class='ident'>NotHandled</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>, <span class='ident'>RawMessage</span>::<span class='ident'>NotHandled</span>);
-<span class='macro'>wrapup_directed</span><span class='macro'>!</span>(<span class='ident'>ReadStreamEvents</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>, <span class='ident'>RawMessage</span>::<span class='ident'>ReadStreamEvents</span>);
-<span class='macro'>wrapup_directed</span><span class='macro'>!</span>(<span class='ident'>ReadStreamEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>, <span class='ident'>RawMessage</span>::<span class='ident'>ReadStreamEventsCompleted</span>);
-<span class='macro'>wrapup_directed</span><span class='macro'>!</span>(<span class='ident'>ReadAllEvents</span>, <span class='ident'>RawMessage</span>::<span class='ident'>ReadAllEvents</span>);
-<span class='macro'>wrapup_directed</span><span class='macro'>!</span>(<span class='ident'>ReadAllEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>, <span class='ident'>RawMessage</span>::<span class='ident'>ReadAllEventsCompleted</span>);
+<span class="macro">wrapup</span><span class="macro">!</span>(<span class="ident">BadRequestPayload</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>, <span class="ident">RawMessage</span>::<span class="ident">BadRequest</span>);
+<span class="macro">wrapup</span><span class="macro">!</span>(<span class="ident">NotAuthenticatedPayload</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>, <span class="ident">RawMessage</span>::<span class="ident">NotAuthenticated</span>);
+<span class="macro">wrapup</span><span class="macro">!</span>(<span class="ident">WriteEvents</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>, <span class="ident">RawMessage</span>::<span class="ident">WriteEvents</span>);
+<span class="macro">wrapup</span><span class="macro">!</span>(<span class="ident">WriteEventsCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>, <span class="ident">RawMessage</span>::<span class="ident">WriteEventsCompleted</span>);
+<span class="macro">wrapup</span><span class="macro">!</span>(<span class="ident">DeleteStream</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>, <span class="ident">RawMessage</span>::<span class="ident">DeleteStream</span>);
+<span class="macro">wrapup</span><span class="macro">!</span>(<span class="ident">DeleteStreamCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>, <span class="ident">RawMessage</span>::<span class="ident">DeleteStreamCompleted</span>);
+<span class="macro">wrapup</span><span class="macro">!</span>(<span class="ident">ReadEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>, <span class="ident">RawMessage</span>::<span class="ident">ReadEvent</span>);
+<span class="macro">wrapup</span><span class="macro">!</span>(<span class="ident">ReadEventCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>, <span class="ident">RawMessage</span>::<span class="ident">ReadEventCompleted</span>);
+<span class="macro">wrapup</span><span class="macro">!</span>(<span class="ident">NotHandled</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>, <span class="ident">RawMessage</span>::<span class="ident">NotHandled</span>);
+<span class="macro">wrapup_directed</span><span class="macro">!</span>(<span class="ident">ReadStreamEvents</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>, <span class="ident">RawMessage</span>::<span class="ident">ReadStreamEvents</span>);
+<span class="macro">wrapup_directed</span><span class="macro">!</span>(<span class="ident">ReadStreamEventsCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>, <span class="ident">RawMessage</span>::<span class="ident">ReadStreamEventsCompleted</span>);
+<span class="macro">wrapup_directed</span><span class="macro">!</span>(<span class="ident">ReadAllEvents</span>, <span class="ident">RawMessage</span>::<span class="ident">ReadAllEvents</span>);
+<span class="macro">wrapup_directed</span><span class="macro">!</span>(<span class="ident">ReadAllEventsCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>, <span class="ident">RawMessage</span>::<span class="ident">ReadAllEventsCompleted</span>);
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>From</span><span class='op'>&lt;</span>(<span class='ident'>u8</span>, <span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, [<span class='ident'>u8</span>]<span class='op'>&gt;</span>)<span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>RawMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>from</span>((<span class='ident'>d</span>, <span class='ident'>data</span>): (<span class='ident'>u8</span>, <span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, [<span class='ident'>u8</span>]<span class='op'>&gt;</span>)) <span class='op'>-&gt;</span> <span class='ident'>RawMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-        <span class='ident'>RawMessage</span>::<span class='ident'>Unsupported</span>(<span class='ident'>d</span>, <span class='ident'>data</span>)
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span>(<span class="ident">u8</span>, <span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, [<span class="ident">u8</span>]<span class="op">&gt;</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">RawMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>((<span class="ident">d</span>, <span class="ident">data</span>): (<span class="ident">u8</span>, <span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, [<span class="ident">u8</span>]<span class="op">&gt;</span>)) <span class="op">-&gt;</span> <span class="ident">RawMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+        <span class="ident">RawMessage</span>::<span class="ident">Unsupported</span>(<span class="ident">d</span>, <span class="ident">data</span>)
     }
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>RawMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='doccomment'>/// Turns possibly borrowed value of `self` into one that owns all of it&#39;s data.</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>RawMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
-        <span class='kw'>use</span> <span class='self'>self</span>::<span class='ident'>RawMessage</span>::<span class='kw-2'>*</span>;
-        <span class='kw'>use</span> <span class='self'>self</span>::<span class='ident'>client_messages_ext</span>::<span class='kw-2'>*</span>;
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">RawMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
 
-        <span class='kw'>match</span> <span class='self'>self</span> {
-            <span class='ident'>HeartbeatRequest</span> <span class='op'>=&gt;</span> <span class='ident'>HeartbeatRequest</span>,
-            <span class='ident'>HeartbeatResponse</span> <span class='op'>=&gt;</span> <span class='ident'>HeartbeatResponse</span>,
+    <span class="doccomment">/// Attempt to convert a raw message into an adapted one</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_adapt</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">adapted</span>::<span class="ident">AdaptedMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>, (<span class="self">Self</span>, <span class="ident">Error</span>)<span class="op">&gt;</span> {
+        <span class="kw">use</span> <span class="ident">CustomTryInto</span>;
+        <span class="self">self</span>.<span class="ident">try_into</span>()
+    }
 
-            <span class='ident'>Ping</span> <span class='op'>=&gt;</span> <span class='ident'>Ping</span>,
-            <span class='ident'>Pong</span> <span class='op'>=&gt;</span> <span class='ident'>Pong</span>,
+    <span class="doccomment">/// Turns possibly borrowed value of `self` into one that owns all of it&#39;s data.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">RawMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
+        <span class="kw">use</span> <span class="self">self</span>::<span class="ident">RawMessage</span>::<span class="kw-2">*</span>;
+        <span class="kw">use</span> <span class="self">self</span>::<span class="ident">client_messages_ext</span>::<span class="kw-2">*</span>;
 
-            <span class='ident'>Authenticate</span> <span class='op'>=&gt;</span> <span class='ident'>Authenticate</span>,
-            <span class='ident'>Authenticated</span> <span class='op'>=&gt;</span> <span class='ident'>Authenticated</span>,
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">HeartbeatRequest</span> <span class="op">=&gt;</span> <span class="ident">HeartbeatRequest</span>,
+            <span class="ident">HeartbeatResponse</span> <span class="op">=&gt;</span> <span class="ident">HeartbeatResponse</span>,
 
-            <span class='ident'>WriteEvents</span>(<span class='ident'>e</span>) <span class='op'>=&gt;</span> <span class='ident'>WriteEvents</span>(<span class='ident'>e</span>.<span class='ident'>into_owned</span>()),
-            <span class='ident'>WriteEventsCompleted</span>(<span class='ident'>e</span>) <span class='op'>=&gt;</span> <span class='ident'>WriteEventsCompleted</span>(<span class='ident'>e</span>.<span class='ident'>into_owned</span>()),
+            <span class="ident">Ping</span> <span class="op">=&gt;</span> <span class="ident">Ping</span>,
+            <span class="ident">Pong</span> <span class="op">=&gt;</span> <span class="ident">Pong</span>,
 
-            <span class='ident'>DeleteStream</span>(<span class='ident'>e</span>) <span class='op'>=&gt;</span> <span class='ident'>DeleteStream</span>(<span class='ident'>e</span>.<span class='ident'>into_owned</span>()),
-            <span class='ident'>DeleteStreamCompleted</span>(<span class='ident'>e</span>) <span class='op'>=&gt;</span> <span class='ident'>DeleteStreamCompleted</span>(<span class='ident'>e</span>.<span class='ident'>into_owned</span>()),
+            <span class="ident">Authenticate</span> <span class="op">=&gt;</span> <span class="ident">Authenticate</span>,
+            <span class="ident">Authenticated</span> <span class="op">=&gt;</span> <span class="ident">Authenticated</span>,
 
-            <span class='ident'>ReadEvent</span>(<span class='ident'>e</span>) <span class='op'>=&gt;</span> <span class='ident'>ReadEvent</span>(<span class='ident'>e</span>.<span class='ident'>into_owned</span>()),
-            <span class='ident'>ReadEventCompleted</span>(<span class='ident'>e</span>) <span class='op'>=&gt;</span> <span class='ident'>ReadEventCompleted</span>(<span class='ident'>e</span>.<span class='ident'>into_owned</span>()),
+            <span class="ident">WriteEvents</span>(<span class="ident">e</span>) <span class="op">=&gt;</span> <span class="ident">WriteEvents</span>(<span class="ident">e</span>.<span class="ident">into_owned</span>()),
+            <span class="ident">WriteEventsCompleted</span>(<span class="ident">e</span>) <span class="op">=&gt;</span> <span class="ident">WriteEventsCompleted</span>(<span class="ident">e</span>.<span class="ident">into_owned</span>()),
 
-            <span class='ident'>ReadStreamEvents</span>(<span class='ident'>dir</span>, <span class='ident'>e</span>) <span class='op'>=&gt;</span> <span class='ident'>ReadStreamEvents</span>(<span class='ident'>dir</span>, <span class='ident'>e</span>.<span class='ident'>into_owned</span>()),
-            <span class='ident'>ReadStreamEventsCompleted</span>(<span class='ident'>dir</span>, <span class='ident'>e</span>) <span class='op'>=&gt;</span> <span class='ident'>ReadStreamEventsCompleted</span>(<span class='ident'>dir</span>, <span class='ident'>e</span>.<span class='ident'>into_owned</span>()),
+            <span class="ident">DeleteStream</span>(<span class="ident">e</span>) <span class="op">=&gt;</span> <span class="ident">DeleteStream</span>(<span class="ident">e</span>.<span class="ident">into_owned</span>()),
+            <span class="ident">DeleteStreamCompleted</span>(<span class="ident">e</span>) <span class="op">=&gt;</span> <span class="ident">DeleteStreamCompleted</span>(<span class="ident">e</span>.<span class="ident">into_owned</span>()),
 
-            <span class='ident'>ReadAllEvents</span>(<span class='ident'>dir</span>, <span class='ident'>e</span>) <span class='op'>=&gt;</span> <span class='ident'>ReadAllEvents</span>(<span class='ident'>dir</span>, <span class='ident'>e</span>),
-            <span class='ident'>ReadAllEventsCompleted</span>(<span class='ident'>dir</span>, <span class='ident'>e</span>) <span class='op'>=&gt;</span> <span class='ident'>ReadAllEventsCompleted</span>(<span class='ident'>dir</span>, <span class='ident'>e</span>.<span class='ident'>into_owned</span>()),
+            <span class="ident">ReadEvent</span>(<span class="ident">e</span>) <span class="op">=&gt;</span> <span class="ident">ReadEvent</span>(<span class="ident">e</span>.<span class="ident">into_owned</span>()),
+            <span class="ident">ReadEventCompleted</span>(<span class="ident">e</span>) <span class="op">=&gt;</span> <span class="ident">ReadEventCompleted</span>(<span class="ident">e</span>.<span class="ident">into_owned</span>()),
 
-            <span class='ident'>BadRequest</span>(<span class='ident'>e</span>) <span class='op'>=&gt;</span> <span class='ident'>BadRequest</span>(<span class='ident'>e</span>.<span class='ident'>into_owned</span>()),
-            <span class='ident'>NotHandled</span>(<span class='ident'>e</span>) <span class='op'>=&gt;</span> <span class='ident'>NotHandled</span>(<span class='ident'>e</span>.<span class='ident'>into_owned</span>()),
-            <span class='ident'>NotAuthenticated</span>(<span class='ident'>e</span>) <span class='op'>=&gt;</span> <span class='ident'>NotAuthenticated</span>(<span class='ident'>e</span>.<span class='ident'>into_owned</span>()),
-            <span class='ident'>Unsupported</span>(<span class='ident'>d</span>, <span class='ident'>bytes</span>) <span class='op'>=&gt;</span> <span class='ident'>Unsupported</span>(<span class='ident'>d</span>, <span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='ident'>bytes</span>.<span class='ident'>into_owned</span>())),
+            <span class="ident">ReadStreamEvents</span>(<span class="ident">dir</span>, <span class="ident">e</span>) <span class="op">=&gt;</span> <span class="ident">ReadStreamEvents</span>(<span class="ident">dir</span>, <span class="ident">e</span>.<span class="ident">into_owned</span>()),
+            <span class="ident">ReadStreamEventsCompleted</span>(<span class="ident">dir</span>, <span class="ident">e</span>) <span class="op">=&gt;</span> <span class="ident">ReadStreamEventsCompleted</span>(<span class="ident">dir</span>, <span class="ident">e</span>.<span class="ident">into_owned</span>()),
+
+            <span class="ident">ReadAllEvents</span>(<span class="ident">dir</span>, <span class="ident">e</span>) <span class="op">=&gt;</span> <span class="ident">ReadAllEvents</span>(<span class="ident">dir</span>, <span class="ident">e</span>),
+            <span class="ident">ReadAllEventsCompleted</span>(<span class="ident">dir</span>, <span class="ident">e</span>) <span class="op">=&gt;</span> <span class="ident">ReadAllEventsCompleted</span>(<span class="ident">dir</span>, <span class="ident">e</span>.<span class="ident">into_owned</span>()),
+
+            <span class="ident">BadRequest</span>(<span class="ident">e</span>) <span class="op">=&gt;</span> <span class="ident">BadRequest</span>(<span class="ident">e</span>.<span class="ident">into_owned</span>()),
+            <span class="ident">NotHandled</span>(<span class="ident">e</span>) <span class="op">=&gt;</span> <span class="ident">NotHandled</span>(<span class="ident">e</span>.<span class="ident">into_owned</span>()),
+            <span class="ident">NotAuthenticated</span>(<span class="ident">e</span>) <span class="op">=&gt;</span> <span class="ident">NotAuthenticated</span>(<span class="ident">e</span>.<span class="ident">into_owned</span>()),
+            <span class="ident">Unsupported</span>(<span class="ident">d</span>, <span class="ident">bytes</span>) <span class="op">=&gt;</span> <span class="ident">Unsupported</span>(<span class="ident">d</span>, <span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="ident">bytes</span>.<span class="ident">into_owned</span>())),
         }
     }
 
-    <span class='doccomment'>/// Decodes the message from the buffer without any cloning.</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>decode</span>(<span class='ident'>discriminator</span>: <span class='ident'>u8</span>, <span class='ident'>buf</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> [<span class='ident'>u8</span>]) <span class='op'>-&gt;</span> <span class='ident'>io</span>::<span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>RawMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;&gt;</span> {
-        <span class='kw'>use</span> <span class='self'>self</span>::<span class='ident'>RawMessage</span>;
-        <span class='kw'>use</span> <span class='ident'>ReadDirection</span>::{<span class='ident'>Forward</span>, <span class='ident'>Backward</span>};
+    <span class="doccomment">/// Decodes the message from the buffer without any cloning.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">decode</span>(<span class="ident">discriminator</span>: <span class="ident">u8</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">u8</span>]) <span class="op">-&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RawMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;&gt;</span> {
+        <span class="kw">use</span> <span class="self">self</span>::<span class="ident">RawMessage</span>;
+        <span class="kw">use</span> <span class="ident">ReadDirection</span>::{<span class="ident">Forward</span>, <span class="ident">Backward</span>};
 
-        <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>decode</span> {
-            (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>x</span>:<span class='ident'>ty</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>buf</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {
+        <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">decode</span> {
+            (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>:<span class="ident">ty</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">buf</span>:<span class="ident">expr</span>) <span class="op">=&gt;</span> {
                 {
-                    <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>reader</span> <span class='op'>=</span> ::<span class='ident'>quick_protobuf</span>::<span class='ident'>reader</span>::<span class='ident'>BytesReader</span>::<span class='ident'>from_bytes</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>buf</span>);
-                    <span class='kw'>let</span> <span class='ident'>res</span>: <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>x</span>, <span class='ident'>io</span>::<span class='ident'>Error</span><span class='op'>&gt;</span> <span class='op'>=</span> <span class='op'>&lt;</span><span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>x</span><span class='op'>&gt;</span>::<span class='ident'>from_reader</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>reader</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>buf</span>)
-                        .<span class='ident'>map_err</span>(<span class='op'>|</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>x</span>.<span class='ident'>into</span>());
-                    <span class='macro'>assert</span><span class='macro'>!</span>(<span class='ident'>reader</span>.<span class='ident'>is_eof</span>());
-                    <span class='ident'>res</span>
+                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> ::<span class="ident">quick_protobuf</span>::<span class="ident">reader</span>::<span class="ident">BytesReader</span>::<span class="ident">from_bytes</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">buf</span>);
+                    <span class="kw">let</span> <span class="ident">res</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>, <span class="ident">io</span>::<span class="ident">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span><span class="op">&gt;</span>::<span class="ident">from_reader</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">reader</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">buf</span>)
+                        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">into</span>());
+                    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">reader</span>.<span class="ident">is_eof</span>());
+                    <span class="ident">res</span>
                 }
             }
         }
 
-        <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>without_data</span> {
-            (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>x</span>: <span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>buf</span>: <span class='ident'>expr</span>) <span class='op'>=&gt;</span> {
+        <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">without_data</span> {
+            (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>: <span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">buf</span>: <span class="ident">expr</span>) <span class="op">=&gt;</span> {
                 {
-                    <span class='prelude-val'>Ok</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>x</span>)
+                    <span class="prelude-val">Ok</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>)
                 }
             }
         }
 
-        <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>decoded</span> {
-            (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>x</span>:<span class='ident'>ty</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>buf</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>var</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {
+        <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">decoded</span> {
+            (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>:<span class="ident">ty</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">buf</span>:<span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">var</span>:<span class="ident">expr</span>) <span class="op">=&gt;</span> {
                 {
-                    <span class='macro'>decode</span><span class='macro'>!</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>x</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>buf</span>).<span class='ident'>map</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>var</span>)
+                    <span class="macro">decode</span><span class="macro">!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">buf</span>).<span class="ident">map</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">var</span>)
                 }
             };
-            (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>x</span>:<span class='ident'>ty</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>buf</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>var</span>:<span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>dir</span>:<span class='ident'>expr</span>) <span class='op'>=&gt;</span> {
+            (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>:<span class="ident">ty</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">buf</span>:<span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">var</span>:<span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">dir</span>:<span class="ident">expr</span>) <span class="op">=&gt;</span> {
                 {
-                    <span class='macro'>decode</span><span class='macro'>!</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>x</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>buf</span>).<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>x</span><span class='op'>|</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>var</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>dir</span>, <span class='ident'>x</span>))
+                    <span class="macro">decode</span><span class="macro">!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">buf</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">var</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">dir</span>, <span class="ident">x</span>))
                 }
             };
         }
 
-        <span class='kw'>match</span> <span class='ident'>discriminator</span> {
-            <span class='comment'>// these hold no data</span>
-            <span class='number'>0x01</span> <span class='op'>=&gt;</span> <span class='macro'>without_data</span><span class='macro'>!</span>(<span class='ident'>RawMessage</span>::<span class='ident'>HeartbeatRequest</span>, <span class='ident'>buf</span>),
-            <span class='number'>0x02</span> <span class='op'>=&gt;</span> <span class='macro'>without_data</span><span class='macro'>!</span>(<span class='ident'>RawMessage</span>::<span class='ident'>HeartbeatResponse</span>, <span class='ident'>buf</span>),
-            <span class='number'>0x03</span> <span class='op'>=&gt;</span> <span class='macro'>without_data</span><span class='macro'>!</span>(<span class='ident'>RawMessage</span>::<span class='ident'>Ping</span>, <span class='ident'>buf</span>),
-            <span class='number'>0x04</span> <span class='op'>=&gt;</span> <span class='macro'>without_data</span><span class='macro'>!</span>(<span class='ident'>RawMessage</span>::<span class='ident'>Pong</span>, <span class='ident'>buf</span>),
+        <span class="kw">match</span> <span class="ident">discriminator</span> {
+            <span class="comment">// these hold no data</span>
+            <span class="number">0x01</span> <span class="op">=&gt;</span> <span class="macro">without_data</span><span class="macro">!</span>(<span class="ident">RawMessage</span>::<span class="ident">HeartbeatRequest</span>, <span class="ident">buf</span>),
+            <span class="number">0x02</span> <span class="op">=&gt;</span> <span class="macro">without_data</span><span class="macro">!</span>(<span class="ident">RawMessage</span>::<span class="ident">HeartbeatResponse</span>, <span class="ident">buf</span>),
+            <span class="number">0x03</span> <span class="op">=&gt;</span> <span class="macro">without_data</span><span class="macro">!</span>(<span class="ident">RawMessage</span>::<span class="ident">Ping</span>, <span class="ident">buf</span>),
+            <span class="number">0x04</span> <span class="op">=&gt;</span> <span class="macro">without_data</span><span class="macro">!</span>(<span class="ident">RawMessage</span>::<span class="ident">Pong</span>, <span class="ident">buf</span>),
 
-            <span class='number'>0x82</span> <span class='op'>=&gt;</span> <span class='macro'>decoded</span><span class='macro'>!</span>(<span class='ident'>WriteEvents</span>, <span class='ident'>buf</span>, <span class='ident'>RawMessage</span>::<span class='ident'>WriteEvents</span>),
-            <span class='number'>0x83</span> <span class='op'>=&gt;</span> <span class='macro'>decoded</span><span class='macro'>!</span>(<span class='ident'>WriteEventsCompleted</span>, <span class='ident'>buf</span>, <span class='ident'>RawMessage</span>::<span class='ident'>WriteEventsCompleted</span>),
+            <span class="number">0x82</span> <span class="op">=&gt;</span> <span class="macro">decoded</span><span class="macro">!</span>(<span class="ident">WriteEvents</span>, <span class="ident">buf</span>, <span class="ident">RawMessage</span>::<span class="ident">WriteEvents</span>),
+            <span class="number">0x83</span> <span class="op">=&gt;</span> <span class="macro">decoded</span><span class="macro">!</span>(<span class="ident">WriteEventsCompleted</span>, <span class="ident">buf</span>, <span class="ident">RawMessage</span>::<span class="ident">WriteEventsCompleted</span>),
 
-            <span class='number'>0x8A</span> <span class='op'>=&gt;</span> <span class='macro'>decoded</span><span class='macro'>!</span>(<span class='ident'>DeleteStream</span>, <span class='ident'>buf</span>, <span class='ident'>RawMessage</span>::<span class='ident'>DeleteStream</span>),
-            <span class='number'>0x8B</span> <span class='op'>=&gt;</span> <span class='macro'>decoded</span><span class='macro'>!</span>(<span class='ident'>DeleteStreamCompleted</span>, <span class='ident'>buf</span>, <span class='ident'>RawMessage</span>::<span class='ident'>DeleteStreamCompleted</span>),
+            <span class="number">0x8A</span> <span class="op">=&gt;</span> <span class="macro">decoded</span><span class="macro">!</span>(<span class="ident">DeleteStream</span>, <span class="ident">buf</span>, <span class="ident">RawMessage</span>::<span class="ident">DeleteStream</span>),
+            <span class="number">0x8B</span> <span class="op">=&gt;</span> <span class="macro">decoded</span><span class="macro">!</span>(<span class="ident">DeleteStreamCompleted</span>, <span class="ident">buf</span>, <span class="ident">RawMessage</span>::<span class="ident">DeleteStreamCompleted</span>),
 
-            <span class='number'>0xB0</span> <span class='op'>=&gt;</span> <span class='macro'>decoded</span><span class='macro'>!</span>(<span class='ident'>ReadEvent</span>, <span class='ident'>buf</span>, <span class='ident'>RawMessage</span>::<span class='ident'>ReadEvent</span>),
-            <span class='number'>0xB1</span> <span class='op'>=&gt;</span> <span class='macro'>decoded</span><span class='macro'>!</span>(<span class='ident'>ReadEventCompleted</span>, <span class='ident'>buf</span>, <span class='ident'>RawMessage</span>::<span class='ident'>ReadEventCompleted</span>),
+            <span class="number">0xB0</span> <span class="op">=&gt;</span> <span class="macro">decoded</span><span class="macro">!</span>(<span class="ident">ReadEvent</span>, <span class="ident">buf</span>, <span class="ident">RawMessage</span>::<span class="ident">ReadEvent</span>),
+            <span class="number">0xB1</span> <span class="op">=&gt;</span> <span class="macro">decoded</span><span class="macro">!</span>(<span class="ident">ReadEventCompleted</span>, <span class="ident">buf</span>, <span class="ident">RawMessage</span>::<span class="ident">ReadEventCompleted</span>),
 
-            <span class='number'>0xB2</span> <span class='op'>=&gt;</span> <span class='macro'>decoded</span><span class='macro'>!</span>(<span class='ident'>ReadStreamEvents</span>, <span class='ident'>buf</span>, <span class='ident'>RawMessage</span>::<span class='ident'>ReadStreamEvents</span>, <span class='ident'>Forward</span>),
-            <span class='number'>0xB3</span> <span class='op'>=&gt;</span> <span class='macro'>decoded</span><span class='macro'>!</span>(<span class='ident'>ReadStreamEventsCompleted</span>, <span class='ident'>buf</span>, <span class='ident'>RawMessage</span>::<span class='ident'>ReadStreamEventsCompleted</span>, <span class='ident'>Forward</span>),
-            <span class='number'>0xB4</span> <span class='op'>=&gt;</span> <span class='macro'>decoded</span><span class='macro'>!</span>(<span class='ident'>ReadStreamEvents</span>, <span class='ident'>buf</span>, <span class='ident'>RawMessage</span>::<span class='ident'>ReadStreamEvents</span>, <span class='ident'>Backward</span>),
-            <span class='number'>0xB5</span> <span class='op'>=&gt;</span> <span class='macro'>decoded</span><span class='macro'>!</span>(<span class='ident'>ReadStreamEventsCompleted</span>, <span class='ident'>buf</span>, <span class='ident'>RawMessage</span>::<span class='ident'>ReadStreamEventsCompleted</span>, <span class='ident'>Backward</span>),
+            <span class="number">0xB2</span> <span class="op">=&gt;</span> <span class="macro">decoded</span><span class="macro">!</span>(<span class="ident">ReadStreamEvents</span>, <span class="ident">buf</span>, <span class="ident">RawMessage</span>::<span class="ident">ReadStreamEvents</span>, <span class="ident">Forward</span>),
+            <span class="number">0xB3</span> <span class="op">=&gt;</span> <span class="macro">decoded</span><span class="macro">!</span>(<span class="ident">ReadStreamEventsCompleted</span>, <span class="ident">buf</span>, <span class="ident">RawMessage</span>::<span class="ident">ReadStreamEventsCompleted</span>, <span class="ident">Forward</span>),
+            <span class="number">0xB4</span> <span class="op">=&gt;</span> <span class="macro">decoded</span><span class="macro">!</span>(<span class="ident">ReadStreamEvents</span>, <span class="ident">buf</span>, <span class="ident">RawMessage</span>::<span class="ident">ReadStreamEvents</span>, <span class="ident">Backward</span>),
+            <span class="number">0xB5</span> <span class="op">=&gt;</span> <span class="macro">decoded</span><span class="macro">!</span>(<span class="ident">ReadStreamEventsCompleted</span>, <span class="ident">buf</span>, <span class="ident">RawMessage</span>::<span class="ident">ReadStreamEventsCompleted</span>, <span class="ident">Backward</span>),
 
-            <span class='number'>0xB6</span> <span class='op'>=&gt;</span> <span class='macro'>decoded</span><span class='macro'>!</span>(<span class='ident'>ReadAllEvents</span>, <span class='ident'>buf</span>, <span class='ident'>RawMessage</span>::<span class='ident'>ReadAllEvents</span>, <span class='ident'>Forward</span>),
-            <span class='number'>0xB7</span> <span class='op'>=&gt;</span> <span class='macro'>decoded</span><span class='macro'>!</span>(<span class='ident'>ReadAllEventsCompleted</span>, <span class='ident'>buf</span>, <span class='ident'>RawMessage</span>::<span class='ident'>ReadAllEventsCompleted</span>, <span class='ident'>Forward</span>),
-            <span class='number'>0xB8</span> <span class='op'>=&gt;</span> <span class='macro'>decoded</span><span class='macro'>!</span>(<span class='ident'>ReadAllEvents</span>, <span class='ident'>buf</span>, <span class='ident'>RawMessage</span>::<span class='ident'>ReadAllEvents</span>, <span class='ident'>Backward</span>),
-            <span class='number'>0xB9</span> <span class='op'>=&gt;</span> <span class='macro'>decoded</span><span class='macro'>!</span>(<span class='ident'>ReadAllEventsCompleted</span>, <span class='ident'>buf</span>, <span class='ident'>RawMessage</span>::<span class='ident'>ReadAllEventsCompleted</span>, <span class='ident'>Backward</span>),
+            <span class="number">0xB6</span> <span class="op">=&gt;</span> <span class="macro">decoded</span><span class="macro">!</span>(<span class="ident">ReadAllEvents</span>, <span class="ident">buf</span>, <span class="ident">RawMessage</span>::<span class="ident">ReadAllEvents</span>, <span class="ident">Forward</span>),
+            <span class="number">0xB7</span> <span class="op">=&gt;</span> <span class="macro">decoded</span><span class="macro">!</span>(<span class="ident">ReadAllEventsCompleted</span>, <span class="ident">buf</span>, <span class="ident">RawMessage</span>::<span class="ident">ReadAllEventsCompleted</span>, <span class="ident">Forward</span>),
+            <span class="number">0xB8</span> <span class="op">=&gt;</span> <span class="macro">decoded</span><span class="macro">!</span>(<span class="ident">ReadAllEvents</span>, <span class="ident">buf</span>, <span class="ident">RawMessage</span>::<span class="ident">ReadAllEvents</span>, <span class="ident">Backward</span>),
+            <span class="number">0xB9</span> <span class="op">=&gt;</span> <span class="macro">decoded</span><span class="macro">!</span>(<span class="ident">ReadAllEventsCompleted</span>, <span class="ident">buf</span>, <span class="ident">RawMessage</span>::<span class="ident">ReadAllEventsCompleted</span>, <span class="ident">Backward</span>),
 
-            <span class='number'>0xF0</span> <span class='op'>=&gt;</span> <span class='prelude-val'>Ok</span>(<span class='ident'>RawMessage</span>::<span class='ident'>BadRequest</span>(<span class='ident'>Cow</span>::<span class='ident'>Borrowed</span>(<span class='ident'>buf</span>).<span class='ident'>into</span>())),
-            <span class='number'>0xF1</span> <span class='op'>=&gt;</span> <span class='macro'>decoded</span><span class='macro'>!</span>(<span class='ident'>NotHandled</span>, <span class='ident'>buf</span>, <span class='ident'>RawMessage</span>::<span class='ident'>NotHandled</span>),
-            <span class='number'>0xF2</span> <span class='op'>=&gt;</span> <span class='macro'>without_data</span><span class='macro'>!</span>(<span class='ident'>RawMessage</span>::<span class='ident'>Authenticate</span>, <span class='ident'>buf</span>),
-            <span class='number'>0xF3</span> <span class='op'>=&gt;</span> <span class='macro'>without_data</span><span class='macro'>!</span>(<span class='ident'>RawMessage</span>::<span class='ident'>Authenticated</span>, <span class='ident'>buf</span>),
-            <span class='number'>0xF4</span> <span class='op'>=&gt;</span> <span class='prelude-val'>Ok</span>(<span class='ident'>RawMessage</span>::<span class='ident'>NotAuthenticated</span>(<span class='ident'>Cow</span>::<span class='ident'>Borrowed</span>(<span class='ident'>buf</span>).<span class='ident'>into</span>())),
-            <span class='ident'>x</span> <span class='op'>=&gt;</span> <span class='prelude-val'>Ok</span>((<span class='ident'>x</span>, <span class='ident'>Cow</span>::<span class='ident'>Borrowed</span>(<span class='ident'>buf</span>)).<span class='ident'>into</span>()),
+            <span class="number">0xF0</span> <span class="op">=&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">RawMessage</span>::<span class="ident">BadRequest</span>(<span class="ident">Cow</span>::<span class="ident">Borrowed</span>(<span class="ident">buf</span>).<span class="ident">into</span>())),
+            <span class="number">0xF1</span> <span class="op">=&gt;</span> <span class="macro">decoded</span><span class="macro">!</span>(<span class="ident">NotHandled</span>, <span class="ident">buf</span>, <span class="ident">RawMessage</span>::<span class="ident">NotHandled</span>),
+            <span class="number">0xF2</span> <span class="op">=&gt;</span> <span class="macro">without_data</span><span class="macro">!</span>(<span class="ident">RawMessage</span>::<span class="ident">Authenticate</span>, <span class="ident">buf</span>),
+            <span class="number">0xF3</span> <span class="op">=&gt;</span> <span class="macro">without_data</span><span class="macro">!</span>(<span class="ident">RawMessage</span>::<span class="ident">Authenticated</span>, <span class="ident">buf</span>),
+            <span class="number">0xF4</span> <span class="op">=&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">RawMessage</span>::<span class="ident">NotAuthenticated</span>(<span class="ident">Cow</span>::<span class="ident">Borrowed</span>(<span class="ident">buf</span>).<span class="ident">into</span>())),
+            <span class="ident">x</span> <span class="op">=&gt;</span> <span class="prelude-val">Ok</span>((<span class="ident">x</span>, <span class="ident">Cow</span>::<span class="ident">Borrowed</span>(<span class="ident">buf</span>)).<span class="ident">into</span>()),
         }
     }
 
-    <span class='doccomment'>/// Encodes the message into the given writer.</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>encode</span><span class='op'>&lt;</span><span class='ident'>W</span>: <span class='ident'>io</span>::<span class='ident'>Write</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>w</span>: <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>W</span>) <span class='op'>-&gt;</span> <span class='ident'>io</span>::<span class='prelude-ty'>Result</span><span class='op'>&lt;</span>()<span class='op'>&gt;</span> {
-        <span class='kw'>use</span> <span class='self'>self</span>::<span class='ident'>RawMessage</span>::<span class='kw-2'>*</span>;
-        <span class='kw'>use</span> <span class='ident'>quick_protobuf</span>::<span class='ident'>MessageWrite</span>;
+    <span class="doccomment">/// Encodes the message into the given writer.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">encode</span><span class="op">&lt;</span><span class="ident">W</span>: <span class="ident">io</span>::<span class="ident">Write</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">W</span>) <span class="op">-&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">use</span> <span class="self">self</span>::<span class="ident">RawMessage</span>::<span class="kw-2">*</span>;
+        <span class="kw">use</span> <span class="ident">quick_protobuf</span>::<span class="ident">MessageWrite</span>;
 
-        <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>encode</span> {
-            (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>x</span>: <span class='ident'>expr</span>, <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>w</span>: <span class='ident'>expr</span>) <span class='op'>=&gt;</span> {
+        <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">encode</span> {
+            (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>: <span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">w</span>: <span class="ident">expr</span>) <span class="op">=&gt;</span> {
                 {
-                    <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>writer</span> <span class='op'>=</span> <span class='ident'>quick_protobuf</span>::<span class='ident'>writer</span>::<span class='ident'>Writer</span>::<span class='ident'>new</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>w</span>);
-                    <span class='kw'>let</span> <span class='ident'>result</span>: <span class='prelude-ty'>Result</span><span class='op'>&lt;</span>(), <span class='ident'>io</span>::<span class='ident'>Error</span><span class='op'>&gt;</span> <span class='op'>=</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>x</span>.<span class='ident'>write_message</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>writer</span>)
-                        .<span class='ident'>map_err</span>(<span class='op'>|</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>x</span>.<span class='ident'>into</span>());
-                    <span class='ident'>result</span>
+                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">writer</span> <span class="op">=</span> <span class="ident">quick_protobuf</span>::<span class="ident">writer</span>::<span class="ident">Writer</span>::<span class="ident">new</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">w</span>);
+                    <span class="kw">let</span> <span class="ident">result</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">io</span>::<span class="ident">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>.<span class="ident">write_message</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">writer</span>)
+                        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">into</span>());
+                    <span class="ident">result</span>
                 }
             }
         }
 
-        <span class='kw'>match</span> <span class='kw-2'>*</span><span class='self'>self</span> {
-            <span class='ident'>HeartbeatRequest</span> <span class='op'>|</span>
-            <span class='ident'>HeartbeatResponse</span> <span class='op'>|</span>
-            <span class='ident'>Ping</span> <span class='op'>|</span>
-            <span class='ident'>Pong</span> <span class='op'>|</span>
-            <span class='ident'>Authenticate</span> <span class='op'>|</span>
-            <span class='ident'>Authenticated</span> <span class='op'>=&gt;</span> <span class='prelude-val'>Ok</span>(()),
+        <span class="kw">match</span> <span class="kw-2">*</span><span class="self">self</span> {
+            <span class="ident">HeartbeatRequest</span> <span class="op">|</span>
+            <span class="ident">HeartbeatResponse</span> <span class="op">|</span>
+            <span class="ident">Ping</span> <span class="op">|</span>
+            <span class="ident">Pong</span> <span class="op">|</span>
+            <span class="ident">Authenticate</span> <span class="op">|</span>
+            <span class="ident">Authenticated</span> <span class="op">=&gt;</span> <span class="prelude-val">Ok</span>(()),
 
-            <span class='ident'>WriteEvents</span>(<span class='kw-2'>ref</span> <span class='ident'>x</span>) <span class='op'>=&gt;</span> <span class='macro'>encode</span><span class='macro'>!</span>(<span class='ident'>x</span>, <span class='ident'>w</span>),
-            <span class='ident'>WriteEventsCompleted</span>(<span class='kw-2'>ref</span> <span class='ident'>x</span>) <span class='op'>=&gt;</span> <span class='macro'>encode</span><span class='macro'>!</span>(<span class='ident'>x</span>, <span class='ident'>w</span>),
+            <span class="ident">WriteEvents</span>(<span class="kw-2">ref</span> <span class="ident">x</span>) <span class="op">=&gt;</span> <span class="macro">encode</span><span class="macro">!</span>(<span class="ident">x</span>, <span class="ident">w</span>),
+            <span class="ident">WriteEventsCompleted</span>(<span class="kw-2">ref</span> <span class="ident">x</span>) <span class="op">=&gt;</span> <span class="macro">encode</span><span class="macro">!</span>(<span class="ident">x</span>, <span class="ident">w</span>),
 
-            <span class='ident'>DeleteStream</span>(<span class='kw-2'>ref</span> <span class='ident'>x</span>) <span class='op'>=&gt;</span> <span class='macro'>encode</span><span class='macro'>!</span>(<span class='ident'>x</span>, <span class='ident'>w</span>),
-            <span class='ident'>DeleteStreamCompleted</span>(<span class='kw-2'>ref</span> <span class='ident'>x</span>) <span class='op'>=&gt;</span> <span class='macro'>encode</span><span class='macro'>!</span>(<span class='ident'>x</span>, <span class='ident'>w</span>),
+            <span class="ident">DeleteStream</span>(<span class="kw-2">ref</span> <span class="ident">x</span>) <span class="op">=&gt;</span> <span class="macro">encode</span><span class="macro">!</span>(<span class="ident">x</span>, <span class="ident">w</span>),
+            <span class="ident">DeleteStreamCompleted</span>(<span class="kw-2">ref</span> <span class="ident">x</span>) <span class="op">=&gt;</span> <span class="macro">encode</span><span class="macro">!</span>(<span class="ident">x</span>, <span class="ident">w</span>),
 
-            <span class='ident'>ReadEvent</span>(<span class='kw-2'>ref</span> <span class='ident'>x</span>) <span class='op'>=&gt;</span> <span class='macro'>encode</span><span class='macro'>!</span>(<span class='ident'>x</span>, <span class='ident'>w</span>),
-            <span class='ident'>ReadEventCompleted</span>(<span class='kw-2'>ref</span> <span class='ident'>x</span>) <span class='op'>=&gt;</span> <span class='macro'>encode</span><span class='macro'>!</span>(<span class='ident'>x</span>, <span class='ident'>w</span>),
+            <span class="ident">ReadEvent</span>(<span class="kw-2">ref</span> <span class="ident">x</span>) <span class="op">=&gt;</span> <span class="macro">encode</span><span class="macro">!</span>(<span class="ident">x</span>, <span class="ident">w</span>),
+            <span class="ident">ReadEventCompleted</span>(<span class="kw-2">ref</span> <span class="ident">x</span>) <span class="op">=&gt;</span> <span class="macro">encode</span><span class="macro">!</span>(<span class="ident">x</span>, <span class="ident">w</span>),
 
-            <span class='ident'>ReadStreamEvents</span>(_, <span class='kw-2'>ref</span> <span class='ident'>x</span>) <span class='op'>=&gt;</span> <span class='macro'>encode</span><span class='macro'>!</span>(<span class='ident'>x</span>, <span class='ident'>w</span>),
-            <span class='ident'>ReadStreamEventsCompleted</span>(_, <span class='kw-2'>ref</span> <span class='ident'>x</span>) <span class='op'>=&gt;</span> <span class='macro'>encode</span><span class='macro'>!</span>(<span class='ident'>x</span>, <span class='ident'>w</span>),
+            <span class="ident">ReadStreamEvents</span>(_, <span class="kw-2">ref</span> <span class="ident">x</span>) <span class="op">=&gt;</span> <span class="macro">encode</span><span class="macro">!</span>(<span class="ident">x</span>, <span class="ident">w</span>),
+            <span class="ident">ReadStreamEventsCompleted</span>(_, <span class="kw-2">ref</span> <span class="ident">x</span>) <span class="op">=&gt;</span> <span class="macro">encode</span><span class="macro">!</span>(<span class="ident">x</span>, <span class="ident">w</span>),
 
-            <span class='ident'>ReadAllEvents</span>(_, <span class='kw-2'>ref</span> <span class='ident'>x</span>) <span class='op'>=&gt;</span> <span class='macro'>encode</span><span class='macro'>!</span>(<span class='ident'>x</span>, <span class='ident'>w</span>),
-            <span class='ident'>ReadAllEventsCompleted</span>(_, <span class='kw-2'>ref</span> <span class='ident'>x</span>) <span class='op'>=&gt;</span> <span class='macro'>encode</span><span class='macro'>!</span>(<span class='ident'>x</span>, <span class='ident'>w</span>),
+            <span class="ident">ReadAllEvents</span>(_, <span class="kw-2">ref</span> <span class="ident">x</span>) <span class="op">=&gt;</span> <span class="macro">encode</span><span class="macro">!</span>(<span class="ident">x</span>, <span class="ident">w</span>),
+            <span class="ident">ReadAllEventsCompleted</span>(_, <span class="kw-2">ref</span> <span class="ident">x</span>) <span class="op">=&gt;</span> <span class="macro">encode</span><span class="macro">!</span>(<span class="ident">x</span>, <span class="ident">w</span>),
 
-            <span class='ident'>BadRequest</span>(<span class='kw-2'>ref</span> <span class='ident'>x</span>) <span class='op'>=&gt;</span> <span class='ident'>w</span>.<span class='ident'>write_all</span>(<span class='ident'>x</span>.<span class='ident'>as_ref</span>()),
-            <span class='ident'>NotHandled</span>(<span class='kw-2'>ref</span> <span class='ident'>x</span>) <span class='op'>=&gt;</span> <span class='macro'>encode</span><span class='macro'>!</span>(<span class='ident'>x</span>, <span class='ident'>w</span>),
-            <span class='ident'>NotAuthenticated</span>(<span class='kw-2'>ref</span> <span class='ident'>x</span>) <span class='op'>=&gt;</span> <span class='ident'>w</span>.<span class='ident'>write_all</span>(<span class='ident'>x</span>.<span class='ident'>as_ref</span>()),
-            <span class='ident'>Unsupported</span>(_, <span class='kw-2'>ref</span> <span class='ident'>x</span>) <span class='op'>=&gt;</span> <span class='ident'>w</span>.<span class='ident'>write_all</span>(<span class='ident'>x</span>),
+            <span class="ident">BadRequest</span>(<span class="kw-2">ref</span> <span class="ident">x</span>) <span class="op">=&gt;</span> <span class="ident">w</span>.<span class="ident">write_all</span>(<span class="ident">x</span>.<span class="ident">as_ref</span>()),
+            <span class="ident">NotHandled</span>(<span class="kw-2">ref</span> <span class="ident">x</span>) <span class="op">=&gt;</span> <span class="macro">encode</span><span class="macro">!</span>(<span class="ident">x</span>, <span class="ident">w</span>),
+            <span class="ident">NotAuthenticated</span>(<span class="kw-2">ref</span> <span class="ident">x</span>) <span class="op">=&gt;</span> <span class="ident">w</span>.<span class="ident">write_all</span>(<span class="ident">x</span>.<span class="ident">as_ref</span>()),
+            <span class="ident">Unsupported</span>(_, <span class="kw-2">ref</span> <span class="ident">x</span>) <span class="op">=&gt;</span> <span class="ident">w</span>.<span class="ident">write_all</span>(<span class="ident">x</span>),
         }
     }
 
-    <span class='doccomment'>/// Returns the protocol discriminator value for the variant</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>discriminator</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>u8</span> {
-        <span class='comment'>// FIXME: copied from ::Message</span>
-        <span class='kw'>use</span> <span class='self'>self</span>::<span class='ident'>RawMessage</span>::<span class='kw-2'>*</span>;
-        <span class='kw'>match</span> <span class='kw-2'>*</span><span class='self'>self</span> {
-            <span class='ident'>HeartbeatRequest</span> <span class='op'>=&gt;</span> <span class='number'>0x01</span>,
-            <span class='ident'>HeartbeatResponse</span> <span class='op'>=&gt;</span> <span class='number'>0x02</span>,
-            <span class='ident'>Ping</span> <span class='op'>=&gt;</span> <span class='number'>0x03</span>,
-            <span class='ident'>Pong</span> <span class='op'>=&gt;</span> <span class='number'>0x04</span>,
+    <span class="doccomment">/// Returns the protocol discriminator value for the variant</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">discriminator</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">u8</span> {
+        <span class="comment">// FIXME: copied from ::Message</span>
+        <span class="kw">use</span> <span class="self">self</span>::<span class="ident">RawMessage</span>::<span class="kw-2">*</span>;
+        <span class="kw">match</span> <span class="kw-2">*</span><span class="self">self</span> {
+            <span class="ident">HeartbeatRequest</span> <span class="op">=&gt;</span> <span class="number">0x01</span>,
+            <span class="ident">HeartbeatResponse</span> <span class="op">=&gt;</span> <span class="number">0x02</span>,
+            <span class="ident">Ping</span> <span class="op">=&gt;</span> <span class="number">0x03</span>,
+            <span class="ident">Pong</span> <span class="op">=&gt;</span> <span class="number">0x04</span>,
 
-            <span class='ident'>WriteEvents</span>(_) <span class='op'>=&gt;</span> <span class='number'>0x82</span>,
-            <span class='ident'>WriteEventsCompleted</span>(_) <span class='op'>=&gt;</span> <span class='number'>0x83</span>,
+            <span class="ident">WriteEvents</span>(_) <span class="op">=&gt;</span> <span class="number">0x82</span>,
+            <span class="ident">WriteEventsCompleted</span>(_) <span class="op">=&gt;</span> <span class="number">0x83</span>,
 
-            <span class='ident'>DeleteStream</span>(_) <span class='op'>=&gt;</span> <span class='number'>0x8A</span>,
-            <span class='ident'>DeleteStreamCompleted</span>(_) <span class='op'>=&gt;</span> <span class='number'>0x8B</span>,
+            <span class="ident">DeleteStream</span>(_) <span class="op">=&gt;</span> <span class="number">0x8A</span>,
+            <span class="ident">DeleteStreamCompleted</span>(_) <span class="op">=&gt;</span> <span class="number">0x8B</span>,
 
-            <span class='ident'>ReadEvent</span>(_) <span class='op'>=&gt;</span> <span class='number'>0xB0</span>,
-            <span class='ident'>ReadEventCompleted</span>(_) <span class='op'>=&gt;</span> <span class='number'>0xB1</span>,
+            <span class="ident">ReadEvent</span>(_) <span class="op">=&gt;</span> <span class="number">0xB0</span>,
+            <span class="ident">ReadEventCompleted</span>(_) <span class="op">=&gt;</span> <span class="number">0xB1</span>,
 
-            <span class='ident'>ReadStreamEvents</span>(<span class='ident'>ReadDirection</span>::<span class='ident'>Forward</span>, _) <span class='op'>=&gt;</span> <span class='number'>0xB2</span>,
-            <span class='ident'>ReadStreamEventsCompleted</span>(<span class='ident'>ReadDirection</span>::<span class='ident'>Forward</span>, _) <span class='op'>=&gt;</span> <span class='number'>0xB3</span>,
+            <span class="ident">ReadStreamEvents</span>(<span class="ident">ReadDirection</span>::<span class="ident">Forward</span>, _) <span class="op">=&gt;</span> <span class="number">0xB2</span>,
+            <span class="ident">ReadStreamEventsCompleted</span>(<span class="ident">ReadDirection</span>::<span class="ident">Forward</span>, _) <span class="op">=&gt;</span> <span class="number">0xB3</span>,
 
-            <span class='ident'>ReadStreamEvents</span>(<span class='ident'>ReadDirection</span>::<span class='ident'>Backward</span>, _) <span class='op'>=&gt;</span> <span class='number'>0xB4</span>,
-            <span class='ident'>ReadStreamEventsCompleted</span>(<span class='ident'>ReadDirection</span>::<span class='ident'>Backward</span>, _) <span class='op'>=&gt;</span> <span class='number'>0xB5</span>,
+            <span class="ident">ReadStreamEvents</span>(<span class="ident">ReadDirection</span>::<span class="ident">Backward</span>, _) <span class="op">=&gt;</span> <span class="number">0xB4</span>,
+            <span class="ident">ReadStreamEventsCompleted</span>(<span class="ident">ReadDirection</span>::<span class="ident">Backward</span>, _) <span class="op">=&gt;</span> <span class="number">0xB5</span>,
 
-            <span class='ident'>ReadAllEvents</span>(<span class='ident'>ReadDirection</span>::<span class='ident'>Forward</span>, _) <span class='op'>=&gt;</span> <span class='number'>0xB6</span>,
-            <span class='ident'>ReadAllEventsCompleted</span>(<span class='ident'>ReadDirection</span>::<span class='ident'>Forward</span>, _) <span class='op'>=&gt;</span> <span class='number'>0xB7</span>,
+            <span class="ident">ReadAllEvents</span>(<span class="ident">ReadDirection</span>::<span class="ident">Forward</span>, _) <span class="op">=&gt;</span> <span class="number">0xB6</span>,
+            <span class="ident">ReadAllEventsCompleted</span>(<span class="ident">ReadDirection</span>::<span class="ident">Forward</span>, _) <span class="op">=&gt;</span> <span class="number">0xB7</span>,
 
-            <span class='ident'>ReadAllEvents</span>(<span class='ident'>ReadDirection</span>::<span class='ident'>Backward</span>, _) <span class='op'>=&gt;</span> <span class='number'>0xB8</span>,
-            <span class='ident'>ReadAllEventsCompleted</span>(<span class='ident'>ReadDirection</span>::<span class='ident'>Backward</span>, _) <span class='op'>=&gt;</span> <span class='number'>0xB9</span>,
+            <span class="ident">ReadAllEvents</span>(<span class="ident">ReadDirection</span>::<span class="ident">Backward</span>, _) <span class="op">=&gt;</span> <span class="number">0xB8</span>,
+            <span class="ident">ReadAllEventsCompleted</span>(<span class="ident">ReadDirection</span>::<span class="ident">Backward</span>, _) <span class="op">=&gt;</span> <span class="number">0xB9</span>,
 
-            <span class='ident'>BadRequest</span>(_) <span class='op'>=&gt;</span> <span class='number'>0xf0</span>,
-            <span class='ident'>NotHandled</span>(_) <span class='op'>=&gt;</span> <span class='number'>0xf1</span>,
-            <span class='ident'>Authenticate</span> <span class='op'>=&gt;</span> <span class='number'>0xf2</span>,
-            <span class='ident'>Authenticated</span> <span class='op'>=&gt;</span> <span class='number'>0xf3</span>,
-            <span class='ident'>NotAuthenticated</span>(_) <span class='op'>=&gt;</span> <span class='number'>0xf4</span>,
-            <span class='ident'>Unsupported</span>(<span class='ident'>d</span>, _) <span class='op'>=&gt;</span> <span class='ident'>d</span>,
+            <span class="ident">BadRequest</span>(_) <span class="op">=&gt;</span> <span class="number">0xf0</span>,
+            <span class="ident">NotHandled</span>(_) <span class="op">=&gt;</span> <span class="number">0xf1</span>,
+            <span class="ident">Authenticate</span> <span class="op">=&gt;</span> <span class="number">0xf2</span>,
+            <span class="ident">Authenticated</span> <span class="op">=&gt;</span> <span class="number">0xf3</span>,
+            <span class="ident">NotAuthenticated</span>(_) <span class="op">=&gt;</span> <span class="number">0xf4</span>,
+            <span class="ident">Unsupported</span>(<span class="ident">d</span>, _) <span class="op">=&gt;</span> <span class="ident">d</span>,
         }
     }
 }

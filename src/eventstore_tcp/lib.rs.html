@@ -522,484 +522,484 @@
 <span id="477">477</span>
 <span id="478">478</span>
 <span id="479">479</span>
-</pre><pre class='rust '>
-<span class='doccomment'>//! Tokio-based [EventStore](https://geteventstore.com/) client library in it&#39;s early stages.</span>
-<span class='doccomment'>//! Currently the most interesting API is the `tokio_service::service::Service` implemented by</span>
-<span class='doccomment'>//! `client::Client`, which allows sending values of `Package` to get back a `Future` of a response</span>
-<span class='doccomment'>//! `Package`. `Package` is the name for a frame in the protocol. See it&#39;s documentation for more</span>
-<span class='doccomment'>//! information.</span>
-<span class='doccomment'>//!</span>
-<span class='doccomment'>//! You can build values of `Package` using `builder::Builder` and it&#39;s functions. Actual payloads</span>
-<span class='doccomment'>//! are described as `Message` enum.</span>
-<span class='doccomment'>//!</span>
-<span class='doccomment'>//! The protocol is multiplexed so you can have multiple (hard limit is 128 currently) calls going</span>
-<span class='doccomment'>//! at any point in time. Current implementation is based on `tokio_proto::multiplex`, at the</span>
-<span class='doccomment'>//! moment using a custom fork. It does not yet support `tokio_proto::streaming::multiplex` which is</span>
-<span class='doccomment'>//! needed to support subscriptions.</span>
-<span class='doccomment'>//!</span>
-<span class='doccomment'>//! # Panics</span>
-<span class='doccomment'>//!</span>
-<span class='doccomment'>//! There should not be any panicing now that `adapted` and `raw` are separate.</span>
-<span class='doccomment'>//!</span>
-<span class='doccomment'>//! # Simplest example</span>
-<span class='doccomment'>//!</span>
-<span class='doccomment'>//! Example of writing to the database and simple handling of the response.</span>
-<span class='doccomment'>//!</span>
-<span class='doccomment'>//! ```no_run</span>
-<span class='doccomment'>//! extern crate futures;</span>
-<span class='doccomment'>//! extern crate tokio_core;</span>
-<span class='doccomment'>//! extern crate tokio_proto;</span>
-<span class='doccomment'>//! extern crate tokio_service;</span>
-<span class='doccomment'>//! extern crate eventstore_tcp;</span>
-<span class='doccomment'>//!</span>
-<span class='doccomment'>//! use std::net::SocketAddr;</span>
-<span class='doccomment'>//! use futures::Future;</span>
-<span class='doccomment'>//! use tokio_core::reactor::Core;</span>
-<span class='doccomment'>//! use tokio_service::Service;</span>
-<span class='doccomment'>//!</span>
-<span class='doccomment'>//! use eventstore_tcp::{EventStoreClient, Builder, AdaptedMessage, StreamVersion, ContentType};</span>
-<span class='doccomment'>//!</span>
-<span class='doccomment'>//! fn main() {</span>
-<span class='doccomment'>//!     let addr = &quot;127.0.0.1:1113&quot;.parse::&lt;SocketAddr&gt;().unwrap();</span>
-<span class='doccomment'>//!     let mut core = Core::new().unwrap();</span>
-<span class='doccomment'>//!</span>
-<span class='doccomment'>//!     // connecting the client returns a future for an EventStoreClient</span>
-<span class='doccomment'>//!     // which implements tokio_service::Service</span>
-<span class='doccomment'>//!     let client = EventStoreClient::connect(&amp;addr, &amp;core.handle());</span>
-<span class='doccomment'>//!</span>
-<span class='doccomment'>//!     let value = client.and_then(|client| {</span>
-<span class='doccomment'>//!         // once the connection is made and EventStoreClient (`client`)</span>
-<span class='doccomment'>//!         // is created, send a WriteEvents request:</span>
-<span class='doccomment'>//!         client.call(Builder::write_events()</span>
-<span class='doccomment'>//!             .stream_id(&quot;my_stream-1&quot;)</span>
-<span class='doccomment'>//!             .expected_version(StreamVersion::from(42))</span>
-<span class='doccomment'>//!             .new_event()</span>
-<span class='doccomment'>//!                 .event_type(&quot;meaning_of_life&quot;)</span>
-<span class='doccomment'>//!                 .data(&quot;{ &#39;meaning&#39;: 42 }&quot;.as_bytes())</span>
-<span class='doccomment'>//!                 .data_content_type(ContentType::Json)</span>
-<span class='doccomment'>//!             .done()</span>
-<span class='doccomment'>//!             .build_package(None, None))</span>
-<span class='doccomment'>//!</span>
-<span class='doccomment'>//!         // call returns a future representing the response</span>
-<span class='doccomment'>//!     }).and_then(|resp| {</span>
-<span class='doccomment'>//!         // By default, `resp` is a `Package` that contains the raw protobuf defined message</span>
-<span class='doccomment'>//!         // (`RawMessage`). It is possible to refine it into AdaptedMessage which can fail:</span>
-<span class='doccomment'>//!         match resp.message.try_adapt().unwrap() {</span>
-<span class='doccomment'>//!             AdaptedMessage::WriteEventsCompleted(Ok(_)) =&gt;</span>
-<span class='doccomment'>//!                 println!(&quot;Event was written successfully&quot;),</span>
-<span class='doccomment'>//!             AdaptedMessage::WriteEventsCompleted(Err(fail)) =&gt;</span>
-<span class='doccomment'>//!                 println!(&quot;Event writing failed: {:?}&quot;, fail),</span>
-<span class='doccomment'>//!             unexpected =&gt; println!(&quot;Unexpected response: {:#?}&quot;, unexpected),</span>
-<span class='doccomment'>//!         };</span>
-<span class='doccomment'>//!</span>
-<span class='doccomment'>//!         Ok(())</span>
-<span class='doccomment'>//!     });</span>
-<span class='doccomment'>//!</span>
-<span class='doccomment'>//!     core.run(value).unwrap();</span>
-<span class='doccomment'>//! }</span>
-<span class='doccomment'>//! ```</span>
-<span class='doccomment'>//!</span>
-<span class='doccomment'>//! More examples can be found in the aspiring command line tool under `examples/testclient`.</span>
-<span class='attribute'>#<span class='op'>!</span>[<span class='ident'>deny</span>(<span class='ident'>missing_docs</span>)]</span>
+</pre><pre class="rust ">
+<span class="doccomment">//! Tokio-based [EventStore](https://geteventstore.com/) client library in it&#39;s early stages.</span>
+<span class="doccomment">//! Currently the most interesting API is the `tokio_service::service::Service` implemented by</span>
+<span class="doccomment">//! `client::Client`, which allows sending values of `Package` to get back a `Future` of a response</span>
+<span class="doccomment">//! `Package`. `Package` is the name for a frame in the protocol. See it&#39;s documentation for more</span>
+<span class="doccomment">//! information.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! You can build values of `Package` using `builder::Builder` and it&#39;s functions. Actual payloads</span>
+<span class="doccomment">//! are described as `Message` enum.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! The protocol is multiplexed so you can have multiple (hard limit is 128 currently) calls going</span>
+<span class="doccomment">//! at any point in time. Current implementation is based on `tokio_proto::multiplex`, at the</span>
+<span class="doccomment">//! moment using a custom fork. It does not yet support `tokio_proto::streaming::multiplex` which is</span>
+<span class="doccomment">//! needed to support subscriptions.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! # Panics</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! There should not be any panicing now that `adapted` and `raw` are separate.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! # Simplest example</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! Example of writing to the database and simple handling of the response.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! ```no_run</span>
+<span class="doccomment">//! extern crate futures;</span>
+<span class="doccomment">//! extern crate tokio_core;</span>
+<span class="doccomment">//! extern crate tokio_proto;</span>
+<span class="doccomment">//! extern crate tokio_service;</span>
+<span class="doccomment">//! extern crate eventstore_tcp;</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! use std::net::SocketAddr;</span>
+<span class="doccomment">//! use futures::Future;</span>
+<span class="doccomment">//! use tokio_core::reactor::Core;</span>
+<span class="doccomment">//! use tokio_service::Service;</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! use eventstore_tcp::{EventStoreClient, Builder, AdaptedMessage, StreamVersion, ContentType};</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! fn main() {</span>
+<span class="doccomment">//!     let addr = &quot;127.0.0.1:1113&quot;.parse::&lt;SocketAddr&gt;().unwrap();</span>
+<span class="doccomment">//!     let mut core = Core::new().unwrap();</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//!     // connecting the client returns a future for an EventStoreClient</span>
+<span class="doccomment">//!     // which implements tokio_service::Service</span>
+<span class="doccomment">//!     let client = EventStoreClient::connect(&amp;addr, &amp;core.handle());</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//!     let value = client.and_then(|client| {</span>
+<span class="doccomment">//!         // once the connection is made and EventStoreClient (`client`)</span>
+<span class="doccomment">//!         // is created, send a WriteEvents request:</span>
+<span class="doccomment">//!         client.call(Builder::write_events()</span>
+<span class="doccomment">//!             .stream_id(&quot;my_stream-1&quot;)</span>
+<span class="doccomment">//!             .expected_version(StreamVersion::from(42))</span>
+<span class="doccomment">//!             .new_event()</span>
+<span class="doccomment">//!                 .event_type(&quot;meaning_of_life&quot;)</span>
+<span class="doccomment">//!                 .data(&quot;{ &#39;meaning&#39;: 42 }&quot;.as_bytes())</span>
+<span class="doccomment">//!                 .data_content_type(ContentType::Json)</span>
+<span class="doccomment">//!             .done()</span>
+<span class="doccomment">//!             .build_package(None, None))</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//!         // call returns a future representing the response</span>
+<span class="doccomment">//!     }).and_then(|resp| {</span>
+<span class="doccomment">//!         // By default, `resp` is a `Package` that contains the raw protobuf defined message</span>
+<span class="doccomment">//!         // (`RawMessage`). It is possible to refine it into AdaptedMessage which can fail:</span>
+<span class="doccomment">//!         match resp.message.try_adapt().unwrap() {</span>
+<span class="doccomment">//!             AdaptedMessage::WriteEventsCompleted(Ok(_)) =&gt;</span>
+<span class="doccomment">//!                 println!(&quot;Event was written successfully&quot;),</span>
+<span class="doccomment">//!             AdaptedMessage::WriteEventsCompleted(Err(fail)) =&gt;</span>
+<span class="doccomment">//!                 println!(&quot;Event writing failed: {:?}&quot;, fail),</span>
+<span class="doccomment">//!             unexpected =&gt; println!(&quot;Unexpected response: {:#?}&quot;, unexpected),</span>
+<span class="doccomment">//!         };</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//!         Ok(())</span>
+<span class="doccomment">//!     });</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//!     core.run(value).unwrap();</span>
+<span class="doccomment">//! }</span>
+<span class="doccomment">//! ```</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! More examples can be found in the aspiring command line tool under `examples/testclient`.</span>
+<span class="attribute">#<span class="op">!</span>[<span class="ident">deny</span>(<span class="ident">missing_docs</span>)]</span>
 
-<span class='attribute'>#[<span class='ident'>macro_use</span>]</span>
-<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>bitflags</span>;
-<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>quick_protobuf</span>;
-<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>uuid</span>;
-<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>byteorder</span>;
-<span class='attribute'>#[<span class='ident'>macro_use</span>]</span>
-<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>error_chain</span>;
-<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>futures</span>;
-<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>tokio_core</span>;
-<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>tokio_proto</span>;
-<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>tokio_service</span>;
+<span class="attribute">#[<span class="ident">macro_use</span>]</span>
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">bitflags</span>;
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">quick_protobuf</span>;
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">uuid</span>;
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">byteorder</span>;
+<span class="attribute">#[<span class="ident">macro_use</span>]</span>
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">error_chain</span>;
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">futures</span>;
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">tokio_core</span>;
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">tokio_proto</span>;
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">tokio_service</span>;
 
-<span class='attribute'>#[<span class='ident'>cfg</span>(<span class='ident'>test</span>)]</span>
-<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>rustc_serialize</span>;
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">rustc_serialize</span>;
 
-<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>str</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">str</span>;
 
-<span class='kw'>pub</span> <span class='kw'>mod</span> <span class='ident'>raw</span>;
-<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>raw</span>::<span class='ident'>RawMessage</span>;
-<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>raw</span>::<span class='ident'>client_messages</span>::{<span class='ident'>WriteEvents</span>, <span class='ident'>ResolvedIndexedEvent</span>, <span class='ident'>EventRecord</span>, <span class='ident'>ReadAllEvents</span>};
-<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>raw</span>::<span class='ident'>client_messages</span>::<span class='ident'>mod_NotHandled</span>::{<span class='ident'>NotHandledReason</span>, <span class='ident'>MasterInfo</span>};
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">raw</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">raw</span>::<span class="ident">RawMessage</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">raw</span>::<span class="ident">client_messages</span>::{<span class="ident">WriteEvents</span>, <span class="ident">ResolvedIndexedEvent</span>, <span class="ident">EventRecord</span>, <span class="ident">ReadAllEvents</span>};
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">raw</span>::<span class="ident">client_messages</span>::<span class="ident">mod_NotHandled</span>::{<span class="ident">NotHandledReason</span>, <span class="ident">MasterInfo</span>};
 
-<span class='kw'>pub</span> <span class='kw'>mod</span> <span class='ident'>adapted</span>;
-<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>adapted</span>::<span class='ident'>AdaptedMessage</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">adapted</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">adapted</span>::<span class="ident">AdaptedMessage</span>;
 
-<span class='kw'>pub</span> <span class='kw'>mod</span> <span class='ident'>package</span>;
-<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>package</span>::<span class='ident'>Package</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">package</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">package</span>::<span class="ident">Package</span>;
 
-<span class='kw'>mod</span> <span class='ident'>codec</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">codec</span>;
 
-<span class='kw'>mod</span> <span class='ident'>client</span>;
-<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>client</span>::<span class='ident'>EventStoreClient</span>;
+<span class="kw">mod</span> <span class="ident">client</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">client</span>::<span class="ident">EventStoreClient</span>;
 
-<span class='kw'>pub</span> <span class='kw'>mod</span> <span class='ident'>builder</span>;
-<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>builder</span>::<span class='ident'>Builder</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">builder</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">builder</span>::<span class="ident">Builder</span>;
 
-<span class='kw'>mod</span> <span class='ident'>auth</span>;
-<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>auth</span>::<span class='ident'>UsernamePassword</span>;
+<span class="kw">mod</span> <span class="ident">auth</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">auth</span>::<span class="ident">UsernamePassword</span>;
 
-<span class='kw'>mod</span> <span class='ident'>errors</span> {
-    <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>str</span>;
-    <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>io</span>;
-    <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>fmt</span>;
+<span class="kw">mod</span> <span class="ident">errors</span> {
+    <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">str</span>;
+    <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>;
+    <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>;
 
-    <span class='doccomment'>/// Enum describing the locations where a result value can be missing</span>
-    <span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>PartialEq</span>)]</span>
-    <span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>ResultStatusKind</span> {
-        <span class='doccomment'>/// Missing from WriteEventsCompleted</span>
-        <span class='ident'>WriteEvents</span>,
-        <span class='doccomment'>/// Missing from ReadEventCompleted</span>
-        <span class='ident'>ReadEvent</span>,
-        <span class='doccomment'>/// Missing from ReadStreamEventsCompleted</span>
-        <span class='ident'>ReadStream</span>,
+    <span class="doccomment">/// Enum describing the locations where a result value can be missing</span>
+    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
+    <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ResultStatusKind</span> {
+        <span class="doccomment">/// Missing from WriteEventsCompleted</span>
+        <span class="ident">WriteEvents</span>,
+        <span class="doccomment">/// Missing from ReadEventCompleted</span>
+        <span class="ident">ReadEvent</span>,
+        <span class="doccomment">/// Missing from ReadStreamEventsCompleted</span>
+        <span class="ident">ReadStream</span>,
     }
 
-    <span class='kw'>impl</span> <span class='ident'>fmt</span>::<span class='ident'>Display</span> <span class='kw'>for</span> <span class='ident'>ResultStatusKind</span> {
-        <span class='kw'>fn</span> <span class='ident'>fmt</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>fmt</span>: <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>fmt</span>::<span class='ident'>Formatter</span>) <span class='op'>-&gt;</span> <span class='ident'>fmt</span>::<span class='prelude-ty'>Result</span> {
-            <span class='kw'>use</span> <span class='self'>self</span>::<span class='ident'>ResultStatusKind</span>::<span class='kw-2'>*</span>;
-            <span class='macro'>write</span><span class='macro'>!</span>(<span class='ident'>fmt</span>, <span class='string'>&quot;{}&quot;</span>, <span class='kw'>match</span> <span class='self'>self</span> {
-                <span class='kw-2'>&amp;</span><span class='ident'>WriteEvents</span> <span class='op'>=&gt;</span> <span class='string'>&quot;WriteEventsCompleted::result&quot;</span>,
-                <span class='kw-2'>&amp;</span><span class='ident'>ReadEvent</span> <span class='op'>=&gt;</span> <span class='string'>&quot;ReadEventCompleted::result&quot;</span>,
-                <span class='kw-2'>&amp;</span><span class='ident'>ReadStream</span> <span class='op'>=&gt;</span> <span class='string'>&quot;ReadStreamEventsCompleted::result&quot;</span>,
+    <span class="kw">impl</span> <span class="ident">fmt</span>::<span class="ident">Display</span> <span class="kw">for</span> <span class="ident">ResultStatusKind</span> {
+        <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">fmt</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt</span>::<span class="ident">Formatter</span>) <span class="op">-&gt;</span> <span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
+            <span class="kw">use</span> <span class="self">self</span>::<span class="ident">ResultStatusKind</span>::<span class="kw-2">*</span>;
+            <span class="macro">write</span><span class="macro">!</span>(<span class="ident">fmt</span>, <span class="string">&quot;{}&quot;</span>, <span class="kw">match</span> <span class="self">self</span> {
+                <span class="kw-2">&amp;</span><span class="ident">WriteEvents</span> <span class="op">=&gt;</span> <span class="string">&quot;WriteEventsCompleted::result&quot;</span>,
+                <span class="kw-2">&amp;</span><span class="ident">ReadEvent</span> <span class="op">=&gt;</span> <span class="string">&quot;ReadEventCompleted::result&quot;</span>,
+                <span class="kw-2">&amp;</span><span class="ident">ReadStream</span> <span class="op">=&gt;</span> <span class="string">&quot;ReadStreamEventsCompleted::result&quot;</span>,
             })
         }
     }
 
-    <span class='macro'>error_chain</span><span class='macro'>!</span> {
-        <span class='ident'>foreign_links</span> {
-            <span class='ident'>InvalidUtf8</span>(<span class='ident'>str</span>::<span class='ident'>Utf8Error</span>);
+    <span class="macro">error_chain</span><span class="macro">!</span> {
+        <span class="ident">foreign_links</span> {
+            <span class="ident">InvalidUtf8</span>(<span class="ident">str</span>::<span class="ident">Utf8Error</span>);
         }
 
-        <span class='ident'>errors</span> {
-            <span class='ident'>InvalidFlags</span>(<span class='ident'>flags</span>: <span class='ident'>u8</span>) {
-                <span class='ident'>display</span>(<span class='string'>&quot;Invalid flags: 0x{:02x}&quot;</span>, <span class='ident'>flags</span>)
+        <span class="ident">errors</span> {
+            <span class="ident">InvalidFlags</span>(<span class="ident">flags</span>: <span class="ident">u8</span>) {
+                <span class="ident">display</span>(<span class="string">&quot;Invalid flags: 0x{:02x}&quot;</span>, <span class="ident">flags</span>)
             }
-            <span class='ident'>MissingResultField</span>(<span class='ident'>which</span>: <span class='ident'>ResultStatusKind</span>) {
-                <span class='ident'>display</span>(<span class='string'>&quot;Missing result field: {}&quot;</span>, <span class='ident'>which</span>)
+            <span class="ident">MissingResultField</span>(<span class="ident">which</span>: <span class="ident">ResultStatusKind</span>) {
+                <span class="ident">display</span>(<span class="string">&quot;Missing result field: {}&quot;</span>, <span class="ident">which</span>)
             }
-            <span class='ident'>InvalidStreamVersion</span>(<span class='ident'>value</span>: <span class='ident'>i32</span>) {
-                <span class='ident'>display</span>(<span class='string'>&quot;Invalid StreamVersion: {}&quot;</span>, <span class='ident'>value</span>)
+            <span class="ident">InvalidStreamVersion</span>(<span class="ident">value</span>: <span class="ident">i32</span>) {
+                <span class="ident">display</span>(<span class="string">&quot;Invalid StreamVersion: {}&quot;</span>, <span class="ident">value</span>)
             }
-            <span class='ident'>InvalidEventNumber</span>(<span class='ident'>value</span>: <span class='ident'>i32</span>) {
-                <span class='ident'>display</span>(<span class='string'>&quot;Invalid EventNumber: {}&quot;</span>, <span class='ident'>value</span>)
+            <span class="ident">InvalidEventNumber</span>(<span class="ident">value</span>: <span class="ident">i32</span>) {
+                <span class="ident">display</span>(<span class="string">&quot;Invalid EventNumber: {}&quot;</span>, <span class="ident">value</span>)
             }
-            <span class='ident'>InvalidLogPosition</span>(<span class='ident'>value</span>: <span class='ident'>i64</span>) {
-                <span class='ident'>display</span>(<span class='string'>&quot;Invalid LogPosition: {}&quot;</span>, <span class='ident'>value</span>)
+            <span class="ident">InvalidLogPosition</span>(<span class="ident">value</span>: <span class="ident">i64</span>) {
+                <span class="ident">display</span>(<span class="string">&quot;Invalid LogPosition: {}&quot;</span>, <span class="ident">value</span>)
             }
-            <span class='ident'>UnsupportedDiscriminator</span>(<span class='ident'>d</span>: <span class='ident'>u8</span>) {
-                <span class='ident'>display</span>(<span class='string'>&quot;Unsupported discriminator 0x{:02x}&quot;</span>, <span class='ident'>d</span>)
+            <span class="ident">UnsupportedDiscriminator</span>(<span class="ident">d</span>: <span class="ident">u8</span>) {
+                <span class="ident">display</span>(<span class="string">&quot;Unsupported discriminator 0x{:02x}&quot;</span>, <span class="ident">d</span>)
             }
-            <span class='ident'>UnimplementedConversion</span> {
-                <span class='ident'>display</span>(<span class='string'>&quot;Unimplemented conversion&quot;</span>)
+            <span class="ident">UnimplementedConversion</span> {
+                <span class="ident">display</span>(<span class="string">&quot;Unimplemented conversion&quot;</span>)
             }
-            <span class='ident'>WriteEventsInvalidTransaction</span> {
-                <span class='ident'>display</span>(<span class='string'>&quot;Unexpected WriteEvents result: InvalidTransaction&quot;</span>)
-            }
-        }
-    }
-
-    <span class='kw'>impl</span> <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>io</span>::<span class='ident'>Error</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>Error</span> {
-        <span class='kw'>fn</span> <span class='ident'>into</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>io</span>::<span class='ident'>Error</span> {
-            <span class='kw'>match</span> <span class='self'>self</span> {
-                <span class='ident'>e</span> <span class='op'>=&gt;</span> <span class='ident'>io</span>::<span class='ident'>Error</span>::<span class='ident'>new</span>(<span class='ident'>io</span>::<span class='ident'>ErrorKind</span>::<span class='ident'>Other</span>, <span class='ident'>e</span>),
+            <span class="ident">WriteEventsInvalidTransaction</span> {
+                <span class="ident">display</span>(<span class="string">&quot;Unexpected WriteEvents result: InvalidTransaction&quot;</span>)
             }
         }
     }
 
-    <span class='kw'>impl</span> <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>io</span>::<span class='ident'>Error</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>ErrorKind</span> {
-        <span class='kw'>fn</span> <span class='ident'>into</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>io</span>::<span class='ident'>Error</span> {
-            <span class='ident'>Error</span>::<span class='ident'>from</span>(<span class='self'>self</span>).<span class='ident'>into</span>()
+    <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">io</span>::<span class="ident">Error</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
+        <span class="kw">fn</span> <span class="ident">into</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">io</span>::<span class="ident">Error</span> {
+            <span class="kw">match</span> <span class="self">self</span> {
+                <span class="ident">e</span> <span class="op">=&gt;</span> <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>, <span class="ident">e</span>),
+            }
+        }
+    }
+
+    <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">io</span>::<span class="ident">Error</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ErrorKind</span> {
+        <span class="kw">fn</span> <span class="ident">into</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">io</span>::<span class="ident">Error</span> {
+            <span class="ident">Error</span>::<span class="ident">from</span>(<span class="self">self</span>).<span class="ident">into</span>()
         }
     }
 }
 
-<span class='kw'>use</span> <span class='self'>self</span>::<span class='ident'>errors</span>::{<span class='ident'>Error</span>, <span class='ident'>ErrorKind</span>};
+<span class="kw">use</span> <span class="self">self</span>::<span class="ident">errors</span>::{<span class="ident">Error</span>, <span class="ident">ErrorKind</span>};
 
-<span class='doccomment'>/// The direction in which events are read.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>PartialEq</span>, <span class='ident'>Eq</span>, <span class='ident'>Clone</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>ReadDirection</span> {
-    <span class='doccomment'>/// Read from first (event 0) to the latest</span>
-    <span class='ident'>Forward</span>,
-    <span class='doccomment'>/// Read from latest (highest event number) to the first (event 0)</span>
-    <span class='ident'>Backward</span>
+<span class="doccomment">/// The direction in which events are read.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ReadDirection</span> {
+    <span class="doccomment">/// Read from first (event 0) to the latest</span>
+    <span class="ident">Forward</span>,
+    <span class="doccomment">/// Read from latest (highest event number) to the first (event 0)</span>
+    <span class="ident">Backward</span>
 }
 
-<span class='kw'>impl</span> <span class='ident'>Copy</span> <span class='kw'>for</span> <span class='ident'>ReadDirection</span> {}
+<span class="kw">impl</span> <span class="ident">Copy</span> <span class="kw">for</span> <span class="ident">ReadDirection</span> {}
 
-<span class='doccomment'>/// `ExpectedVersion` represents the different modes of optimistic locking when writing to a stream</span>
-<span class='doccomment'>/// using `WriteEventsBuilder`.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>Clone</span>, <span class='ident'>Eq</span>, <span class='ident'>PartialEq</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>ExpectedVersion</span> {
-    <span class='doccomment'>/// No optimistic locking</span>
-    <span class='ident'>Any</span>,
-    <span class='doccomment'>/// Expect a stream not to exist</span>
-    <span class='ident'>NewStream</span>,
-    <span class='doccomment'>/// Expect exact number of events in the stream</span>
-    <span class='ident'>Exact</span>(<span class='ident'>StreamVersion</span>)
+<span class="doccomment">/// `ExpectedVersion` represents the different modes of optimistic locking when writing to a stream</span>
+<span class="doccomment">/// using `WriteEventsBuilder`.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ExpectedVersion</span> {
+    <span class="doccomment">/// No optimistic locking</span>
+    <span class="ident">Any</span>,
+    <span class="doccomment">/// Expect a stream not to exist</span>
+    <span class="ident">NewStream</span>,
+    <span class="doccomment">/// Expect exact number of events in the stream</span>
+    <span class="ident">Exact</span>(<span class="ident">StreamVersion</span>)
 }
 
-<span class='kw'>impl</span> <span class='ident'>Copy</span> <span class='kw'>for</span> <span class='ident'>ExpectedVersion</span> {}
+<span class="kw">impl</span> <span class="ident">Copy</span> <span class="kw">for</span> <span class="ident">ExpectedVersion</span> {}
 
-<span class='kw'>impl</span> <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>i32</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>ExpectedVersion</span> {
-    <span class='doccomment'>/// Returns the wire representation.</span>
-    <span class='kw'>fn</span> <span class='ident'>into</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>i32</span> {
-        <span class='kw'>use</span> <span class='self'>self</span>::<span class='ident'>ExpectedVersion</span>::<span class='kw-2'>*</span>;
-        <span class='kw'>match</span> <span class='self'>self</span> {
-            <span class='ident'>Any</span> <span class='op'>=&gt;</span> <span class='op'>-</span><span class='number'>2</span>,
-            <span class='ident'>NewStream</span> <span class='op'>=&gt;</span> <span class='op'>-</span><span class='number'>1</span>,
-            <span class='ident'>Exact</span>(<span class='ident'>ver</span>) <span class='op'>=&gt;</span> <span class='ident'>ver</span>.<span class='ident'>into</span>()
+<span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ExpectedVersion</span> {
+    <span class="doccomment">/// Returns the wire representation.</span>
+    <span class="kw">fn</span> <span class="ident">into</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">i32</span> {
+        <span class="kw">use</span> <span class="self">self</span>::<span class="ident">ExpectedVersion</span>::<span class="kw-2">*</span>;
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">Any</span> <span class="op">=&gt;</span> <span class="op">-</span><span class="number">2</span>,
+            <span class="ident">NewStream</span> <span class="op">=&gt;</span> <span class="op">-</span><span class="number">1</span>,
+            <span class="ident">Exact</span>(<span class="ident">ver</span>) <span class="op">=&gt;</span> <span class="ident">ver</span>.<span class="ident">into</span>()
         }
     }
 }
 
-<span class='kw'>impl</span> <span class='ident'>From</span><span class='op'>&lt;</span><span class='ident'>StreamVersion</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>ExpectedVersion</span> {
-    <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>ver</span>: <span class='ident'>StreamVersion</span>) <span class='op'>-&gt;</span> <span class='self'>Self</span> {
-        <span class='ident'>ExpectedVersion</span>::<span class='ident'>Exact</span>(<span class='ident'>ver</span>)
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">StreamVersion</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ExpectedVersion</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">ver</span>: <span class="ident">StreamVersion</span>) <span class="op">-&gt;</span> <span class="self">Self</span> {
+        <span class="ident">ExpectedVersion</span>::<span class="ident">Exact</span>(<span class="ident">ver</span>)
     }
 }
 
-<span class='kw'>impl</span> <span class='ident'>CustomTryFrom</span><span class='op'>&lt;</span><span class='ident'>i32</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>ExpectedVersion</span> {
-    <span class='kw'>type</span> <span class='prelude-val'>Err</span> <span class='op'>=</span> <span class='ident'>Error</span>;
+<span class="kw">impl</span> <span class="ident">CustomTryFrom</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ExpectedVersion</span> {
+    <span class="kw">type</span> <span class="prelude-val">Err</span> <span class="op">=</span> <span class="ident">Error</span>;
 
-    <span class='kw'>fn</span> <span class='ident'>try_from</span>(<span class='ident'>val</span>: <span class='ident'>i32</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>ExpectedVersion</span>, (<span class='ident'>i32</span>, <span class='self'>Self</span>::<span class='prelude-val'>Err</span>)<span class='op'>&gt;</span> {
-        <span class='kw'>let</span> <span class='ident'>ver</span> <span class='op'>=</span> <span class='ident'>StreamVersion</span>::<span class='ident'>try_from</span>(<span class='ident'>val</span>)<span class='question-mark'>?</span>;
-        <span class='prelude-val'>Ok</span>(<span class='ident'>ExpectedVersion</span>::<span class='ident'>from</span>(<span class='ident'>ver</span>))
+    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">val</span>: <span class="ident">i32</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ExpectedVersion</span>, (<span class="ident">i32</span>, <span class="self">Self</span>::<span class="prelude-val">Err</span>)<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">ver</span> <span class="op">=</span> <span class="ident">StreamVersion</span>::<span class="ident">try_from</span>(<span class="ident">val</span>)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="ident">ExpectedVersion</span>::<span class="ident">from</span>(<span class="ident">ver</span>))
     }
 }
 
-<span class='doccomment'>/// `StreamVersion` represents the valid values for a stream version which is the same as the</span>
-<span class='doccomment'>/// event number of the latest event. As such, values are non-negative integers up to</span>
-<span class='doccomment'>/// `i32::max_value`. Negative values of `i32` have special meaning in the protocol, and are</span>
-<span class='doccomment'>/// restricted from being used with this type.</span>
-<span class='doccomment'>///</span>
-<span class='doccomment'>/// Conversions to StreamVersion are quite horrible until TryFrom is stabilized.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>Clone</span>, <span class='ident'>Eq</span>, <span class='ident'>PartialEq</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>StreamVersion</span>(<span class='ident'>u32</span>);
+<span class="doccomment">/// `StreamVersion` represents the valid values for a stream version which is the same as the</span>
+<span class="doccomment">/// event number of the latest event. As such, values are non-negative integers up to</span>
+<span class="doccomment">/// `i32::max_value`. Negative values of `i32` have special meaning in the protocol, and are</span>
+<span class="doccomment">/// restricted from being used with this type.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Conversions to StreamVersion are quite horrible until TryFrom is stabilized.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">StreamVersion</span>(<span class="ident">u32</span>);
 
-<span class='kw'>impl</span> <span class='ident'>Copy</span> <span class='kw'>for</span> <span class='ident'>StreamVersion</span> {}
+<span class="kw">impl</span> <span class="ident">Copy</span> <span class="kw">for</span> <span class="ident">StreamVersion</span> {}
 
-<span class='kw'>impl</span> <span class='ident'>StreamVersion</span> {
-    <span class='doccomment'>/// Converts the value to a StreamVersion or panics if the value is out of range</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>version</span>: <span class='ident'>u32</span>) <span class='op'>-&gt;</span> <span class='self'>Self</span> {
-        <span class='self'>Self</span>::<span class='ident'>from_opt</span>(<span class='ident'>version</span>).<span class='ident'>expect</span>(<span class='string'>&quot;StreamVersion overflow&quot;</span>)
+<span class="kw">impl</span> <span class="ident">StreamVersion</span> {
+    <span class="doccomment">/// Converts the value to a StreamVersion or panics if the value is out of range</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">version</span>: <span class="ident">u32</span>) <span class="op">-&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span>::<span class="ident">from_opt</span>(<span class="ident">version</span>).<span class="ident">expect</span>(<span class="string">&quot;StreamVersion overflow&quot;</span>)
     }
 
-    <span class='doccomment'>/// Converts the value to a StreamVersion returning None if the input is out of range.</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>from_opt</span>(<span class='ident'>version</span>: <span class='ident'>u32</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='self'>Self</span><span class='op'>&gt;</span> {
-        <span class='comment'>// TODO: MAX_VALUE might be some magical value, should be lower?</span>
-        <span class='kw'>if</span> <span class='ident'>version</span> <span class='op'>&lt;</span> <span class='ident'>i32</span>::<span class='ident'>max_value</span>() <span class='kw'>as</span> <span class='ident'>u32</span> {
-            <span class='prelude-val'>Some</span>(<span class='ident'>StreamVersion</span>(<span class='ident'>version</span>))
-        } <span class='kw'>else</span> {
-            <span class='prelude-val'>None</span>
+    <span class="doccomment">/// Converts the value to a StreamVersion returning None if the input is out of range.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_opt</span>(<span class="ident">version</span>: <span class="ident">u32</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="comment">// TODO: MAX_VALUE might be some magical value, should be lower?</span>
+        <span class="kw">if</span> <span class="ident">version</span> <span class="op">&lt;</span> <span class="ident">i32</span>::<span class="ident">max_value</span>() <span class="kw">as</span> <span class="ident">u32</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">StreamVersion</span>(<span class="ident">version</span>))
+        } <span class="kw">else</span> {
+            <span class="prelude-val">None</span>
         }
     }
 
-    <span class='attribute'>#[<span class='ident'>doc</span>(<span class='ident'>hidden</span>)]</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>from_i32</span>(<span class='ident'>version</span>: <span class='ident'>i32</span>) <span class='op'>-&gt;</span> <span class='self'>Self</span> {
-        <span class='self'>Self</span>::<span class='ident'>try_from</span>(<span class='ident'>version</span>).<span class='ident'>unwrap</span>()
+    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_i32</span>(<span class="ident">version</span>: <span class="ident">i32</span>) <span class="op">-&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span>::<span class="ident">try_from</span>(<span class="ident">version</span>).<span class="ident">unwrap</span>()
 
     }
 
-    <span class='attribute'>#[<span class='ident'>doc</span>(<span class='ident'>hidden</span>)]</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>from_i32_opt</span>(<span class='ident'>version</span>: <span class='ident'>i32</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='self'>Self</span><span class='op'>&gt;</span> {
-        <span class='self'>Self</span>::<span class='ident'>try_from</span>(<span class='ident'>version</span>).<span class='ident'>ok</span>()
+    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_i32_opt</span>(<span class="ident">version</span>: <span class="ident">i32</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="self">Self</span>::<span class="ident">try_from</span>(<span class="ident">version</span>).<span class="ident">ok</span>()
     }
 }
 
-<span class='kw'>impl</span> <span class='ident'>CustomTryFrom</span><span class='op'>&lt;</span><span class='ident'>i32</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>StreamVersion</span> {
-    <span class='kw'>type</span> <span class='prelude-val'>Err</span> <span class='op'>=</span> <span class='ident'>Error</span>;
+<span class="kw">impl</span> <span class="ident">CustomTryFrom</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">StreamVersion</span> {
+    <span class="kw">type</span> <span class="prelude-val">Err</span> <span class="op">=</span> <span class="ident">Error</span>;
 
-    <span class='kw'>fn</span> <span class='ident'>try_from</span>(<span class='ident'>val</span>: <span class='ident'>i32</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='self'>Self</span>, (<span class='ident'>i32</span>, <span class='self'>Self</span>::<span class='prelude-val'>Err</span>)<span class='op'>&gt;</span> {
-        <span class='kw'>if</span> <span class='ident'>val</span> <span class='op'>&lt;</span> <span class='number'>0</span> {
-            <span class='prelude-val'>Err</span>((<span class='ident'>val</span>, <span class='ident'>ErrorKind</span>::<span class='ident'>InvalidStreamVersion</span>(<span class='ident'>val</span>).<span class='ident'>into</span>()))
-        } <span class='kw'>else</span> {
-            <span class='prelude-val'>Ok</span>(<span class='ident'>StreamVersion</span>(<span class='ident'>val</span> <span class='kw'>as</span> <span class='ident'>u32</span>))
+    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">val</span>: <span class="ident">i32</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, (<span class="ident">i32</span>, <span class="self">Self</span>::<span class="prelude-val">Err</span>)<span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="ident">val</span> <span class="op">&lt;</span> <span class="number">0</span> {
+            <span class="prelude-val">Err</span>((<span class="ident">val</span>, <span class="ident">ErrorKind</span>::<span class="ident">InvalidStreamVersion</span>(<span class="ident">val</span>).<span class="ident">into</span>()))
+        } <span class="kw">else</span> {
+            <span class="prelude-val">Ok</span>(<span class="ident">StreamVersion</span>(<span class="ident">val</span> <span class="kw">as</span> <span class="ident">u32</span>))
         }
     }
 }
 
-<span class='kw'>impl</span> <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>i32</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>StreamVersion</span> {
-    <span class='doccomment'>/// Returns the wire representation.</span>
-    <span class='kw'>fn</span> <span class='ident'>into</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>i32</span> {
-        <span class='self'>self</span>.<span class='number'>0</span> <span class='kw'>as</span> <span class='ident'>i32</span>
+<span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">StreamVersion</span> {
+    <span class="doccomment">/// Returns the wire representation.</span>
+    <span class="kw">fn</span> <span class="ident">into</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">i32</span> {
+        <span class="self">self</span>.<span class="number">0</span> <span class="kw">as</span> <span class="ident">i32</span>
     }
 }
 
-<span class='doccomment'>/// `EventNumber` is similar to `StreamVersion` and `ExpectedVersion` but is used when specifying a</span>
-<span class='doccomment'>/// position to read from in the stream. Allows specifying the first or last (when reading</span>
-<span class='doccomment'>/// backwards) event in addition to exact event number.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>Clone</span>, <span class='ident'>Eq</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>EventNumber</span> {
-    <span class='doccomment'>/// The first event in a stream</span>
-    <span class='ident'>First</span>,
-    <span class='doccomment'>/// Exactly the given event number</span>
-    <span class='ident'>Exact</span>(<span class='ident'>StreamVersion</span>),
-    <span class='doccomment'>/// The last event in a stream</span>
-    <span class='ident'>Last</span>,
+<span class="doccomment">/// `EventNumber` is similar to `StreamVersion` and `ExpectedVersion` but is used when specifying a</span>
+<span class="doccomment">/// position to read from in the stream. Allows specifying the first or last (when reading</span>
+<span class="doccomment">/// backwards) event in addition to exact event number.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Eq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">EventNumber</span> {
+    <span class="doccomment">/// The first event in a stream</span>
+    <span class="ident">First</span>,
+    <span class="doccomment">/// Exactly the given event number</span>
+    <span class="ident">Exact</span>(<span class="ident">StreamVersion</span>),
+    <span class="doccomment">/// The last event in a stream</span>
+    <span class="ident">Last</span>,
 }
 
-<span class='kw'>impl</span> <span class='ident'>Copy</span> <span class='kw'>for</span> <span class='ident'>EventNumber</span> {}
+<span class="kw">impl</span> <span class="ident">Copy</span> <span class="kw">for</span> <span class="ident">EventNumber</span> {}
 
-<span class='kw'>impl</span> <span class='ident'>PartialEq</span><span class='op'>&lt;</span><span class='ident'>EventNumber</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>EventNumber</span> {
-    <span class='kw'>fn</span> <span class='ident'>eq</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>other</span>: <span class='kw-2'>&amp;</span><span class='ident'>EventNumber</span>) <span class='op'>-&gt;</span> <span class='ident'>bool</span> {
-        <span class='kw'>let</span> <span class='ident'>val</span>: <span class='ident'>i32</span> <span class='op'>=</span> (<span class='kw-2'>*</span><span class='self'>self</span>).<span class='ident'>into</span>();
-        <span class='kw'>let</span> <span class='ident'>other</span>: <span class='ident'>i32</span> <span class='op'>=</span> (<span class='kw-2'>*</span><span class='ident'>other</span>).<span class='ident'>into</span>();
-        <span class='ident'>val</span> <span class='op'>==</span> <span class='ident'>other</span>
+<span class="kw">impl</span> <span class="ident">PartialEq</span><span class="op">&lt;</span><span class="ident">EventNumber</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EventNumber</span> {
+    <span class="kw">fn</span> <span class="ident">eq</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="ident">EventNumber</span>) <span class="op">-&gt;</span> <span class="ident">bool</span> {
+        <span class="kw">let</span> <span class="ident">val</span>: <span class="ident">i32</span> <span class="op">=</span> (<span class="kw-2">*</span><span class="self">self</span>).<span class="ident">into</span>();
+        <span class="kw">let</span> <span class="ident">other</span>: <span class="ident">i32</span> <span class="op">=</span> (<span class="kw-2">*</span><span class="ident">other</span>).<span class="ident">into</span>();
+        <span class="ident">val</span> <span class="op">==</span> <span class="ident">other</span>
     }
 }
 
-<span class='kw'>impl</span> <span class='ident'>From</span><span class='op'>&lt;</span><span class='ident'>StreamVersion</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>EventNumber</span> {
-    <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>ver</span>: <span class='ident'>StreamVersion</span>) <span class='op'>-&gt;</span> <span class='self'>Self</span> {
-        <span class='ident'>EventNumber</span>::<span class='ident'>Exact</span>(<span class='ident'>ver</span>)
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">StreamVersion</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EventNumber</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">ver</span>: <span class="ident">StreamVersion</span>) <span class="op">-&gt;</span> <span class="self">Self</span> {
+        <span class="ident">EventNumber</span>::<span class="ident">Exact</span>(<span class="ident">ver</span>)
     }
 }
 
-<span class='kw'>impl</span> <span class='ident'>CustomTryFrom</span><span class='op'>&lt;</span><span class='ident'>i32</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>EventNumber</span> {
-    <span class='kw'>type</span> <span class='prelude-val'>Err</span> <span class='op'>=</span> <span class='ident'>Error</span>;
+<span class="kw">impl</span> <span class="ident">CustomTryFrom</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EventNumber</span> {
+    <span class="kw">type</span> <span class="prelude-val">Err</span> <span class="op">=</span> <span class="ident">Error</span>;
 
-    <span class='kw'>fn</span> <span class='ident'>try_from</span>(<span class='ident'>val</span>: <span class='ident'>i32</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='self'>Self</span>, (<span class='ident'>i32</span>, <span class='self'>Self</span>::<span class='prelude-val'>Err</span>)<span class='op'>&gt;</span> {
-        <span class='kw'>match</span> <span class='ident'>val</span> {
-            <span class='number'>0</span> <span class='op'>=&gt;</span> <span class='prelude-val'>Ok</span>(<span class='ident'>EventNumber</span>::<span class='ident'>First</span>),
-            <span class='op'>-</span><span class='number'>1</span> <span class='op'>=&gt;</span> <span class='prelude-val'>Ok</span>(<span class='ident'>EventNumber</span>::<span class='ident'>Last</span>),
-            <span class='ident'>x</span> <span class='kw'>if</span> <span class='ident'>x</span> <span class='op'>&gt;</span> <span class='number'>0</span> <span class='op'>=&gt;</span> <span class='prelude-val'>Ok</span>(<span class='ident'>EventNumber</span>::<span class='ident'>Exact</span>(<span class='ident'>StreamVersion</span>::<span class='ident'>from_i32</span>(<span class='ident'>x</span>))),
-            <span class='ident'>invalid</span> <span class='op'>=&gt;</span> {
-                <span class='prelude-val'>Err</span>((<span class='ident'>invalid</span>, <span class='ident'>ErrorKind</span>::<span class='ident'>InvalidEventNumber</span>(<span class='ident'>val</span>).<span class='ident'>into</span>()))
+    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">val</span>: <span class="ident">i32</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, (<span class="ident">i32</span>, <span class="self">Self</span>::<span class="prelude-val">Err</span>)<span class="op">&gt;</span> {
+        <span class="kw">match</span> <span class="ident">val</span> {
+            <span class="number">0</span> <span class="op">=&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">EventNumber</span>::<span class="ident">First</span>),
+            <span class="op">-</span><span class="number">1</span> <span class="op">=&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">EventNumber</span>::<span class="ident">Last</span>),
+            <span class="ident">x</span> <span class="kw">if</span> <span class="ident">x</span> <span class="op">&gt;</span> <span class="number">0</span> <span class="op">=&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">EventNumber</span>::<span class="ident">Exact</span>(<span class="ident">StreamVersion</span>::<span class="ident">from_i32</span>(<span class="ident">x</span>))),
+            <span class="ident">invalid</span> <span class="op">=&gt;</span> {
+                <span class="prelude-val">Err</span>((<span class="ident">invalid</span>, <span class="ident">ErrorKind</span>::<span class="ident">InvalidEventNumber</span>(<span class="ident">val</span>).<span class="ident">into</span>()))
             }
         }
     }
 }
 
-<span class='kw'>impl</span> <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>i32</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>EventNumber</span> {
-    <span class='doccomment'>/// Returns the wire representation.</span>
-    <span class='kw'>fn</span> <span class='ident'>into</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>i32</span> {
-        <span class='kw'>match</span> <span class='self'>self</span> {
-            <span class='ident'>EventNumber</span>::<span class='ident'>First</span> <span class='op'>=&gt;</span> <span class='number'>0</span>,
-            <span class='ident'>EventNumber</span>::<span class='ident'>Exact</span>(<span class='ident'>x</span>) <span class='op'>=&gt;</span> <span class='ident'>x</span>.<span class='ident'>into</span>(),
-            <span class='ident'>EventNumber</span>::<span class='ident'>Last</span> <span class='op'>=&gt;</span> <span class='op'>-</span><span class='number'>1</span>
+<span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EventNumber</span> {
+    <span class="doccomment">/// Returns the wire representation.</span>
+    <span class="kw">fn</span> <span class="ident">into</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">i32</span> {
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">EventNumber</span>::<span class="ident">First</span> <span class="op">=&gt;</span> <span class="number">0</span>,
+            <span class="ident">EventNumber</span>::<span class="ident">Exact</span>(<span class="ident">x</span>) <span class="op">=&gt;</span> <span class="ident">x</span>.<span class="ident">into</span>(),
+            <span class="ident">EventNumber</span>::<span class="ident">Last</span> <span class="op">=&gt;</span> <span class="op">-</span><span class="number">1</span>
         }
     }
 }
 
-<span class='doccomment'>/// Content type of the event `data` or `metadata`.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>PartialEq</span>, <span class='ident'>Eq</span>, <span class='ident'>Clone</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>ContentType</span> {
-    <span class='doccomment'>/// Raw bytes</span>
-    <span class='ident'>Bytes</span>,
-    <span class='doccomment'>/// JSON values usable with projections in EventStore</span>
-    <span class='ident'>Json</span>
+<span class="doccomment">/// Content type of the event `data` or `metadata`.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ContentType</span> {
+    <span class="doccomment">/// Raw bytes</span>
+    <span class="ident">Bytes</span>,
+    <span class="doccomment">/// JSON values usable with projections in EventStore</span>
+    <span class="ident">Json</span>
 }
 
-<span class='kw'>impl</span> <span class='ident'>Copy</span> <span class='kw'>for</span> <span class='ident'>ContentType</span> {}
+<span class="kw">impl</span> <span class="ident">Copy</span> <span class="kw">for</span> <span class="ident">ContentType</span> {}
 
-<span class='kw'>impl</span> <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>i32</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>ContentType</span> {
-    <span class='kw'>fn</span> <span class='ident'>into</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>i32</span> {
-        <span class='kw'>match</span> <span class='self'>self</span> {
-            <span class='ident'>ContentType</span>::<span class='ident'>Bytes</span> <span class='op'>=&gt;</span> <span class='number'>0</span>,
-            <span class='ident'>ContentType</span>::<span class='ident'>Json</span> <span class='op'>=&gt;</span> <span class='number'>1</span>,
+<span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ContentType</span> {
+    <span class="kw">fn</span> <span class="ident">into</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">i32</span> {
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">ContentType</span>::<span class="ident">Bytes</span> <span class="op">=&gt;</span> <span class="number">0</span>,
+            <span class="ident">ContentType</span>::<span class="ident">Json</span> <span class="op">=&gt;</span> <span class="number">1</span>,
         }
     }
 }
 
-<span class='doccomment'>/// Global unique position in the EventStore, used when reading all events.</span>
-<span class='doccomment'>/// Range -1..i64::max_value()</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>Clone</span>, <span class='ident'>Eq</span>, <span class='ident'>PartialOrd</span>, <span class='ident'>Ord</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>LogPosition</span> {
-    <span class='doccomment'>/// The first event ever</span>
-    <span class='ident'>First</span>,
-    <span class='doccomment'>/// Exact position</span>
-    <span class='ident'>Exact</span>(<span class='ident'>u64</span>),
-    <span class='doccomment'>/// The last event written to the database at the moment</span>
-    <span class='ident'>Last</span>,
+<span class="doccomment">/// Global unique position in the EventStore, used when reading all events.</span>
+<span class="doccomment">/// Range -1..i64::max_value()</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Eq</span>, <span class="ident">PartialOrd</span>, <span class="ident">Ord</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">LogPosition</span> {
+    <span class="doccomment">/// The first event ever</span>
+    <span class="ident">First</span>,
+    <span class="doccomment">/// Exact position</span>
+    <span class="ident">Exact</span>(<span class="ident">u64</span>),
+    <span class="doccomment">/// The last event written to the database at the moment</span>
+    <span class="ident">Last</span>,
 }
 
-<span class='kw'>impl</span> <span class='ident'>Copy</span> <span class='kw'>for</span> <span class='ident'>LogPosition</span> {}
+<span class="kw">impl</span> <span class="ident">Copy</span> <span class="kw">for</span> <span class="ident">LogPosition</span> {}
 
-<span class='kw'>impl</span> <span class='ident'>PartialEq</span><span class='op'>&lt;</span><span class='ident'>LogPosition</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>LogPosition</span> {
-    <span class='kw'>fn</span> <span class='ident'>eq</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>other</span>: <span class='kw-2'>&amp;</span><span class='ident'>LogPosition</span>) <span class='op'>-&gt;</span> <span class='ident'>bool</span> {
-        <span class='kw'>let</span> <span class='ident'>left</span>: <span class='ident'>i64</span> <span class='op'>=</span> (<span class='kw-2'>*</span><span class='self'>self</span>).<span class='ident'>into</span>();
-        <span class='kw'>let</span> <span class='ident'>right</span>: <span class='ident'>i64</span> <span class='op'>=</span> (<span class='kw-2'>*</span><span class='ident'>other</span>).<span class='ident'>into</span>();
-        <span class='ident'>left</span> <span class='op'>==</span> <span class='ident'>right</span>
+<span class="kw">impl</span> <span class="ident">PartialEq</span><span class="op">&lt;</span><span class="ident">LogPosition</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">LogPosition</span> {
+    <span class="kw">fn</span> <span class="ident">eq</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="ident">LogPosition</span>) <span class="op">-&gt;</span> <span class="ident">bool</span> {
+        <span class="kw">let</span> <span class="ident">left</span>: <span class="ident">i64</span> <span class="op">=</span> (<span class="kw-2">*</span><span class="self">self</span>).<span class="ident">into</span>();
+        <span class="kw">let</span> <span class="ident">right</span>: <span class="ident">i64</span> <span class="op">=</span> (<span class="kw-2">*</span><span class="ident">other</span>).<span class="ident">into</span>();
+        <span class="ident">left</span> <span class="op">==</span> <span class="ident">right</span>
     }
 }
 
-<span class='kw'>impl</span> <span class='ident'>From</span><span class='op'>&lt;</span><span class='ident'>i64</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>LogPosition</span> {
-    <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>val</span>: <span class='ident'>i64</span>) <span class='op'>-&gt;</span> <span class='ident'>LogPosition</span> {
-        <span class='kw'>match</span> <span class='ident'>LogPosition</span>::<span class='ident'>from_i64_opt</span>(<span class='ident'>val</span>) {
-            <span class='prelude-val'>Some</span>(<span class='ident'>x</span>) <span class='op'>=&gt;</span> <span class='ident'>x</span>,
-            <span class='prelude-val'>None</span> <span class='op'>=&gt;</span> <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;LogPosition undeflow: {}&quot;</span>, <span class='ident'>val</span>),
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">LogPosition</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">val</span>: <span class="ident">i64</span>) <span class="op">-&gt;</span> <span class="ident">LogPosition</span> {
+        <span class="kw">match</span> <span class="ident">LogPosition</span>::<span class="ident">from_i64_opt</span>(<span class="ident">val</span>) {
+            <span class="prelude-val">Some</span>(<span class="ident">x</span>) <span class="op">=&gt;</span> <span class="ident">x</span>,
+            <span class="prelude-val">None</span> <span class="op">=&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;LogPosition undeflow: {}&quot;</span>, <span class="ident">val</span>),
         }
     }
 }
 
-<span class='kw'>impl</span> <span class='ident'>CustomTryFrom</span><span class='op'>&lt;</span><span class='ident'>i64</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>LogPosition</span> {
-    <span class='kw'>type</span> <span class='prelude-val'>Err</span> <span class='op'>=</span> <span class='ident'>Error</span>;
+<span class="kw">impl</span> <span class="ident">CustomTryFrom</span><span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">LogPosition</span> {
+    <span class="kw">type</span> <span class="prelude-val">Err</span> <span class="op">=</span> <span class="ident">Error</span>;
 
-    <span class='kw'>fn</span> <span class='ident'>try_from</span>(<span class='ident'>val</span>: <span class='ident'>i64</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='self'>Self</span>, (<span class='ident'>i64</span>, <span class='self'>Self</span>::<span class='prelude-val'>Err</span>)<span class='op'>&gt;</span> {
-        <span class='kw'>match</span> <span class='ident'>val</span> {
-            <span class='number'>0</span> <span class='op'>=&gt;</span> <span class='prelude-val'>Ok</span>(<span class='ident'>LogPosition</span>::<span class='ident'>First</span>),
-            <span class='op'>-</span><span class='number'>1</span> <span class='op'>=&gt;</span> <span class='prelude-val'>Ok</span>(<span class='ident'>LogPosition</span>::<span class='ident'>Last</span>),
-            <span class='ident'>pos</span> <span class='op'>=&gt;</span> {
-                <span class='kw'>if</span> <span class='ident'>pos</span> <span class='op'>&gt;</span> <span class='number'>0</span> {
-                    <span class='prelude-val'>Ok</span>(<span class='ident'>LogPosition</span>::<span class='ident'>Exact</span>(<span class='ident'>pos</span> <span class='kw'>as</span> <span class='ident'>u64</span>))
-                } <span class='kw'>else</span> {
-                    <span class='prelude-val'>Err</span>((<span class='ident'>pos</span>, <span class='ident'>ErrorKind</span>::<span class='ident'>InvalidLogPosition</span>(<span class='ident'>pos</span>).<span class='ident'>into</span>()))
+    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">val</span>: <span class="ident">i64</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, (<span class="ident">i64</span>, <span class="self">Self</span>::<span class="prelude-val">Err</span>)<span class="op">&gt;</span> {
+        <span class="kw">match</span> <span class="ident">val</span> {
+            <span class="number">0</span> <span class="op">=&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">LogPosition</span>::<span class="ident">First</span>),
+            <span class="op">-</span><span class="number">1</span> <span class="op">=&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">LogPosition</span>::<span class="ident">Last</span>),
+            <span class="ident">pos</span> <span class="op">=&gt;</span> {
+                <span class="kw">if</span> <span class="ident">pos</span> <span class="op">&gt;</span> <span class="number">0</span> {
+                    <span class="prelude-val">Ok</span>(<span class="ident">LogPosition</span>::<span class="ident">Exact</span>(<span class="ident">pos</span> <span class="kw">as</span> <span class="ident">u64</span>))
+                } <span class="kw">else</span> {
+                    <span class="prelude-val">Err</span>((<span class="ident">pos</span>, <span class="ident">ErrorKind</span>::<span class="ident">InvalidLogPosition</span>(<span class="ident">pos</span>).<span class="ident">into</span>()))
                 }
             }
         }
     }
 }
 
-<span class='kw'>impl</span> <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>i64</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>LogPosition</span> {
-    <span class='kw'>fn</span> <span class='ident'>into</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>i64</span> {
-        <span class='kw'>match</span> <span class='self'>self</span> {
-            <span class='ident'>LogPosition</span>::<span class='ident'>First</span> <span class='op'>=&gt;</span> <span class='number'>0</span>,
-            <span class='ident'>LogPosition</span>::<span class='ident'>Exact</span>(<span class='ident'>x</span>) <span class='op'>=&gt;</span> <span class='ident'>x</span> <span class='kw'>as</span> <span class='ident'>i64</span>,
-            <span class='ident'>LogPosition</span>::<span class='ident'>Last</span> <span class='op'>=&gt;</span> <span class='op'>-</span><span class='number'>1</span>,
+<span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">LogPosition</span> {
+    <span class="kw">fn</span> <span class="ident">into</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">i64</span> {
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">LogPosition</span>::<span class="ident">First</span> <span class="op">=&gt;</span> <span class="number">0</span>,
+            <span class="ident">LogPosition</span>::<span class="ident">Exact</span>(<span class="ident">x</span>) <span class="op">=&gt;</span> <span class="ident">x</span> <span class="kw">as</span> <span class="ident">i64</span>,
+            <span class="ident">LogPosition</span>::<span class="ident">Last</span> <span class="op">=&gt;</span> <span class="op">-</span><span class="number">1</span>,
         }
     }
 }
 
-<span class='kw'>impl</span> <span class='ident'>LogPosition</span> {
-    <span class='doccomment'>/// Wraps the value into LogPosition or None, if it is larger than i64</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>from_opt</span>(<span class='ident'>pos</span>: <span class='ident'>u64</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>LogPosition</span><span class='op'>&gt;</span> {
-        <span class='kw'>match</span> <span class='ident'>pos</span> {
-            <span class='number'>0</span> <span class='op'>=&gt;</span> <span class='prelude-val'>Some</span>(<span class='ident'>LogPosition</span>::<span class='ident'>First</span>),
-            <span class='ident'>pos</span> <span class='op'>=&gt;</span> {
-                <span class='kw'>if</span> <span class='ident'>pos</span> <span class='op'>&lt;</span> <span class='ident'>i64</span>::<span class='ident'>max_value</span>() <span class='kw'>as</span> <span class='ident'>u64</span> {
-                    <span class='prelude-val'>Some</span>(<span class='ident'>LogPosition</span>::<span class='ident'>Exact</span>(<span class='ident'>pos</span>))
-                } <span class='kw'>else</span> {
-                    <span class='prelude-val'>None</span>
+<span class="kw">impl</span> <span class="ident">LogPosition</span> {
+    <span class="doccomment">/// Wraps the value into LogPosition or None, if it is larger than i64</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_opt</span>(<span class="ident">pos</span>: <span class="ident">u64</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">LogPosition</span><span class="op">&gt;</span> {
+        <span class="kw">match</span> <span class="ident">pos</span> {
+            <span class="number">0</span> <span class="op">=&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">LogPosition</span>::<span class="ident">First</span>),
+            <span class="ident">pos</span> <span class="op">=&gt;</span> {
+                <span class="kw">if</span> <span class="ident">pos</span> <span class="op">&lt;</span> <span class="ident">i64</span>::<span class="ident">max_value</span>() <span class="kw">as</span> <span class="ident">u64</span> {
+                    <span class="prelude-val">Some</span>(<span class="ident">LogPosition</span>::<span class="ident">Exact</span>(<span class="ident">pos</span>))
+                } <span class="kw">else</span> {
+                    <span class="prelude-val">None</span>
                 }
             }
         }
     }
 
-    <span class='attribute'>#[<span class='ident'>doc</span>(<span class='ident'>hidden</span>)]</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>from_i64_opt</span>(<span class='ident'>pos</span>: <span class='ident'>i64</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>LogPosition</span><span class='op'>&gt;</span> {
-        <span class='self'>Self</span>::<span class='ident'>try_from</span>(<span class='ident'>pos</span>).<span class='ident'>ok</span>()
+    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_i64_opt</span>(<span class="ident">pos</span>: <span class="ident">i64</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">LogPosition</span><span class="op">&gt;</span> {
+        <span class="self">Self</span>::<span class="ident">try_from</span>(<span class="ident">pos</span>).<span class="ident">ok</span>()
     }
 }
 
-<span class='kw'>trait</span> <span class='ident'>CustomTryFrom</span><span class='op'>&lt;</span><span class='ident'>T</span>: <span class='ident'>Sized</span><span class='op'>&gt;</span>: <span class='ident'>Sized</span> {
-    <span class='kw'>type</span> <span class='prelude-val'>Err</span>;
+<span class="kw">trait</span> <span class="ident">CustomTryFrom</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Sized</span><span class="op">&gt;</span>: <span class="ident">Sized</span> {
+    <span class="kw">type</span> <span class="prelude-val">Err</span>;
 
-    <span class='kw'>fn</span> <span class='ident'>try_from</span>(<span class='ident'>t</span>: <span class='ident'>T</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='self'>Self</span>, (<span class='ident'>T</span>, <span class='self'>Self</span>::<span class='prelude-val'>Err</span>)<span class='op'>&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">t</span>: <span class="ident">T</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, (<span class="ident">T</span>, <span class="self">Self</span>::<span class="prelude-val">Err</span>)<span class="op">&gt;</span>;
 }
 
-<span class='kw'>trait</span> <span class='ident'>CustomTryInto</span><span class='op'>&lt;</span><span class='ident'>T</span>: <span class='ident'>Sized</span><span class='op'>&gt;</span>: <span class='ident'>Sized</span> {
-    <span class='kw'>type</span> <span class='prelude-val'>Err</span>;
+<span class="kw">trait</span> <span class="ident">CustomTryInto</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Sized</span><span class="op">&gt;</span>: <span class="ident">Sized</span> {
+    <span class="kw">type</span> <span class="prelude-val">Err</span>;
 
-    <span class='kw'>fn</span> <span class='ident'>try_into</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>T</span>, (<span class='self'>Self</span>, <span class='self'>Self</span>::<span class='prelude-val'>Err</span>)<span class='op'>&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">try_into</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, (<span class="self">Self</span>, <span class="self">Self</span>::<span class="prelude-val">Err</span>)<span class="op">&gt;</span>;
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='ident'>T</span>, <span class='ident'>U</span><span class='op'>&gt;</span> <span class='ident'>CustomTryInto</span><span class='op'>&lt;</span><span class='ident'>U</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>T</span> <span class='kw'>where</span> <span class='ident'>U</span>: <span class='ident'>CustomTryFrom</span><span class='op'>&lt;</span><span class='ident'>T</span><span class='op'>&gt;</span> {
-    <span class='kw'>type</span> <span class='prelude-val'>Err</span> <span class='op'>=</span> <span class='ident'>U</span>::<span class='prelude-val'>Err</span>;
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">U</span><span class="op">&gt;</span> <span class="ident">CustomTryInto</span><span class="op">&lt;</span><span class="ident">U</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">T</span> <span class="kw">where</span> <span class="ident">U</span>: <span class="ident">CustomTryFrom</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">type</span> <span class="prelude-val">Err</span> <span class="op">=</span> <span class="ident">U</span>::<span class="prelude-val">Err</span>;
 
-    <span class='kw'>fn</span> <span class='ident'>try_into</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>U</span>, (<span class='ident'>T</span>, <span class='self'>Self</span>::<span class='prelude-val'>Err</span>)<span class='op'>&gt;</span> {
-        <span class='ident'>U</span>::<span class='ident'>try_from</span>(<span class='self'>self</span>)
+    <span class="kw">fn</span> <span class="ident">try_into</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">U</span>, (<span class="ident">T</span>, <span class="self">Self</span>::<span class="prelude-val">Err</span>)<span class="op">&gt;</span> {
+        <span class="ident">U</span>::<span class="ident">try_from</span>(<span class="self">self</span>)
     }
 }
 </pre>

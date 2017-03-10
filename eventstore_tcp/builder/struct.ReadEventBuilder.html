@@ -44,7 +44,7 @@
     </nav>
 
     <section id='main' class="content struct">
-<h1 class='fqn'><span class='in-band'>Struct <a href='../index.html'>eventstore_tcp</a>::<wbr><a href='index.html'>builder</a>::<wbr><a class='struct' href=''>ReadEventBuilder</a></span><span class='out-of-band'><span id='render-detail'>
+<h1 class='fqn'><span class='in-band'>Struct <a href='../index.html'>eventstore_tcp</a>::<wbr><a href='index.html'>builder</a>::<wbr><a class="struct" href=''>ReadEventBuilder</a></span><span class='out-of-band'><span id='render-detail'>
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
@@ -52,30 +52,30 @@
 <pre class='rust struct'>pub struct ReadEventBuilder { /* fields omitted */ }</pre><div class='docblock'><p>Builder for a single event read request <code>ReadEvent</code>.</p>
 
 <h1 id='example' class='section-header'><a href='#example'>Example</a></h1>
-<pre class='rust rust-example-rendered'>
-<span class='kw'>use</span> <span class='ident'>eventstore_tcp</span>::{<span class='ident'>Builder</span>, <span class='ident'>StreamVersion</span>};
+<pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">eventstore_tcp</span>::{<span class="ident">Builder</span>, <span class="ident">StreamVersion</span>};
 
-<span class='kw'>let</span> <span class='ident'>package</span> <span class='op'>=</span> <span class='ident'>Builder</span>::<span class='ident'>read_event</span>()
-    .<span class='ident'>stream_id</span>(<span class='string'>&quot;my_stream-1&quot;</span>)
-    .<span class='ident'>event_number</span>(<span class='ident'>StreamVersion</span>::<span class='ident'>from</span>(<span class='number'>42</span>))
-    .<span class='ident'>resolve_link_tos</span>(<span class='bool-val'>true</span>) <span class='comment'>// default</span>
-    .<span class='ident'>require_master</span>(<span class='bool-val'>false</span>)  <span class='comment'>// default</span>
-    .<span class='ident'>build_package</span>(<span class='prelude-val'>None</span>, <span class='prelude-val'>None</span>);
+<span class="kw">let</span> <span class="ident">package</span> <span class="op">=</span> <span class="ident">Builder</span>::<span class="ident">read_event</span>()
+    .<span class="ident">stream_id</span>(<span class="string">&quot;my_stream-1&quot;</span>)
+    .<span class="ident">event_number</span>(<span class="ident">StreamVersion</span>::<span class="ident">from</span>(<span class="number">42</span>))
+    .<span class="ident">resolve_link_tos</span>(<span class="bool-val">true</span>) <span class="comment">// default</span>
+    .<span class="ident">require_master</span>(<span class="bool-val">false</span>)  <span class="comment">// default</span>
+    .<span class="ident">build_package</span>(<span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
 </pre>
-</div><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class='struct' href='../../eventstore_tcp/builder/struct.ReadEventBuilder.html' title='struct eventstore_tcp::builder::ReadEventBuilder'>ReadEventBuilder</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/eventstore_tcp/builder.rs.html#348-384' title='goto source code'>[src]</a></span></h3>
-<div class='impl-items'><h4 id='method.stream_id' class='method'><span id='stream_id.v' class='invisible'><code>fn <a href='#method.stream_id' class='fnname'>stream_id</a>&lt;S:&nbsp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.Into.html' title='trait core::convert::Into'>Into</a>&lt;<a class='enum' href='https://doc.rust-lang.org/nightly/collections/borrow/enum.Cow.html' title='enum collections::borrow::Cow'>Cow</a>&lt;'static, <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>&gt;&gt;&gt;(&amp;mut self, id: S) -&gt; &amp;mut Self</code></span></h4>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class="struct" href="../../eventstore_tcp/builder/struct.ReadEventBuilder.html" title="struct eventstore_tcp::builder::ReadEventBuilder">ReadEventBuilder</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/eventstore_tcp/builder.rs.html#348-384' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.stream_id' class="method"><span id='stream_id.v' class='invisible'><code>fn <a href='#method.stream_id' class='fnname'>stream_id</a>&lt;S:&nbsp;<a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/collections/borrow/enum.Cow.html" title="enum collections::borrow::Cow">Cow</a>&lt;'static, <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>&gt;&gt;&gt;(&amp;mut self, id: S) -&gt; &amp;mut Self</code></span></h4>
 <div class='docblock'><p>Panics if the id is an empty string</p>
-</div><h4 id='method.event_number' class='method'><span id='event_number.v' class='invisible'><code>fn <a href='#method.event_number' class='fnname'>event_number</a>&lt;N:&nbsp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.Into.html' title='trait core::convert::Into'>Into</a>&lt;<a class='enum' href='../../eventstore_tcp/enum.EventNumber.html' title='enum eventstore_tcp::EventNumber'>EventNumber</a>&gt;&gt;(&amp;mut self, number: N) -&gt; &amp;mut Self</code></span></h4>
+</div><h4 id='method.event_number' class="method"><span id='event_number.v' class='invisible'><code>fn <a href='#method.event_number' class='fnname'>event_number</a>&lt;N:&nbsp;<a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;<a class="enum" href="../../eventstore_tcp/enum.EventNumber.html" title="enum eventstore_tcp::EventNumber">EventNumber</a>&gt;&gt;(&amp;mut self, number: N) -&gt; &amp;mut Self</code></span></h4>
 <div class='docblock'><p>Event number to be read.</p>
-</div><h4 id='method.resolve_link_tos' class='method'><span id='resolve_link_tos.v' class='invisible'><code>fn <a href='#method.resolve_link_tos' class='fnname'>resolve_link_tos</a>(&amp;mut self, resolve: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; &amp;mut Self</code></span></h4>
+</div><h4 id='method.resolve_link_tos' class="method"><span id='resolve_link_tos.v' class='invisible'><code>fn <a href='#method.resolve_link_tos' class='fnname'>resolve_link_tos</a>(&amp;mut self, resolve: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>) -&gt; &amp;mut Self</code></span></h4>
 <div class='docblock'><p>Whether or not the server should resolve links found in the stream to events of other
 streams. Defaults to <code>true</code>.</p>
-</div><h4 id='method.require_master' class='method'><span id='require_master.v' class='invisible'><code>fn <a href='#method.require_master' class='fnname'>require_master</a>(&amp;mut self, require: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; &amp;mut Self</code></span></h4>
+</div><h4 id='method.require_master' class="method"><span id='require_master.v' class='invisible'><code>fn <a href='#method.require_master' class='fnname'>require_master</a>(&amp;mut self, require: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>) -&gt; &amp;mut Self</code></span></h4>
 <div class='docblock'><p>Should the server only handle the request if it is the cluster master. Note that while only
 the master server can accept writes, other cluster members can forward requests to the master.</p>
 
 <p>Defaults to <code>false</code>.</p>
-</div><h4 id='method.build_package' class='method'><span id='build_package.v' class='invisible'><code>fn <a href='#method.build_package' class='fnname'>build_package</a>(&amp;mut self,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; authentication: <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='enum core::option::Option'>Option</a>&lt;<a class='struct' href='../../eventstore_tcp/struct.UsernamePassword.html' title='struct eventstore_tcp::UsernamePassword'>UsernamePassword</a>&gt;,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; correlation_id: <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='enum core::option::Option'>Option</a>&lt;<a class='struct' href='https://doc.rust-lang.org/uuid/uuid/struct.Uuid.html' title='struct uuid::Uuid'>Uuid</a>&gt;)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -&gt; <a class='struct' href='../../eventstore_tcp/package/struct.Package.html' title='struct eventstore_tcp::package::Package'>Package</a></code></span></h4>
+</div><h4 id='method.build_package' class="method"><span id='build_package.v' class='invisible'><code>fn <a href='#method.build_package' class='fnname'>build_package</a>(&amp;mut self,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; authentication: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="../../eventstore_tcp/struct.UsernamePassword.html" title="struct eventstore_tcp::UsernamePassword">UsernamePassword</a>&gt;,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; correlation_id: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/uuid/uuid/struct.Uuid.html" title="struct uuid::Uuid">Uuid</a>&gt;)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -&gt; <a class="struct" href="../../eventstore_tcp/package/struct.Package.html" title="struct eventstore_tcp::package::Package">Package</a></code></span></h4>
 <div class='docblock'><p>Build a package. Will panic if required values are not set.
 Values of this builder will be moved into the package.</p>
 </div></div></section>

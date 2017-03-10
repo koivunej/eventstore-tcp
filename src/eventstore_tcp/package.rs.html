@@ -67,105 +67,31 @@
 <span id="22">22</span>
 <span id="23">23</span>
 <span id="24">24</span>
-<span id="25">25</span>
-<span id="26">26</span>
-<span id="27">27</span>
-<span id="28">28</span>
-<span id="29">29</span>
-<span id="30">30</span>
-<span id="31">31</span>
-<span id="32">32</span>
-<span id="33">33</span>
-<span id="34">34</span>
-<span id="35">35</span>
-<span id="36">36</span>
-<span id="37">37</span>
-<span id="38">38</span>
-<span id="39">39</span>
-<span id="40">40</span>
-<span id="41">41</span>
-<span id="42">42</span>
-<span id="43">43</span>
-<span id="44">44</span>
-<span id="45">45</span>
-<span id="46">46</span>
-<span id="47">47</span>
-<span id="48">48</span>
-<span id="49">49</span>
-<span id="50">50</span>
-<span id="51">51</span>
-<span id="52">52</span>
-<span id="53">53</span>
-<span id="54">54</span>
-<span id="55">55</span>
-<span id="56">56</span>
-<span id="57">57</span>
-<span id="58">58</span>
-<span id="59">59</span>
-<span id="60">60</span>
-<span id="61">61</span>
-</pre><pre class='rust '>
-<span class='doccomment'>//! Frame and MessageContainer</span>
+</pre><pre class="rust ">
+<span class="doccomment">//! Frame and MessageContainer</span>
 
-<span class='kw'>use</span> <span class='ident'>uuid</span>::<span class='ident'>Uuid</span>;
-<span class='kw'>use</span> <span class='ident'>UsernamePassword</span>;
-<span class='kw'>use</span> <span class='ident'>errors</span>::<span class='ident'>Error</span>;
-<span class='kw'>use</span> <span class='ident'>raw</span>;
-<span class='kw'>use</span> <span class='ident'>adapted</span>;
+<span class="kw">use</span> <span class="ident">uuid</span>::<span class="ident">Uuid</span>;
+<span class="kw">use</span> <span class="ident">UsernamePassword</span>;
+<span class="kw">use</span> <span class="ident">raw</span>;
 
-<span class='doccomment'>/// Frame in the protocol. On the wire, packets are embedded in frames with length</span>
-<span class='doccomment'>/// prefix and suffix.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>PartialEq</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>Package</span> {
-    <span class='doccomment'>/// Possible authentication data included in the packet. `Some` and `None` values of this will</span>
-    <span class='doccomment'>/// be used to generate corresponding `TcpFlags` first bit.</span>
-    <span class='kw'>pub</span> <span class='ident'>authentication</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>UsernamePassword</span><span class='op'>&gt;</span>,
-    <span class='doccomment'>/// Before sending an request to the server client generates a new random UUID using</span>
-    <span class='doccomment'>/// `uuid::Uuid::new_v4()` and later server will respond using the same `correlation_id`.</span>
-    <span class='kw'>pub</span> <span class='ident'>correlation_id</span>: <span class='ident'>Uuid</span>,
-    <span class='doccomment'>/// Enumeration of possible messages.</span>
-    <span class='kw'>pub</span> <span class='ident'>message</span>: <span class='ident'>MessageContainer</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span>,
+<span class="doccomment">/// Frame in the protocol. On the wire, packets are embedded in frames with length</span>
+<span class="doccomment">/// prefix and suffix.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Package</span> {
+    <span class="doccomment">/// Possible authentication data included in the packet. `Some` and `None` values of this will</span>
+    <span class="doccomment">/// be used to generate corresponding `TcpFlags` first bit.</span>
+    <span class="kw">pub</span> <span class="ident">authentication</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">UsernamePassword</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Before sending an request to the server client generates a new random UUID using</span>
+    <span class="doccomment">/// `uuid::Uuid::new_v4()` and later server will respond using the same `correlation_id`.</span>
+    <span class="kw">pub</span> <span class="ident">correlation_id</span>: <span class="ident">Uuid</span>,
+    <span class="doccomment">/// Enumeration of possible messages.</span>
+    <span class="kw">pub</span> <span class="ident">message</span>: <span class="ident">raw</span>::<span class="ident">RawMessage</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span>,
 }
 
-<span class='kw'>trait</span> <span class='ident'>SendReq</span>: <span class='ident'>Send</span> {}
+<span class="kw">trait</span> <span class="ident">SendReq</span>: <span class="ident">Send</span> {}
 
-<span class='kw'>impl</span> <span class='ident'>SendReq</span> <span class='kw'>for</span> <span class='ident'>Package</span> {}
+<span class="kw">impl</span> <span class="ident">SendReq</span> <span class="kw">for</span> <span class="ident">Package</span> {}
 
-<span class='doccomment'>/// Wrapper for either a raw just decoded or built-for sending message or an adapted one.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>PartialEq</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>MessageContainer</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='doccomment'>/// Contains a raw message</span>
-    <span class='ident'>Raw</span>(<span class='ident'>raw</span>::<span class='ident'>RawMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>),
-
-    <span class='doccomment'>/// Contains an adapted message</span>
-    <span class='ident'>Adapted</span>(<span class='ident'>adapted</span>::<span class='ident'>AdaptedMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>),
-}
-
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>From</span><span class='op'>&lt;</span><span class='ident'>raw</span>::<span class='ident'>RawMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;&gt;</span> <span class='kw'>for</span> <span class='ident'>MessageContainer</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>raw</span>: <span class='ident'>raw</span>::<span class='ident'>RawMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>MessageContainer</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-        <span class='ident'>MessageContainer</span>::<span class='ident'>Raw</span>(<span class='ident'>raw</span>)
-    }
-}
-
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>From</span><span class='op'>&lt;</span><span class='ident'>adapted</span>::<span class='ident'>AdaptedMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;&gt;</span> <span class='kw'>for</span> <span class='ident'>MessageContainer</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>adapted</span>: <span class='ident'>adapted</span>::<span class='ident'>AdaptedMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>MessageContainer</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-        <span class='ident'>MessageContainer</span>::<span class='ident'>Adapted</span>(<span class='ident'>adapted</span>)
-    }
-}
-
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>MessageContainer</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='doccomment'>/// Attempt to convert a raw message into an adapted one</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>try_adapt</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>adapted</span>::<span class='ident'>AdaptedMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>, (<span class='ident'>raw</span>::<span class='ident'>RawMessage</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>, <span class='ident'>Error</span>)<span class='op'>&gt;</span> {
-        <span class='kw'>use</span> <span class='ident'>CustomTryInto</span>;
-        <span class='kw'>use</span> <span class='self'>self</span>::<span class='ident'>MessageContainer</span>::<span class='kw-2'>*</span>;
-        <span class='kw'>match</span> <span class='self'>self</span> {
-            <span class='ident'>Adapted</span>(<span class='ident'>adapted</span>) <span class='op'>=&gt;</span> <span class='prelude-val'>Ok</span>(<span class='ident'>adapted</span>),
-            <span class='ident'>Raw</span>(<span class='ident'>raw</span>) <span class='op'>=&gt;</span> {
-                <span class='ident'>raw</span>.<span class='ident'>try_into</span>()
-            }
-        }
-    }
-}
 </pre>
 </section>
     <section id='search' class="content hidden"></section>

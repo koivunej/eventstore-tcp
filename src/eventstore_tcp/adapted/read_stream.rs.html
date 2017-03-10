@@ -98,59 +98,59 @@
 <span id="53">53</span>
 <span id="54">54</span>
 <span id="55">55</span>
-</pre><pre class='rust '>
-<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>borrow</span>::<span class='ident'>Cow</span>;
-<span class='kw'>use</span> <span class='ident'>raw</span>::<span class='ident'>client_messages</span>::<span class='ident'>mod_ReadStreamEventsCompleted</span>::<span class='ident'>ReadStreamResult</span>;
-<span class='kw'>use</span> <span class='ident'>raw</span>::<span class='ident'>client_messages</span>::<span class='ident'>ResolvedIndexedEvent</span>;
-<span class='kw'>use</span> {<span class='ident'>StreamVersion</span>, <span class='ident'>EventNumber</span>};
+</pre><pre class="rust ">
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">borrow</span>::<span class="ident">Cow</span>;
+<span class="kw">use</span> <span class="ident">raw</span>::<span class="ident">client_messages</span>::<span class="ident">mod_ReadStreamEventsCompleted</span>::<span class="ident">ReadStreamResult</span>;
+<span class="kw">use</span> <span class="ident">raw</span>::<span class="ident">client_messages</span>::<span class="ident">ResolvedIndexedEvent</span>;
+<span class="kw">use</span> {<span class="ident">StreamVersion</span>, <span class="ident">EventNumber</span>};
 
-<span class='doccomment'>/// Successful response to a `Message::ReadStreamEvents`.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>PartialEq</span>, <span class='ident'>Clone</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>ReadStreamCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='doccomment'>/// The actual events returned by the server. Subject to `resolve_link_tos` setting on the read</span>
-    <span class='doccomment'>/// request.</span>
-    <span class='kw'>pub</span> <span class='ident'>events</span>: <span class='ident'>Vec</span><span class='op'>&lt;</span><span class='ident'>ResolvedIndexedEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;&gt;</span>,
-    <span class='doccomment'>/// `EventNumber` for a query for the next page in the same direction, `None` if start has been</span>
-    <span class='doccomment'>/// reached when reading backwards. When reading forwards, this will never be `None` as new</span>
-    <span class='doccomment'>/// events might have appeared while receiving this response.</span>
-    <span class='kw'>pub</span> <span class='ident'>next_page</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>EventNumber</span><span class='op'>&gt;</span>,
-    <span class='doccomment'>/// Event number of the last event</span>
-    <span class='kw'>pub</span> <span class='ident'>last_event_number</span>: <span class='ident'>StreamVersion</span>,
-    <span class='doccomment'>/// Has the end of the stream been reached (or could more events be read immediatedly)</span>
-    <span class='kw'>pub</span> <span class='ident'>end_of_stream</span>: <span class='ident'>bool</span>,
+<span class="doccomment">/// Successful response to a `Message::ReadStreamEvents`.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ReadStreamCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// The actual events returned by the server. Subject to `resolve_link_tos` setting on the read</span>
+    <span class="doccomment">/// request.</span>
+    <span class="kw">pub</span> <span class="ident">events</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ResolvedIndexedEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;&gt;</span>,
+    <span class="doccomment">/// `EventNumber` for a query for the next page in the same direction, `None` if start has been</span>
+    <span class="doccomment">/// reached when reading backwards. When reading forwards, this will never be `None` as new</span>
+    <span class="doccomment">/// events might have appeared while receiving this response.</span>
+    <span class="kw">pub</span> <span class="ident">next_page</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">EventNumber</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Event number of the last event</span>
+    <span class="kw">pub</span> <span class="ident">last_event_number</span>: <span class="ident">StreamVersion</span>,
+    <span class="doccomment">/// Has the end of the stream been reached (or could more events be read immediatedly)</span>
+    <span class="kw">pub</span> <span class="ident">end_of_stream</span>: <span class="ident">bool</span>,
 
-    <span class='doccomment'>/// Last commit position of the last event. Not public as there is currently no type for an</span>
-    <span class='doccomment'>/// positive i64 (0 &lt; x &lt; i64). Also, not sure how to explain the use of this property.</span>
-    <span class='kw'>pub</span> <span class='ident'>last_commit_position</span>: <span class='ident'>i64</span>,
+    <span class="doccomment">/// Last commit position of the last event. Not public as there is currently no type for an</span>
+    <span class="doccomment">/// positive i64 (0 &lt; x &lt; i64). Also, not sure how to explain the use of this property.</span>
+    <span class="kw">pub</span> <span class="ident">last_commit_position</span>: <span class="ident">i64</span>,
 }
 
-<span class='doccomment'>/// Non-success projection of the `ReadStreamResult` enum on the wire representing</span>
-<span class='doccomment'>/// a failed `ReadStreamCompleted` request.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>Clone</span>, <span class='ident'>Eq</span>, <span class='ident'>PartialEq</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>ReadStreamError</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='doccomment'>/// Stream was not found</span>
-    <span class='ident'>NoStream</span>,
-    <span class='doccomment'>/// Stream has been deleted</span>
-    <span class='ident'>StreamDeleted</span>,
-    <span class='doccomment'>/// Unknown when this happens: it is not retuned when reading past the last event in a stream</span>
-    <span class='doccomment'>/// forwards.</span>
-    <span class='ident'>NotModified</span>,
-    <span class='doccomment'>/// Other error</span>
-    <span class='ident'>Error</span>(<span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, <span class='ident'>str</span><span class='op'>&gt;&gt;</span>),
-    <span class='doccomment'>/// Access was denied (no credentials provided or insufficient permissions)</span>
-    <span class='ident'>AccessDenied</span>,
+<span class="doccomment">/// Non-success projection of the `ReadStreamResult` enum on the wire representing</span>
+<span class="doccomment">/// a failed `ReadStreamCompleted` request.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ReadStreamError</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Stream was not found</span>
+    <span class="ident">NoStream</span>,
+    <span class="doccomment">/// Stream has been deleted</span>
+    <span class="ident">StreamDeleted</span>,
+    <span class="doccomment">/// Unknown when this happens: it is not retuned when reading past the last event in a stream</span>
+    <span class="doccomment">/// forwards.</span>
+    <span class="ident">NotModified</span>,
+    <span class="doccomment">/// Other error</span>
+    <span class="ident">Error</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">str</span><span class="op">&gt;&gt;</span>),
+    <span class="doccomment">/// Access was denied (no credentials provided or insufficient permissions)</span>
+    <span class="ident">AccessDenied</span>,
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>From</span><span class='op'>&lt;</span>(<span class='ident'>ReadStreamResult</span>, <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, <span class='ident'>str</span><span class='op'>&gt;&gt;</span>)<span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>ReadStreamError</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>from</span>((<span class='ident'>res</span>, <span class='ident'>err</span>): (<span class='ident'>ReadStreamResult</span>, <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, <span class='ident'>str</span><span class='op'>&gt;&gt;</span>)) <span class='op'>-&gt;</span> <span class='self'>Self</span> {
-        <span class='kw'>use</span> <span class='self'>self</span>::<span class='ident'>ReadStreamResult</span>::<span class='kw-2'>*</span>;
-        <span class='kw'>match</span> <span class='ident'>res</span> {
-            <span class='ident'>Success</span> <span class='op'>=&gt;</span> <span class='macro'>unreachable</span><span class='macro'>!</span>(),
-            <span class='ident'>NoStream</span> <span class='op'>=&gt;</span> <span class='ident'>ReadStreamError</span>::<span class='ident'>NoStream</span>,
-            <span class='ident'>StreamDeleted</span> <span class='op'>=&gt;</span> <span class='ident'>ReadStreamError</span>::<span class='ident'>StreamDeleted</span>,
-            <span class='ident'>NotModified</span> <span class='op'>=&gt;</span> <span class='ident'>ReadStreamError</span>::<span class='ident'>NotModified</span>,
-            <span class='ident'>Error</span> <span class='op'>=&gt;</span> <span class='ident'>ReadStreamError</span>::<span class='ident'>Error</span>(<span class='ident'>err</span>),
-            <span class='ident'>AccessDenied</span> <span class='op'>=&gt;</span> <span class='ident'>ReadStreamError</span>::<span class='ident'>AccessDenied</span>,
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span>(<span class="ident">ReadStreamResult</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">str</span><span class="op">&gt;&gt;</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ReadStreamError</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>((<span class="ident">res</span>, <span class="ident">err</span>): (<span class="ident">ReadStreamResult</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">str</span><span class="op">&gt;&gt;</span>)) <span class="op">-&gt;</span> <span class="self">Self</span> {
+        <span class="kw">use</span> <span class="self">self</span>::<span class="ident">ReadStreamResult</span>::<span class="kw-2">*</span>;
+        <span class="kw">match</span> <span class="ident">res</span> {
+            <span class="ident">Success</span> <span class="op">=&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(),
+            <span class="ident">NoStream</span> <span class="op">=&gt;</span> <span class="ident">ReadStreamError</span>::<span class="ident">NoStream</span>,
+            <span class="ident">StreamDeleted</span> <span class="op">=&gt;</span> <span class="ident">ReadStreamError</span>::<span class="ident">StreamDeleted</span>,
+            <span class="ident">NotModified</span> <span class="op">=&gt;</span> <span class="ident">ReadStreamError</span>::<span class="ident">NotModified</span>,
+            <span class="ident">Error</span> <span class="op">=&gt;</span> <span class="ident">ReadStreamError</span>::<span class="ident">Error</span>(<span class="ident">err</span>),
+            <span class="ident">AccessDenied</span> <span class="op">=&gt;</span> <span class="ident">ReadStreamError</span>::<span class="ident">AccessDenied</span>,
         }
     }
 }

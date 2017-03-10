@@ -388,351 +388,351 @@
 <span id="343">343</span>
 <span id="344">344</span>
 <span id="345">345</span>
-</pre><pre class='rust '>
-<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>borrow</span>::<span class='ident'>Cow</span>;
+</pre><pre class="rust ">
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">borrow</span>::<span class="ident">Cow</span>;
 
-<span class='kw'>use</span> <span class='ident'>raw</span>::<span class='ident'>client_messages</span>::{<span class='self'>self</span>, <span class='ident'>WriteEvents</span>, <span class='ident'>NewEvent</span>};
-<span class='kw'>use</span> <span class='ident'>raw</span>::<span class='ident'>client_messages</span>::<span class='ident'>mod_NotHandled</span>::<span class='ident'>MasterInfo</span>;
+<span class="kw">use</span> <span class="ident">raw</span>::<span class="ident">client_messages</span>::{<span class="self">self</span>, <span class="ident">WriteEvents</span>, <span class="ident">NewEvent</span>};
+<span class="kw">use</span> <span class="ident">raw</span>::<span class="ident">client_messages</span>::<span class="ident">mod_NotHandled</span>::<span class="ident">MasterInfo</span>;
 
-<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>WriteEventsExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='doccomment'>/// Turns this instance to an instance that owns all it&#39;s data and thus has `&#39;static` lifetime.</span>
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>WriteEvents</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span>;
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">WriteEventsExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Turns this instance to an instance that owns all it&#39;s data and thus has `&#39;static` lifetime.</span>
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">WriteEvents</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span>;
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>WriteEventsExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>client_messages</span>::<span class='ident'>WriteEvents</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>WriteEvents</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
-        <span class='ident'>client_messages</span>::<span class='ident'>WriteEvents</span> {
-            <span class='ident'>event_stream_id</span>: <span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='self'>self</span>.<span class='ident'>event_stream_id</span>.<span class='ident'>into_owned</span>()),
-            <span class='ident'>expected_version</span>: <span class='self'>self</span>.<span class='ident'>expected_version</span>,
-            <span class='ident'>events</span>: <span class='self'>self</span>.<span class='ident'>events</span>.<span class='ident'>into_iter</span>().<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>x</span>.<span class='ident'>into_owned</span>()).<span class='ident'>collect</span>(),
-            <span class='ident'>require_master</span>: <span class='self'>self</span>.<span class='ident'>require_master</span>,
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">WriteEventsExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">client_messages</span>::<span class="ident">WriteEvents</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">WriteEvents</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
+        <span class="ident">client_messages</span>::<span class="ident">WriteEvents</span> {
+            <span class="ident">event_stream_id</span>: <span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="self">self</span>.<span class="ident">event_stream_id</span>.<span class="ident">into_owned</span>()),
+            <span class="ident">expected_version</span>: <span class="self">self</span>.<span class="ident">expected_version</span>,
+            <span class="ident">events</span>: <span class="self">self</span>.<span class="ident">events</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">into_owned</span>()).<span class="ident">collect</span>(),
+            <span class="ident">require_master</span>: <span class="self">self</span>.<span class="ident">require_master</span>,
         }
     }
 }
 
-<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>WriteEventsCompletedExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='doccomment'>/// Turns this instance to an instance that owns all it&#39;s data and thus has `&#39;static` lifetime.</span>
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>WriteEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span>;
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">WriteEventsCompletedExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Turns this instance to an instance that owns all it&#39;s data and thus has `&#39;static` lifetime.</span>
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">WriteEventsCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span>;
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>WriteEventsCompletedExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>client_messages</span>::<span class='ident'>WriteEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>WriteEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
-        <span class='ident'>client_messages</span>::<span class='ident'>WriteEventsCompleted</span> {
-            <span class='ident'>result</span>: <span class='self'>self</span>.<span class='ident'>result</span>,
-            <span class='ident'>message</span>: <span class='ident'>owned_opt_cow</span>(<span class='self'>self</span>.<span class='ident'>message</span>),
-            <span class='ident'>first_event_number</span>: <span class='self'>self</span>.<span class='ident'>first_event_number</span>,
-            <span class='ident'>last_event_number</span>: <span class='self'>self</span>.<span class='ident'>last_event_number</span>,
-            <span class='ident'>prepare_position</span>: <span class='self'>self</span>.<span class='ident'>prepare_position</span>,
-            <span class='ident'>commit_position</span>: <span class='self'>self</span>.<span class='ident'>commit_position</span>,
-        }
-    }
-}
-
-
-<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>NewEventExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='doccomment'>/// Turns this instance to an instance that owns all it&#39;s data and thus has `&#39;static` lifetime.</span>
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>NewEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span>;
-}
-
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>NewEventExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>NewEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>NewEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
-        <span class='ident'>NewEvent</span> {
-            <span class='ident'>event_id</span>: <span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='self'>self</span>.<span class='ident'>event_id</span>.<span class='ident'>into_owned</span>()),
-            <span class='ident'>event_type</span>: <span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='self'>self</span>.<span class='ident'>event_type</span>.<span class='ident'>into_owned</span>()),
-            <span class='ident'>data_content_type</span>: <span class='self'>self</span>.<span class='ident'>data_content_type</span>,
-            <span class='ident'>metadata_content_type</span>: <span class='self'>self</span>.<span class='ident'>metadata_content_type</span>,
-            <span class='ident'>data</span>: <span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='self'>self</span>.<span class='ident'>data</span>.<span class='ident'>into_owned</span>()),
-            <span class='ident'>metadata</span>: <span class='self'>self</span>.<span class='ident'>metadata</span>.<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='ident'>x</span>.<span class='ident'>into_owned</span>())),
-        }
-    }
-}
-
-<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>MasterInfoExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='doccomment'>/// Turns this instance to an instance that owns all it&#39;s data and thus has `&#39;static` lifetime.</span>
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>mod_NotHandled</span>::<span class='ident'>MasterInfo</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span>;
-}
-
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>MasterInfoExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>client_messages</span>::<span class='ident'>mod_NotHandled</span>::<span class='ident'>MasterInfo</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>mod_NotHandled</span>::<span class='ident'>MasterInfo</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
-        <span class='ident'>MasterInfo</span> {
-            <span class='ident'>external_tcp_address</span>: <span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='self'>self</span>.<span class='ident'>external_tcp_address</span>.<span class='ident'>into_owned</span>()),
-            <span class='ident'>external_tcp_port</span>: <span class='self'>self</span>.<span class='ident'>external_tcp_port</span>,
-            <span class='ident'>external_http_address</span>: <span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='self'>self</span>.<span class='ident'>external_http_address</span>.<span class='ident'>into_owned</span>()),
-            <span class='ident'>external_http_port</span>: <span class='self'>self</span>.<span class='ident'>external_http_port</span>,
-            <span class='ident'>external_secure_tcp_address</span>: <span class='self'>self</span>.<span class='ident'>external_secure_tcp_address</span>.<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='ident'>x</span>.<span class='ident'>into_owned</span>())),
-            <span class='ident'>external_secure_tcp_port</span>: <span class='self'>self</span>.<span class='ident'>external_secure_tcp_port</span>
-        }
-    }
-}
-
-<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>ReadEventExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='doccomment'>/// Turns this instance to an instance that owns all it&#39;s data and thus has `&#39;static` lifetime.</span>
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ReadEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span>;
-}
-
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>ReadEventExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>client_messages</span>::<span class='ident'>ReadEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ReadEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
-        <span class='ident'>client_messages</span>::<span class='ident'>ReadEvent</span> {
-            <span class='ident'>event_stream_id</span>: <span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='self'>self</span>.<span class='ident'>event_stream_id</span>.<span class='ident'>into_owned</span>()),
-            <span class='ident'>event_number</span>: <span class='self'>self</span>.<span class='ident'>event_number</span>,
-            <span class='ident'>resolve_link_tos</span>: <span class='self'>self</span>.<span class='ident'>resolve_link_tos</span>,
-            <span class='ident'>require_master</span>: <span class='self'>self</span>.<span class='ident'>require_master</span>,
-        }
-    }
-}
-
-<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>ReadEventCompletedExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='doccomment'>/// Turns this instance to an instance that owns all it&#39;s data and thus has `&#39;static` lifetime.</span>
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ReadEventCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span>;
-}
-
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>ReadEventCompletedExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>client_messages</span>::<span class='ident'>ReadEventCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ReadEventCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
-        <span class='ident'>client_messages</span>::<span class='ident'>ReadEventCompleted</span> {
-            <span class='ident'>result</span>: <span class='self'>self</span>.<span class='ident'>result</span>,
-            <span class='ident'>event</span>: <span class='self'>self</span>.<span class='ident'>event</span>.<span class='ident'>into_owned</span>(),
-            <span class='ident'>error</span>: <span class='ident'>owned_opt_cow</span>(<span class='self'>self</span>.<span class='ident'>error</span>),
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">WriteEventsCompletedExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">client_messages</span>::<span class="ident">WriteEventsCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">WriteEventsCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
+        <span class="ident">client_messages</span>::<span class="ident">WriteEventsCompleted</span> {
+            <span class="ident">result</span>: <span class="self">self</span>.<span class="ident">result</span>,
+            <span class="ident">message</span>: <span class="ident">owned_opt_cow</span>(<span class="self">self</span>.<span class="ident">message</span>),
+            <span class="ident">first_event_number</span>: <span class="self">self</span>.<span class="ident">first_event_number</span>,
+            <span class="ident">last_event_number</span>: <span class="self">self</span>.<span class="ident">last_event_number</span>,
+            <span class="ident">prepare_position</span>: <span class="self">self</span>.<span class="ident">prepare_position</span>,
+            <span class="ident">commit_position</span>: <span class="self">self</span>.<span class="ident">commit_position</span>,
         }
     }
 }
 
 
-<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>ResolvedIndexedEventExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='doccomment'>/// Turns this instance to an instance that owns all it&#39;s data and thus has `&#39;static` lifetime.</span>
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ResolvedIndexedEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span>;
-
-    <span class='doccomment'>/// Creates an instance which borrows the non-copyable data of `self`</span>
-    <span class='kw'>fn</span> <span class='ident'>borrowed</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ResolvedIndexedEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>;
-
-    <span class='kw'>fn</span> <span class='ident'>as_read_event_completed</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ReadEventCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>;
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">NewEventExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Turns this instance to an instance that owns all it&#39;s data and thus has `&#39;static` lifetime.</span>
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">NewEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span>;
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>ResolvedIndexedEventExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>client_messages</span>::<span class='ident'>ResolvedIndexedEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ResolvedIndexedEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
-        <span class='ident'>client_messages</span>::<span class='ident'>ResolvedIndexedEvent</span> {
-            <span class='ident'>event</span>: <span class='self'>self</span>.<span class='ident'>event</span>.<span class='ident'>into_owned</span>(),
-            <span class='ident'>link</span>: <span class='self'>self</span>.<span class='ident'>link</span>.<span class='ident'>map</span>(<span class='ident'>EventRecordExt</span>::<span class='ident'>into_owned</span>),
-        }
-    }
-
-    <span class='kw'>fn</span> <span class='ident'>borrowed</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ResolvedIndexedEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span> {
-        <span class='ident'>client_messages</span>::<span class='ident'>ResolvedIndexedEvent</span> {
-            <span class='ident'>event</span>: <span class='self'>self</span>.<span class='ident'>event</span>.<span class='ident'>borrowed</span>(),
-            <span class='ident'>link</span>: <span class='self'>self</span>.<span class='ident'>link</span>.<span class='ident'>as_ref</span>().<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>x</span>.<span class='ident'>borrowed</span>()),
-        }
-    }
-
-    <span class='kw'>fn</span> <span class='ident'>as_read_event_completed</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ReadEventCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span> {
-        <span class='ident'>client_messages</span>::<span class='ident'>ReadEventCompleted</span> {
-            <span class='ident'>result</span>: <span class='prelude-val'>Some</span>(<span class='ident'>client_messages</span>::<span class='ident'>mod_ReadEventCompleted</span>::<span class='ident'>ReadEventResult</span>::<span class='ident'>Success</span>),
-            <span class='ident'>event</span>: <span class='self'>self</span>.<span class='ident'>borrowed</span>(),
-            <span class='ident'>error</span>: <span class='prelude-val'>None</span>,
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">NewEventExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">NewEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">NewEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
+        <span class="ident">NewEvent</span> {
+            <span class="ident">event_id</span>: <span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="self">self</span>.<span class="ident">event_id</span>.<span class="ident">into_owned</span>()),
+            <span class="ident">event_type</span>: <span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="self">self</span>.<span class="ident">event_type</span>.<span class="ident">into_owned</span>()),
+            <span class="ident">data_content_type</span>: <span class="self">self</span>.<span class="ident">data_content_type</span>,
+            <span class="ident">metadata_content_type</span>: <span class="self">self</span>.<span class="ident">metadata_content_type</span>,
+            <span class="ident">data</span>: <span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="self">self</span>.<span class="ident">data</span>.<span class="ident">into_owned</span>()),
+            <span class="ident">metadata</span>: <span class="self">self</span>.<span class="ident">metadata</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="ident">x</span>.<span class="ident">into_owned</span>())),
         }
     }
 }
 
-<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>EventRecordExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='doccomment'>/// Turns this instance to an instance that owns all it&#39;s data and thus has `&#39;static` lifetime.</span>
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>EventRecord</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span>;
-
-    <span class='doccomment'>/// Creates an instance which borrows the non-copyable data of `self`</span>
-    <span class='kw'>fn</span> <span class='ident'>borrowed</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>EventRecord</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>;
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">MasterInfoExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Turns this instance to an instance that owns all it&#39;s data and thus has `&#39;static` lifetime.</span>
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">mod_NotHandled</span>::<span class="ident">MasterInfo</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span>;
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>EventRecordExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>client_messages</span>::<span class='ident'>EventRecord</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>EventRecord</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
-        <span class='ident'>client_messages</span>::<span class='ident'>EventRecord</span> {
-            <span class='ident'>event_stream_id</span>: <span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='self'>self</span>.<span class='ident'>event_stream_id</span>.<span class='ident'>into_owned</span>()),
-            <span class='ident'>event_number</span>: <span class='self'>self</span>.<span class='ident'>event_number</span>,
-            <span class='ident'>event_id</span>: <span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='self'>self</span>.<span class='ident'>event_id</span>.<span class='ident'>into_owned</span>()),
-            <span class='ident'>event_type</span>: <span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='self'>self</span>.<span class='ident'>event_type</span>.<span class='ident'>into_owned</span>()),
-            <span class='ident'>data_content_type</span>: <span class='self'>self</span>.<span class='ident'>data_content_type</span>,
-            <span class='ident'>metadata_content_type</span>: <span class='self'>self</span>.<span class='ident'>metadata_content_type</span>,
-            <span class='ident'>data</span>: <span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='self'>self</span>.<span class='ident'>data</span>.<span class='ident'>into_owned</span>()),
-            <span class='ident'>metadata</span>: <span class='self'>self</span>.<span class='ident'>metadata</span>.<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='ident'>x</span>.<span class='ident'>into_owned</span>())),
-            <span class='ident'>created</span>: <span class='self'>self</span>.<span class='ident'>created</span>,
-            <span class='ident'>created_epoch</span>: <span class='self'>self</span>.<span class='ident'>created_epoch</span>,
-        }
-    }
-
-    <span class='kw'>fn</span> <span class='ident'>borrowed</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>EventRecord</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span> {
-        <span class='ident'>client_messages</span>::<span class='ident'>EventRecord</span> {
-            <span class='ident'>event_stream_id</span>: <span class='ident'>Cow</span>::<span class='ident'>Borrowed</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>*</span><span class='self'>self</span>.<span class='ident'>event_stream_id</span>),
-            <span class='ident'>event_number</span>: <span class='self'>self</span>.<span class='ident'>event_number</span>,
-            <span class='ident'>event_id</span>: <span class='ident'>Cow</span>::<span class='ident'>Borrowed</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>*</span><span class='self'>self</span>.<span class='ident'>event_id</span>),
-            <span class='ident'>event_type</span>: <span class='ident'>Cow</span>::<span class='ident'>Borrowed</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>*</span><span class='self'>self</span>.<span class='ident'>event_type</span>),
-            <span class='ident'>data_content_type</span>: <span class='self'>self</span>.<span class='ident'>data_content_type</span>,
-            <span class='ident'>metadata_content_type</span>: <span class='self'>self</span>.<span class='ident'>metadata_content_type</span>,
-            <span class='ident'>data</span>: <span class='ident'>Cow</span>::<span class='ident'>Borrowed</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>*</span><span class='self'>self</span>.<span class='ident'>data</span>),
-            <span class='ident'>metadata</span>: <span class='self'>self</span>.<span class='ident'>metadata</span>.<span class='ident'>as_ref</span>().<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>Cow</span>::<span class='ident'>Borrowed</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>*</span><span class='kw-2'>*</span><span class='ident'>x</span>)),
-            <span class='ident'>created</span>: <span class='self'>self</span>.<span class='ident'>created</span>,
-            <span class='ident'>created_epoch</span>: <span class='self'>self</span>.<span class='ident'>created_epoch</span>,
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">MasterInfoExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">client_messages</span>::<span class="ident">mod_NotHandled</span>::<span class="ident">MasterInfo</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">mod_NotHandled</span>::<span class="ident">MasterInfo</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
+        <span class="ident">MasterInfo</span> {
+            <span class="ident">external_tcp_address</span>: <span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="self">self</span>.<span class="ident">external_tcp_address</span>.<span class="ident">into_owned</span>()),
+            <span class="ident">external_tcp_port</span>: <span class="self">self</span>.<span class="ident">external_tcp_port</span>,
+            <span class="ident">external_http_address</span>: <span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="self">self</span>.<span class="ident">external_http_address</span>.<span class="ident">into_owned</span>()),
+            <span class="ident">external_http_port</span>: <span class="self">self</span>.<span class="ident">external_http_port</span>,
+            <span class="ident">external_secure_tcp_address</span>: <span class="self">self</span>.<span class="ident">external_secure_tcp_address</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="ident">x</span>.<span class="ident">into_owned</span>())),
+            <span class="ident">external_secure_tcp_port</span>: <span class="self">self</span>.<span class="ident">external_secure_tcp_port</span>
         }
     }
 }
 
-<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>ReadStreamEventsExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='doccomment'>/// Turns this instance to an instance that owns all it&#39;s data and thus has `&#39;static` lifetime.</span>
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ReadStreamEvents</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span>;
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ReadEventExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Turns this instance to an instance that owns all it&#39;s data and thus has `&#39;static` lifetime.</span>
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ReadEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span>;
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>ReadStreamEventsExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>client_messages</span>::<span class='ident'>ReadStreamEvents</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ReadStreamEvents</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
-        <span class='ident'>client_messages</span>::<span class='ident'>ReadStreamEvents</span> {
-            <span class='ident'>event_stream_id</span>: <span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='self'>self</span>.<span class='ident'>event_stream_id</span>.<span class='ident'>into_owned</span>()),
-            <span class='ident'>from_event_number</span>: <span class='self'>self</span>.<span class='ident'>from_event_number</span>,
-            <span class='ident'>max_count</span>: <span class='self'>self</span>.<span class='ident'>max_count</span>,
-            <span class='ident'>resolve_link_tos</span>: <span class='self'>self</span>.<span class='ident'>resolve_link_tos</span>,
-            <span class='ident'>require_master</span>: <span class='self'>self</span>.<span class='ident'>require_master</span>,
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">ReadEventExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">client_messages</span>::<span class="ident">ReadEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ReadEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
+        <span class="ident">client_messages</span>::<span class="ident">ReadEvent</span> {
+            <span class="ident">event_stream_id</span>: <span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="self">self</span>.<span class="ident">event_stream_id</span>.<span class="ident">into_owned</span>()),
+            <span class="ident">event_number</span>: <span class="self">self</span>.<span class="ident">event_number</span>,
+            <span class="ident">resolve_link_tos</span>: <span class="self">self</span>.<span class="ident">resolve_link_tos</span>,
+            <span class="ident">require_master</span>: <span class="self">self</span>.<span class="ident">require_master</span>,
         }
     }
 }
 
-<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>ResolvedEventExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ResolvedEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span>;
-
-    <span class='kw'>fn</span> <span class='ident'>borrowed</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ResolvedEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>;
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ReadEventCompletedExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Turns this instance to an instance that owns all it&#39;s data and thus has `&#39;static` lifetime.</span>
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ReadEventCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span>;
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>ResolvedEventExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>client_messages</span>::<span class='ident'>ResolvedEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ResolvedEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
-        <span class='ident'>client_messages</span>::<span class='ident'>ResolvedEvent</span> {
-            <span class='ident'>event</span>: <span class='self'>self</span>.<span class='ident'>event</span>.<span class='ident'>into_owned</span>(),
-            <span class='ident'>link</span>: <span class='self'>self</span>.<span class='ident'>link</span>.<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>x</span>.<span class='ident'>into_owned</span>()),
-            <span class='ident'>commit_position</span>: <span class='self'>self</span>.<span class='ident'>commit_position</span>,
-            <span class='ident'>prepare_position</span>: <span class='self'>self</span>.<span class='ident'>prepare_position</span>,
-        }
-    }
-
-    <span class='kw'>fn</span> <span class='ident'>borrowed</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ResolvedEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span> {
-        <span class='ident'>client_messages</span>::<span class='ident'>ResolvedEvent</span> {
-            <span class='ident'>event</span>: <span class='self'>self</span>.<span class='ident'>event</span>.<span class='ident'>borrowed</span>(),
-            <span class='ident'>link</span>: <span class='self'>self</span>.<span class='ident'>link</span>.<span class='ident'>as_ref</span>().<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>x</span>.<span class='ident'>borrowed</span>()),
-            <span class='ident'>commit_position</span>: <span class='self'>self</span>.<span class='ident'>commit_position</span>,
-            <span class='ident'>prepare_position</span>: <span class='self'>self</span>.<span class='ident'>prepare_position</span>,
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">ReadEventCompletedExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">client_messages</span>::<span class="ident">ReadEventCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ReadEventCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
+        <span class="ident">client_messages</span>::<span class="ident">ReadEventCompleted</span> {
+            <span class="ident">result</span>: <span class="self">self</span>.<span class="ident">result</span>,
+            <span class="ident">event</span>: <span class="self">self</span>.<span class="ident">event</span>.<span class="ident">into_owned</span>(),
+            <span class="ident">error</span>: <span class="ident">owned_opt_cow</span>(<span class="self">self</span>.<span class="ident">error</span>),
         }
     }
 }
 
-<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>NotHandledExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>NotHandled</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span>;
-    <span class='kw'>fn</span> <span class='ident'>borrowed</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>NotHandled</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>;
+
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ResolvedIndexedEventExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Turns this instance to an instance that owns all it&#39;s data and thus has `&#39;static` lifetime.</span>
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ResolvedIndexedEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span>;
+
+    <span class="doccomment">/// Creates an instance which borrows the non-copyable data of `self`</span>
+    <span class="kw">fn</span> <span class="ident">borrowed</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ResolvedIndexedEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>;
+
+    <span class="kw">fn</span> <span class="ident">as_read_event_completed</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ReadEventCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>;
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>NotHandledExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>client_messages</span>::<span class='ident'>NotHandled</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>NotHandled</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
-        <span class='ident'>client_messages</span>::<span class='ident'>NotHandled</span> {
-            <span class='ident'>reason</span>: <span class='self'>self</span>.<span class='ident'>reason</span>,
-            <span class='ident'>additional_info</span>: <span class='ident'>owned_opt_cow</span>(<span class='self'>self</span>.<span class='ident'>additional_info</span>),
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">ResolvedIndexedEventExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">client_messages</span>::<span class="ident">ResolvedIndexedEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ResolvedIndexedEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
+        <span class="ident">client_messages</span>::<span class="ident">ResolvedIndexedEvent</span> {
+            <span class="ident">event</span>: <span class="self">self</span>.<span class="ident">event</span>.<span class="ident">into_owned</span>(),
+            <span class="ident">link</span>: <span class="self">self</span>.<span class="ident">link</span>.<span class="ident">map</span>(<span class="ident">EventRecordExt</span>::<span class="ident">into_owned</span>),
         }
     }
 
-    <span class='kw'>fn</span> <span class='ident'>borrowed</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>NotHandled</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span> {
-        <span class='ident'>client_messages</span>::<span class='ident'>NotHandled</span> {
-            <span class='ident'>reason</span>: <span class='self'>self</span>.<span class='ident'>reason</span>,
-            <span class='ident'>additional_info</span>: <span class='ident'>borrowed_opt_cow</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>additional_info</span>),
-        }
-    }
-}
-
-<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>ReadStreamEventsCompletedExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ReadStreamEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span>;
-    <span class='kw'>fn</span> <span class='ident'>borrowed</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ReadStreamEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>;
-}
-
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>ReadStreamEventsCompletedExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>client_messages</span>::<span class='ident'>ReadStreamEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ReadStreamEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
-        <span class='ident'>client_messages</span>::<span class='ident'>ReadStreamEventsCompleted</span> {
-            <span class='ident'>events</span>: <span class='self'>self</span>.<span class='ident'>events</span>.<span class='ident'>into_iter</span>().<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>x</span>.<span class='ident'>into_owned</span>()).<span class='ident'>collect</span>(),
-            <span class='ident'>result</span>: <span class='self'>self</span>.<span class='ident'>result</span>,
-            <span class='ident'>next_event_number</span>: <span class='self'>self</span>.<span class='ident'>next_event_number</span>,
-            <span class='ident'>last_event_number</span>: <span class='self'>self</span>.<span class='ident'>last_event_number</span>,
-            <span class='ident'>is_end_of_stream</span>: <span class='self'>self</span>.<span class='ident'>is_end_of_stream</span>,
-            <span class='ident'>last_commit_position</span>: <span class='self'>self</span>.<span class='ident'>last_commit_position</span>,
-            <span class='ident'>error</span>: <span class='ident'>owned_opt_cow</span>(<span class='self'>self</span>.<span class='ident'>error</span>),
+    <span class="kw">fn</span> <span class="ident">borrowed</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ResolvedIndexedEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span> {
+        <span class="ident">client_messages</span>::<span class="ident">ResolvedIndexedEvent</span> {
+            <span class="ident">event</span>: <span class="self">self</span>.<span class="ident">event</span>.<span class="ident">borrowed</span>(),
+            <span class="ident">link</span>: <span class="self">self</span>.<span class="ident">link</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">borrowed</span>()),
         }
     }
 
-    <span class='kw'>fn</span> <span class='ident'>borrowed</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ReadStreamEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span> {
-        <span class='ident'>client_messages</span>::<span class='ident'>ReadStreamEventsCompleted</span> {
-            <span class='ident'>events</span>: <span class='self'>self</span>.<span class='ident'>events</span>.<span class='ident'>iter</span>().<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>x</span>.<span class='ident'>borrowed</span>()).<span class='ident'>collect</span>(),
-            <span class='ident'>result</span>: <span class='self'>self</span>.<span class='ident'>result</span>,
-            <span class='ident'>next_event_number</span>: <span class='self'>self</span>.<span class='ident'>next_event_number</span>,
-            <span class='ident'>last_event_number</span>: <span class='self'>self</span>.<span class='ident'>last_event_number</span>,
-            <span class='ident'>is_end_of_stream</span>: <span class='self'>self</span>.<span class='ident'>is_end_of_stream</span>,
-            <span class='ident'>last_commit_position</span>: <span class='self'>self</span>.<span class='ident'>last_commit_position</span>,
-            <span class='ident'>error</span>: <span class='ident'>borrowed_opt_cow</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>error</span>),
+    <span class="kw">fn</span> <span class="ident">as_read_event_completed</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ReadEventCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span> {
+        <span class="ident">client_messages</span>::<span class="ident">ReadEventCompleted</span> {
+            <span class="ident">result</span>: <span class="prelude-val">Some</span>(<span class="ident">client_messages</span>::<span class="ident">mod_ReadEventCompleted</span>::<span class="ident">ReadEventResult</span>::<span class="ident">Success</span>),
+            <span class="ident">event</span>: <span class="self">self</span>.<span class="ident">borrowed</span>(),
+            <span class="ident">error</span>: <span class="prelude-val">None</span>,
         }
     }
 }
 
-<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>ReadAllEventsCompletedExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ReadAllEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span>;
-    <span class='kw'>fn</span> <span class='ident'>borrowed</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ReadAllEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>;
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">EventRecordExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Turns this instance to an instance that owns all it&#39;s data and thus has `&#39;static` lifetime.</span>
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">EventRecord</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span>;
+
+    <span class="doccomment">/// Creates an instance which borrows the non-copyable data of `self`</span>
+    <span class="kw">fn</span> <span class="ident">borrowed</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">EventRecord</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>;
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>ReadAllEventsCompletedExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>client_messages</span>::<span class='ident'>ReadAllEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ReadAllEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
-        <span class='ident'>client_messages</span>::<span class='ident'>ReadAllEventsCompleted</span> {
-            <span class='ident'>commit_position</span>: <span class='self'>self</span>.<span class='ident'>commit_position</span>,
-            <span class='ident'>prepare_position</span>: <span class='self'>self</span>.<span class='ident'>prepare_position</span>,
-            <span class='ident'>events</span>: <span class='self'>self</span>.<span class='ident'>events</span>.<span class='ident'>into_iter</span>().<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>x</span>.<span class='ident'>into_owned</span>()).<span class='ident'>collect</span>(),
-            <span class='ident'>next_commit_position</span>: <span class='self'>self</span>.<span class='ident'>next_commit_position</span>,
-            <span class='ident'>next_prepare_position</span>: <span class='self'>self</span>.<span class='ident'>next_prepare_position</span>,
-            <span class='ident'>result</span>: <span class='self'>self</span>.<span class='ident'>result</span>,
-            <span class='ident'>error</span>: <span class='ident'>owned_opt_cow</span>(<span class='self'>self</span>.<span class='ident'>error</span>),
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">EventRecordExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">client_messages</span>::<span class="ident">EventRecord</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">EventRecord</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
+        <span class="ident">client_messages</span>::<span class="ident">EventRecord</span> {
+            <span class="ident">event_stream_id</span>: <span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="self">self</span>.<span class="ident">event_stream_id</span>.<span class="ident">into_owned</span>()),
+            <span class="ident">event_number</span>: <span class="self">self</span>.<span class="ident">event_number</span>,
+            <span class="ident">event_id</span>: <span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="self">self</span>.<span class="ident">event_id</span>.<span class="ident">into_owned</span>()),
+            <span class="ident">event_type</span>: <span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="self">self</span>.<span class="ident">event_type</span>.<span class="ident">into_owned</span>()),
+            <span class="ident">data_content_type</span>: <span class="self">self</span>.<span class="ident">data_content_type</span>,
+            <span class="ident">metadata_content_type</span>: <span class="self">self</span>.<span class="ident">metadata_content_type</span>,
+            <span class="ident">data</span>: <span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="self">self</span>.<span class="ident">data</span>.<span class="ident">into_owned</span>()),
+            <span class="ident">metadata</span>: <span class="self">self</span>.<span class="ident">metadata</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="ident">x</span>.<span class="ident">into_owned</span>())),
+            <span class="ident">created</span>: <span class="self">self</span>.<span class="ident">created</span>,
+            <span class="ident">created_epoch</span>: <span class="self">self</span>.<span class="ident">created_epoch</span>,
         }
     }
 
-    <span class='kw'>fn</span> <span class='ident'>borrowed</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>ReadAllEventsCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span><span class='op'>&gt;</span> {
-        <span class='ident'>client_messages</span>::<span class='ident'>ReadAllEventsCompleted</span> {
-            <span class='ident'>commit_position</span>: <span class='self'>self</span>.<span class='ident'>commit_position</span>,
-            <span class='ident'>prepare_position</span>: <span class='self'>self</span>.<span class='ident'>prepare_position</span>,
-            <span class='ident'>events</span>: <span class='self'>self</span>.<span class='ident'>events</span>.<span class='ident'>iter</span>().<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>x</span>.<span class='ident'>borrowed</span>()).<span class='ident'>collect</span>(),
-            <span class='ident'>next_commit_position</span>: <span class='self'>self</span>.<span class='ident'>next_commit_position</span>,
-            <span class='ident'>next_prepare_position</span>: <span class='self'>self</span>.<span class='ident'>next_prepare_position</span>,
-            <span class='ident'>result</span>: <span class='self'>self</span>.<span class='ident'>result</span>,
-            <span class='ident'>error</span>: <span class='ident'>borrowed_opt_cow</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>error</span>),
-        }
-    }
-}
-
-<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>DeleteStreamExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>DeleteStream</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span>;
-}
-
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>DeleteStreamExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>client_messages</span>::<span class='ident'>DeleteStream</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>DeleteStream</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
-        <span class='ident'>client_messages</span>::<span class='ident'>DeleteStream</span> {
-            <span class='ident'>event_stream_id</span>: <span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='self'>self</span>.<span class='ident'>event_stream_id</span>.<span class='ident'>into_owned</span>()),
-            <span class='ident'>expected_version</span>: <span class='self'>self</span>.<span class='ident'>expected_version</span>,
-            <span class='ident'>require_master</span>: <span class='self'>self</span>.<span class='ident'>require_master</span>,
-            <span class='ident'>hard_delete</span>: <span class='self'>self</span>.<span class='ident'>hard_delete</span>,
+    <span class="kw">fn</span> <span class="ident">borrowed</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">EventRecord</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span> {
+        <span class="ident">client_messages</span>::<span class="ident">EventRecord</span> {
+            <span class="ident">event_stream_id</span>: <span class="ident">Cow</span>::<span class="ident">Borrowed</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="self">self</span>.<span class="ident">event_stream_id</span>),
+            <span class="ident">event_number</span>: <span class="self">self</span>.<span class="ident">event_number</span>,
+            <span class="ident">event_id</span>: <span class="ident">Cow</span>::<span class="ident">Borrowed</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="self">self</span>.<span class="ident">event_id</span>),
+            <span class="ident">event_type</span>: <span class="ident">Cow</span>::<span class="ident">Borrowed</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="self">self</span>.<span class="ident">event_type</span>),
+            <span class="ident">data_content_type</span>: <span class="self">self</span>.<span class="ident">data_content_type</span>,
+            <span class="ident">metadata_content_type</span>: <span class="self">self</span>.<span class="ident">metadata_content_type</span>,
+            <span class="ident">data</span>: <span class="ident">Cow</span>::<span class="ident">Borrowed</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="self">self</span>.<span class="ident">data</span>),
+            <span class="ident">metadata</span>: <span class="self">self</span>.<span class="ident">metadata</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">Cow</span>::<span class="ident">Borrowed</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">x</span>)),
+            <span class="ident">created</span>: <span class="self">self</span>.<span class="ident">created</span>,
+            <span class="ident">created_epoch</span>: <span class="self">self</span>.<span class="ident">created_epoch</span>,
         }
     }
 }
 
-<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>DeleteStreamCompletedExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>DeleteStreamCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span>;
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ReadStreamEventsExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Turns this instance to an instance that owns all it&#39;s data and thus has `&#39;static` lifetime.</span>
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ReadStreamEvents</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span>;
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>DeleteStreamCompletedExt</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>client_messages</span>::<span class='ident'>DeleteStreamCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>into_owned</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>client_messages</span>::<span class='ident'>DeleteStreamCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span><span class='op'>&gt;</span> {
-        <span class='ident'>client_messages</span>::<span class='ident'>DeleteStreamCompleted</span> {
-            <span class='ident'>result</span>: <span class='self'>self</span>.<span class='ident'>result</span>,
-            <span class='ident'>message</span>: <span class='ident'>owned_opt_cow</span>(<span class='self'>self</span>.<span class='ident'>message</span>),
-            <span class='ident'>commit_position</span>: <span class='self'>self</span>.<span class='ident'>commit_position</span>,
-            <span class='ident'>prepare_position</span>: <span class='self'>self</span>.<span class='ident'>prepare_position</span>,
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">ReadStreamEventsExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">client_messages</span>::<span class="ident">ReadStreamEvents</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ReadStreamEvents</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
+        <span class="ident">client_messages</span>::<span class="ident">ReadStreamEvents</span> {
+            <span class="ident">event_stream_id</span>: <span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="self">self</span>.<span class="ident">event_stream_id</span>.<span class="ident">into_owned</span>()),
+            <span class="ident">from_event_number</span>: <span class="self">self</span>.<span class="ident">from_event_number</span>,
+            <span class="ident">max_count</span>: <span class="self">self</span>.<span class="ident">max_count</span>,
+            <span class="ident">resolve_link_tos</span>: <span class="self">self</span>.<span class="ident">resolve_link_tos</span>,
+            <span class="ident">require_master</span>: <span class="self">self</span>.<span class="ident">require_master</span>,
         }
     }
 }
 
-<span class='kw'>fn</span> <span class='ident'>owned_opt_cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, <span class='ident'>T</span>: <span class='ident'>ToOwned</span> <span class='op'>+</span> <span class='question-mark'>?</span><span class='ident'>Sized</span><span class='op'>&gt;</span>(<span class='ident'>opt_cow</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, <span class='ident'>T</span><span class='op'>&gt;&gt;</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span>, <span class='ident'>T</span><span class='op'>&gt;&gt;</span> {
-    <span class='ident'>opt_cow</span>.<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='ident'>x</span>.<span class='ident'>into_owned</span>()))
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ResolvedEventExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ResolvedEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span>;
+
+    <span class="kw">fn</span> <span class="ident">borrowed</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ResolvedEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>;
 }
 
-<span class='kw'>fn</span> <span class='ident'>borrowed_opt_cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, <span class='lifetime'>&#39;b</span>, <span class='ident'>T</span>: <span class='ident'>ToOwned</span> <span class='op'>+</span> <span class='question-mark'>?</span><span class='ident'>Sized</span><span class='op'>&gt;</span>(<span class='ident'>opt_cow</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;b</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, <span class='ident'>T</span><span class='op'>&gt;&gt;</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;b</span>, <span class='ident'>T</span><span class='op'>&gt;&gt;</span> {
-    <span class='ident'>opt_cow</span>.<span class='ident'>as_ref</span>().<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>x</span><span class='op'>|</span> <span class='ident'>Cow</span>::<span class='ident'>Borrowed</span>(<span class='ident'>x</span>.<span class='ident'>as_ref</span>()))
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">ResolvedEventExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">client_messages</span>::<span class="ident">ResolvedEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ResolvedEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
+        <span class="ident">client_messages</span>::<span class="ident">ResolvedEvent</span> {
+            <span class="ident">event</span>: <span class="self">self</span>.<span class="ident">event</span>.<span class="ident">into_owned</span>(),
+            <span class="ident">link</span>: <span class="self">self</span>.<span class="ident">link</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">into_owned</span>()),
+            <span class="ident">commit_position</span>: <span class="self">self</span>.<span class="ident">commit_position</span>,
+            <span class="ident">prepare_position</span>: <span class="self">self</span>.<span class="ident">prepare_position</span>,
+        }
+    }
+
+    <span class="kw">fn</span> <span class="ident">borrowed</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ResolvedEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span> {
+        <span class="ident">client_messages</span>::<span class="ident">ResolvedEvent</span> {
+            <span class="ident">event</span>: <span class="self">self</span>.<span class="ident">event</span>.<span class="ident">borrowed</span>(),
+            <span class="ident">link</span>: <span class="self">self</span>.<span class="ident">link</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">borrowed</span>()),
+            <span class="ident">commit_position</span>: <span class="self">self</span>.<span class="ident">commit_position</span>,
+            <span class="ident">prepare_position</span>: <span class="self">self</span>.<span class="ident">prepare_position</span>,
+        }
+    }
+}
+
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">NotHandledExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">NotHandled</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">borrowed</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">NotHandled</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>;
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">NotHandledExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">client_messages</span>::<span class="ident">NotHandled</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">NotHandled</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
+        <span class="ident">client_messages</span>::<span class="ident">NotHandled</span> {
+            <span class="ident">reason</span>: <span class="self">self</span>.<span class="ident">reason</span>,
+            <span class="ident">additional_info</span>: <span class="ident">owned_opt_cow</span>(<span class="self">self</span>.<span class="ident">additional_info</span>),
+        }
+    }
+
+    <span class="kw">fn</span> <span class="ident">borrowed</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">NotHandled</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span> {
+        <span class="ident">client_messages</span>::<span class="ident">NotHandled</span> {
+            <span class="ident">reason</span>: <span class="self">self</span>.<span class="ident">reason</span>,
+            <span class="ident">additional_info</span>: <span class="ident">borrowed_opt_cow</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">additional_info</span>),
+        }
+    }
+}
+
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ReadStreamEventsCompletedExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ReadStreamEventsCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">borrowed</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ReadStreamEventsCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>;
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">ReadStreamEventsCompletedExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">client_messages</span>::<span class="ident">ReadStreamEventsCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ReadStreamEventsCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
+        <span class="ident">client_messages</span>::<span class="ident">ReadStreamEventsCompleted</span> {
+            <span class="ident">events</span>: <span class="self">self</span>.<span class="ident">events</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">into_owned</span>()).<span class="ident">collect</span>(),
+            <span class="ident">result</span>: <span class="self">self</span>.<span class="ident">result</span>,
+            <span class="ident">next_event_number</span>: <span class="self">self</span>.<span class="ident">next_event_number</span>,
+            <span class="ident">last_event_number</span>: <span class="self">self</span>.<span class="ident">last_event_number</span>,
+            <span class="ident">is_end_of_stream</span>: <span class="self">self</span>.<span class="ident">is_end_of_stream</span>,
+            <span class="ident">last_commit_position</span>: <span class="self">self</span>.<span class="ident">last_commit_position</span>,
+            <span class="ident">error</span>: <span class="ident">owned_opt_cow</span>(<span class="self">self</span>.<span class="ident">error</span>),
+        }
+    }
+
+    <span class="kw">fn</span> <span class="ident">borrowed</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ReadStreamEventsCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span> {
+        <span class="ident">client_messages</span>::<span class="ident">ReadStreamEventsCompleted</span> {
+            <span class="ident">events</span>: <span class="self">self</span>.<span class="ident">events</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">borrowed</span>()).<span class="ident">collect</span>(),
+            <span class="ident">result</span>: <span class="self">self</span>.<span class="ident">result</span>,
+            <span class="ident">next_event_number</span>: <span class="self">self</span>.<span class="ident">next_event_number</span>,
+            <span class="ident">last_event_number</span>: <span class="self">self</span>.<span class="ident">last_event_number</span>,
+            <span class="ident">is_end_of_stream</span>: <span class="self">self</span>.<span class="ident">is_end_of_stream</span>,
+            <span class="ident">last_commit_position</span>: <span class="self">self</span>.<span class="ident">last_commit_position</span>,
+            <span class="ident">error</span>: <span class="ident">borrowed_opt_cow</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">error</span>),
+        }
+    }
+}
+
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ReadAllEventsCompletedExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ReadAllEventsCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">borrowed</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ReadAllEventsCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>;
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">ReadAllEventsCompletedExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">client_messages</span>::<span class="ident">ReadAllEventsCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ReadAllEventsCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
+        <span class="ident">client_messages</span>::<span class="ident">ReadAllEventsCompleted</span> {
+            <span class="ident">commit_position</span>: <span class="self">self</span>.<span class="ident">commit_position</span>,
+            <span class="ident">prepare_position</span>: <span class="self">self</span>.<span class="ident">prepare_position</span>,
+            <span class="ident">events</span>: <span class="self">self</span>.<span class="ident">events</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">into_owned</span>()).<span class="ident">collect</span>(),
+            <span class="ident">next_commit_position</span>: <span class="self">self</span>.<span class="ident">next_commit_position</span>,
+            <span class="ident">next_prepare_position</span>: <span class="self">self</span>.<span class="ident">next_prepare_position</span>,
+            <span class="ident">result</span>: <span class="self">self</span>.<span class="ident">result</span>,
+            <span class="ident">error</span>: <span class="ident">owned_opt_cow</span>(<span class="self">self</span>.<span class="ident">error</span>),
+        }
+    }
+
+    <span class="kw">fn</span> <span class="ident">borrowed</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">ReadAllEventsCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span><span class="op">&gt;</span> {
+        <span class="ident">client_messages</span>::<span class="ident">ReadAllEventsCompleted</span> {
+            <span class="ident">commit_position</span>: <span class="self">self</span>.<span class="ident">commit_position</span>,
+            <span class="ident">prepare_position</span>: <span class="self">self</span>.<span class="ident">prepare_position</span>,
+            <span class="ident">events</span>: <span class="self">self</span>.<span class="ident">events</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">borrowed</span>()).<span class="ident">collect</span>(),
+            <span class="ident">next_commit_position</span>: <span class="self">self</span>.<span class="ident">next_commit_position</span>,
+            <span class="ident">next_prepare_position</span>: <span class="self">self</span>.<span class="ident">next_prepare_position</span>,
+            <span class="ident">result</span>: <span class="self">self</span>.<span class="ident">result</span>,
+            <span class="ident">error</span>: <span class="ident">borrowed_opt_cow</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">error</span>),
+        }
+    }
+}
+
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">DeleteStreamExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">DeleteStream</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span>;
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">DeleteStreamExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">client_messages</span>::<span class="ident">DeleteStream</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">DeleteStream</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
+        <span class="ident">client_messages</span>::<span class="ident">DeleteStream</span> {
+            <span class="ident">event_stream_id</span>: <span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="self">self</span>.<span class="ident">event_stream_id</span>.<span class="ident">into_owned</span>()),
+            <span class="ident">expected_version</span>: <span class="self">self</span>.<span class="ident">expected_version</span>,
+            <span class="ident">require_master</span>: <span class="self">self</span>.<span class="ident">require_master</span>,
+            <span class="ident">hard_delete</span>: <span class="self">self</span>.<span class="ident">hard_delete</span>,
+        }
+    }
+}
+
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">DeleteStreamCompletedExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">DeleteStreamCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span>;
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">DeleteStreamCompletedExt</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">client_messages</span>::<span class="ident">DeleteStreamCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">into_owned</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">client_messages</span>::<span class="ident">DeleteStreamCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span><span class="op">&gt;</span> {
+        <span class="ident">client_messages</span>::<span class="ident">DeleteStreamCompleted</span> {
+            <span class="ident">result</span>: <span class="self">self</span>.<span class="ident">result</span>,
+            <span class="ident">message</span>: <span class="ident">owned_opt_cow</span>(<span class="self">self</span>.<span class="ident">message</span>),
+            <span class="ident">commit_position</span>: <span class="self">self</span>.<span class="ident">commit_position</span>,
+            <span class="ident">prepare_position</span>: <span class="self">self</span>.<span class="ident">prepare_position</span>,
+        }
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">owned_opt_cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>: <span class="ident">ToOwned</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span><span class="op">&gt;</span>(<span class="ident">opt_cow</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;&gt;</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span>, <span class="ident">T</span><span class="op">&gt;&gt;</span> {
+    <span class="ident">opt_cow</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="ident">x</span>.<span class="ident">into_owned</span>()))
+}
+
+<span class="kw">fn</span> <span class="ident">borrowed_opt_cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">T</span>: <span class="ident">ToOwned</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span><span class="op">&gt;</span>(<span class="ident">opt_cow</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;&gt;</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">T</span><span class="op">&gt;&gt;</span> {
+    <span class="ident">opt_cow</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">Cow</span>::<span class="ident">Borrowed</span>(<span class="ident">x</span>.<span class="ident">as_ref</span>()))
 }
 </pre>
 </section>

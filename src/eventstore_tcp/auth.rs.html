@@ -97,59 +97,71 @@
 <span id="52">52</span>
 <span id="53">53</span>
 <span id="54">54</span>
-</pre><pre class='rust '>
-<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>borrow</span>::<span class='ident'>Cow</span>;
-<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>fmt</span>;
-<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>io</span>;
-<span class='kw'>use</span> <span class='ident'>byteorder</span>::{<span class='ident'>ReadBytesExt</span>, <span class='ident'>WriteBytesExt</span>};
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+</pre><pre class="rust ">
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">borrow</span>::<span class="ident">Cow</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>;
+<span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">ReadBytesExt</span>, <span class="ident">WriteBytesExt</span>};
 
-<span class='doccomment'>/// Username and password authentication token embedded in requests as there is no concept of</span>
-<span class='doccomment'>/// session in the TCP protocol, every request must be authenticated.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Clone</span>, <span class='ident'>PartialEq</span>, <span class='ident'>Eq</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>UsernamePassword</span>(<span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span>, <span class='ident'>str</span><span class='op'>&gt;</span>, <span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span>, <span class='ident'>str</span><span class='op'>&gt;</span>);
+<span class="doccomment">/// Username and password authentication token embedded in requests as there is no concept of</span>
+<span class="doccomment">/// session in the TCP protocol, every request must be authenticated.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">UsernamePassword</span>(<span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span>, <span class="ident">str</span><span class="op">&gt;</span>, <span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span>, <span class="ident">str</span><span class="op">&gt;</span>);
 
-<span class='kw'>impl</span> <span class='ident'>fmt</span>::<span class='ident'>Debug</span> <span class='kw'>for</span> <span class='ident'>UsernamePassword</span> {
-    <span class='kw'>fn</span> <span class='ident'>fmt</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>fmt</span>: <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>fmt</span>::<span class='ident'>Formatter</span>) <span class='op'>-&gt;</span> <span class='ident'>fmt</span>::<span class='prelude-ty'>Result</span> {
-        <span class='macro'>write</span><span class='macro'>!</span>(<span class='ident'>fmt</span>, <span class='string'>&quot;({:?}, PASSWORD)&quot;</span>, <span class='self'>self</span>.<span class='number'>0</span>)
+<span class="kw">impl</span> <span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">UsernamePassword</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">fmt</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt</span>::<span class="ident">Formatter</span>) <span class="op">-&gt;</span> <span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
+        <span class="macro">write</span><span class="macro">!</span>(<span class="ident">fmt</span>, <span class="string">&quot;({:?}, PASSWORD)&quot;</span>, <span class="self">self</span>.<span class="number">0</span>)
     }
 }
 
-<span class='kw'>impl</span> <span class='ident'>UsernamePassword</span> {
-    <span class='doccomment'>/// Create a new value</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>new</span><span class='op'>&lt;</span><span class='ident'>S</span>: <span class='ident'>Into</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;static</span>, <span class='ident'>str</span><span class='op'>&gt;&gt;</span><span class='op'>&gt;</span>(<span class='ident'>username</span>: <span class='ident'>S</span>, <span class='ident'>password</span>: <span class='ident'>S</span>) <span class='op'>-&gt;</span> <span class='ident'>UsernamePassword</span> {
-        <span class='ident'>UsernamePassword</span>(<span class='ident'>username</span>.<span class='ident'>into</span>(), <span class='ident'>password</span>.<span class='ident'>into</span>())
+<span class="kw">impl</span> <span class="ident">UsernamePassword</span> {
+    <span class="doccomment">/// Create a new value</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span><span class="op">&lt;</span><span class="ident">S</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;static</span>, <span class="ident">str</span><span class="op">&gt;&gt;</span><span class="op">&gt;</span>(<span class="ident">username</span>: <span class="ident">S</span>, <span class="ident">password</span>: <span class="ident">S</span>) <span class="op">-&gt;</span> <span class="ident">UsernamePassword</span> {
+        <span class="ident">UsernamePassword</span>(<span class="ident">username</span>.<span class="ident">into</span>(), <span class="ident">password</span>.<span class="ident">into</span>())
     }
 
-    <span class='attribute'>#[<span class='ident'>doc</span>(<span class='ident'>hidden</span>)]</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>decode</span><span class='op'>&lt;</span><span class='ident'>R</span>: <span class='ident'>ReadBytesExt</span><span class='op'>&gt;</span>(<span class='ident'>buf</span>: <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>R</span>) <span class='op'>-&gt;</span> <span class='ident'>io</span>::<span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='self'>Self</span><span class='op'>&gt;</span> {
-        <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>string</span>;
+    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">decode</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">ReadBytesExt</span><span class="op">&gt;</span>(<span class="ident">buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">R</span>) <span class="op">-&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">string</span>;
 
-        <span class='kw'>fn</span> <span class='ident'>convert_utf8_err</span>(<span class='ident'>e</span>: <span class='ident'>string</span>::<span class='ident'>FromUtf8Error</span>) <span class='op'>-&gt;</span> <span class='ident'>io</span>::<span class='ident'>Error</span> {
-            <span class='ident'>io</span>::<span class='ident'>Error</span>::<span class='ident'>new</span>(<span class='ident'>io</span>::<span class='ident'>ErrorKind</span>::<span class='ident'>InvalidData</span>, <span class='ident'>e</span>.<span class='ident'>utf8_error</span>())
+        <span class="kw">fn</span> <span class="ident">convert_utf8_err</span>(<span class="ident">e</span>: <span class="ident">string</span>::<span class="ident">FromUtf8Error</span>) <span class="op">-&gt;</span> <span class="ident">io</span>::<span class="ident">Error</span> {
+            <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">InvalidData</span>, <span class="ident">e</span>.<span class="ident">utf8_error</span>())
         }
 
-        <span class='kw'>let</span> <span class='ident'>len</span> <span class='op'>=</span> <span class='ident'>buf</span>.<span class='ident'>read_u8</span>()<span class='question-mark'>?</span>;
-        <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>username</span> <span class='op'>=</span> <span class='macro'>vec</span><span class='macro'>!</span>[<span class='number'>0u8</span>, <span class='ident'>len</span>];
-        <span class='ident'>buf</span>.<span class='ident'>read_exact</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>username</span>[..])<span class='question-mark'>?</span>;
-        <span class='kw'>let</span> <span class='ident'>username</span> <span class='op'>=</span> <span class='ident'>String</span>::<span class='ident'>from_utf8</span>(<span class='ident'>username</span>).<span class='ident'>map_err</span>(<span class='ident'>convert_utf8_err</span>)<span class='question-mark'>?</span>;
+        <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">buf</span>.<span class="ident">read_u8</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">username</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0u8</span>, <span class="ident">len</span>];
+        <span class="ident">buf</span>.<span class="ident">read_exact</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">username</span>[..])<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">username</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from_utf8</span>(<span class="ident">username</span>).<span class="ident">map_err</span>(<span class="ident">convert_utf8_err</span>)<span class="question-mark">?</span>;
 
-        <span class='kw'>let</span> <span class='ident'>len</span> <span class='op'>=</span> <span class='ident'>buf</span>.<span class='ident'>read_u8</span>()<span class='question-mark'>?</span>;
-        <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>password</span> <span class='op'>=</span> <span class='macro'>vec</span><span class='macro'>!</span>[<span class='number'>0u8</span>, <span class='ident'>len</span>];
-        <span class='ident'>buf</span>.<span class='ident'>read_exact</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>password</span>[..])<span class='question-mark'>?</span>;
-        <span class='kw'>let</span> <span class='ident'>password</span> <span class='op'>=</span> <span class='ident'>String</span>::<span class='ident'>from_utf8</span>(<span class='ident'>password</span>).<span class='ident'>map_err</span>(<span class='ident'>convert_utf8_err</span>)<span class='question-mark'>?</span>;
+        <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">buf</span>.<span class="ident">read_u8</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">password</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0u8</span>, <span class="ident">len</span>];
+        <span class="ident">buf</span>.<span class="ident">read_exact</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">password</span>[..])<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">password</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from_utf8</span>(<span class="ident">password</span>).<span class="ident">map_err</span>(<span class="ident">convert_utf8_err</span>)<span class="question-mark">?</span>;
 
-        <span class='prelude-val'>Ok</span>(<span class='ident'>UsernamePassword</span>(<span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='ident'>username</span>), <span class='ident'>Cow</span>::<span class='ident'>Owned</span>(<span class='ident'>password</span>)))
+        <span class="prelude-val">Ok</span>(<span class="ident">UsernamePassword</span>(<span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="ident">username</span>), <span class="ident">Cow</span>::<span class="ident">Owned</span>(<span class="ident">password</span>)))
     }
 
-    <span class='attribute'>#[<span class='ident'>doc</span>(<span class='ident'>hidden</span>)]</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>encode</span><span class='op'>&lt;</span><span class='ident'>W</span>: <span class='ident'>WriteBytesExt</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>buf</span>: <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>W</span>) <span class='op'>-&gt;</span> <span class='ident'>io</span>::<span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>usize</span><span class='op'>&gt;</span> {
-        <span class='comment'>// TODO: new that disallows too long strings</span>
-        <span class='ident'>buf</span>.<span class='ident'>write_u8</span>(<span class='self'>self</span>.<span class='number'>0</span>.<span class='ident'>len</span>() <span class='kw'>as</span> <span class='ident'>u8</span>)<span class='question-mark'>?</span>;
-        <span class='ident'>buf</span>.<span class='ident'>write_all</span>(<span class='self'>self</span>.<span class='number'>0</span>.<span class='ident'>as_bytes</span>())<span class='question-mark'>?</span>;
-        <span class='ident'>buf</span>.<span class='ident'>write_u8</span>(<span class='self'>self</span>.<span class='number'>1</span>.<span class='ident'>len</span>() <span class='kw'>as</span> <span class='ident'>u8</span>)<span class='question-mark'>?</span>;
-        <span class='ident'>buf</span>.<span class='ident'>write_all</span>(<span class='self'>self</span>.<span class='number'>1</span>.<span class='ident'>as_bytes</span>())<span class='question-mark'>?</span>;
+    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">encode</span><span class="op">&lt;</span><span class="ident">W</span>: <span class="ident">WriteBytesExt</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">W</span>) <span class="op">-&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
+        <span class="comment">// TODO: new that disallows too long strings</span>
+        <span class="ident">buf</span>.<span class="ident">write_u8</span>(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u8</span>)<span class="question-mark">?</span>;
+        <span class="ident">buf</span>.<span class="ident">write_all</span>(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">as_bytes</span>())<span class="question-mark">?</span>;
+        <span class="ident">buf</span>.<span class="ident">write_u8</span>(<span class="self">self</span>.<span class="number">1</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u8</span>)<span class="question-mark">?</span>;
+        <span class="ident">buf</span>.<span class="ident">write_all</span>(<span class="self">self</span>.<span class="number">1</span>.<span class="ident">as_bytes</span>())<span class="question-mark">?</span>;
 
-        <span class='prelude-val'>Ok</span>(<span class='number'>1</span> <span class='op'>+</span> <span class='self'>self</span>.<span class='number'>0</span>.<span class='ident'>len</span>() <span class='op'>+</span> <span class='number'>1</span> <span class='op'>+</span> <span class='self'>self</span>.<span class='number'>1</span>.<span class='ident'>len</span>())
+        <span class="prelude-val">Ok</span>(<span class="number">1</span> <span class="op">+</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">len</span>() <span class="op">+</span> <span class="number">1</span> <span class="op">+</span> <span class="self">self</span>.<span class="number">1</span>.<span class="ident">len</span>())
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span>(<span class="ident">String</span>, <span class="ident">String</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">UsernamePassword</span> {
+    <span class="kw">fn</span> <span class="ident">into</span>(<span class="self">self</span>) <span class="op">-&gt;</span> (<span class="ident">String</span>, <span class="ident">String</span>) {
+        (<span class="self">self</span>.<span class="number">0</span>.<span class="ident">into_owned</span>(), <span class="self">self</span>.<span class="number">1</span>.<span class="ident">into_owned</span>())
     }
 }
 </pre>

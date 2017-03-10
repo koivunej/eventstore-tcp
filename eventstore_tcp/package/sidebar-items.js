@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["MessageContainer","Wrapper for either a raw just decoded or built-for sending message or an adapted one."]],"struct":[["Package","Frame in the protocol. On the wire, packets are embedded in frames with length prefix and suffix."]]});
+initSidebarItems({"struct":[["Package","Frame in the protocol. On the wire, packets are embedded in frames with length prefix and suffix."]]});

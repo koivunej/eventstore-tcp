@@ -44,7 +44,7 @@
     </nav>
 
     <section id='main' class="content mod">
-<h1 class='fqn'><span class='in-band'>Crate <a class='mod' href=''>eventstore_tcp</a></span><span class='out-of-band'><span id='render-detail'>
+<h1 class='fqn'><span class='in-band'>Crate <a class="mod" href=''>eventstore_tcp</a></span><span class='out-of-band'><span id='render-detail'>
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
@@ -69,65 +69,65 @@ needed to support subscriptions.</p>
 <h1 id='simplest-example' class='section-header'><a href='#simplest-example'>Simplest example</a></h1>
 <p>Example of writing to the database and simple handling of the response.</p>
 
-<pre class='rust rust-example-rendered'>
-<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>futures</span>;
-<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>tokio_core</span>;
-<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>tokio_proto</span>;
-<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>tokio_service</span>;
-<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>eventstore_tcp</span>;
+<pre class="rust rust-example-rendered">
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">futures</span>;
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">tokio_core</span>;
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">tokio_proto</span>;
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">tokio_service</span>;
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">eventstore_tcp</span>;
 
-<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>net</span>::<span class='ident'>SocketAddr</span>;
-<span class='kw'>use</span> <span class='ident'>futures</span>::<span class='ident'>Future</span>;
-<span class='kw'>use</span> <span class='ident'>tokio_core</span>::<span class='ident'>reactor</span>::<span class='ident'>Core</span>;
-<span class='kw'>use</span> <span class='ident'>tokio_service</span>::<span class='ident'>Service</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">net</span>::<span class="ident">SocketAddr</span>;
+<span class="kw">use</span> <span class="ident">futures</span>::<span class="ident">Future</span>;
+<span class="kw">use</span> <span class="ident">tokio_core</span>::<span class="ident">reactor</span>::<span class="ident">Core</span>;
+<span class="kw">use</span> <span class="ident">tokio_service</span>::<span class="ident">Service</span>;
 
-<span class='kw'>use</span> <span class='ident'>eventstore_tcp</span>::{<span class='ident'>EventStoreClient</span>, <span class='ident'>Builder</span>, <span class='ident'>AdaptedMessage</span>, <span class='ident'>StreamVersion</span>, <span class='ident'>ContentType</span>};
+<span class="kw">use</span> <span class="ident">eventstore_tcp</span>::{<span class="ident">EventStoreClient</span>, <span class="ident">Builder</span>, <span class="ident">AdaptedMessage</span>, <span class="ident">StreamVersion</span>, <span class="ident">ContentType</span>};
 
-<span class='kw'>fn</span> <span class='ident'>main</span>() {
-    <span class='kw'>let</span> <span class='ident'>addr</span> <span class='op'>=</span> <span class='string'>&quot;127.0.0.1:1113&quot;</span>.<span class='ident'>parse</span>::<span class='op'>&lt;</span><span class='ident'>SocketAddr</span><span class='op'>&gt;</span>().<span class='ident'>unwrap</span>();
-    <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>core</span> <span class='op'>=</span> <span class='ident'>Core</span>::<span class='ident'>new</span>().<span class='ident'>unwrap</span>();
+<span class="kw">fn</span> <span class="ident">main</span>() {
+    <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="string">&quot;127.0.0.1:1113&quot;</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">SocketAddr</span><span class="op">&gt;</span>().<span class="ident">unwrap</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">core</span> <span class="op">=</span> <span class="ident">Core</span>::<span class="ident">new</span>().<span class="ident">unwrap</span>();
 
-    <span class='comment'>// connecting the client returns a future for an EventStoreClient</span>
-    <span class='comment'>// which implements tokio_service::Service</span>
-    <span class='kw'>let</span> <span class='ident'>client</span> <span class='op'>=</span> <span class='ident'>EventStoreClient</span>::<span class='ident'>connect</span>(<span class='kw-2'>&amp;</span><span class='ident'>addr</span>, <span class='kw-2'>&amp;</span><span class='ident'>core</span>.<span class='ident'>handle</span>());
+    <span class="comment">// connecting the client returns a future for an EventStoreClient</span>
+    <span class="comment">// which implements tokio_service::Service</span>
+    <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">EventStoreClient</span>::<span class="ident">connect</span>(<span class="kw-2">&amp;</span><span class="ident">addr</span>, <span class="kw-2">&amp;</span><span class="ident">core</span>.<span class="ident">handle</span>());
 
-    <span class='kw'>let</span> <span class='ident'>value</span> <span class='op'>=</span> <span class='ident'>client</span>.<span class='ident'>and_then</span>(<span class='op'>|</span><span class='ident'>client</span><span class='op'>|</span> {
-        <span class='comment'>// once the connection is made and EventStoreClient (`client`)</span>
-        <span class='comment'>// is created, send a WriteEvents request:</span>
-        <span class='ident'>client</span>.<span class='ident'>call</span>(<span class='ident'>Builder</span>::<span class='ident'>write_events</span>()
-            .<span class='ident'>stream_id</span>(<span class='string'>&quot;my_stream-1&quot;</span>)
-            .<span class='ident'>expected_version</span>(<span class='ident'>StreamVersion</span>::<span class='ident'>from</span>(<span class='number'>42</span>))
-            .<span class='ident'>new_event</span>()
-                .<span class='ident'>event_type</span>(<span class='string'>&quot;meaning_of_life&quot;</span>)
-                .<span class='ident'>data</span>(<span class='string'>&quot;{ &#39;meaning&#39;: 42 }&quot;</span>.<span class='ident'>as_bytes</span>())
-                .<span class='ident'>data_content_type</span>(<span class='ident'>ContentType</span>::<span class='ident'>Json</span>)
-            .<span class='ident'>done</span>()
-            .<span class='ident'>build_package</span>(<span class='prelude-val'>None</span>, <span class='prelude-val'>None</span>))
+    <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">client</span>.<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">client</span><span class="op">|</span> {
+        <span class="comment">// once the connection is made and EventStoreClient (`client`)</span>
+        <span class="comment">// is created, send a WriteEvents request:</span>
+        <span class="ident">client</span>.<span class="ident">call</span>(<span class="ident">Builder</span>::<span class="ident">write_events</span>()
+            .<span class="ident">stream_id</span>(<span class="string">&quot;my_stream-1&quot;</span>)
+            .<span class="ident">expected_version</span>(<span class="ident">StreamVersion</span>::<span class="ident">from</span>(<span class="number">42</span>))
+            .<span class="ident">new_event</span>()
+                .<span class="ident">event_type</span>(<span class="string">&quot;meaning_of_life&quot;</span>)
+                .<span class="ident">data</span>(<span class="string">&quot;{ &#39;meaning&#39;: 42 }&quot;</span>.<span class="ident">as_bytes</span>())
+                .<span class="ident">data_content_type</span>(<span class="ident">ContentType</span>::<span class="ident">Json</span>)
+            .<span class="ident">done</span>()
+            .<span class="ident">build_package</span>(<span class="prelude-val">None</span>, <span class="prelude-val">None</span>))
 
-        <span class='comment'>// call returns a future representing the response</span>
-    }).<span class='ident'>and_then</span>(<span class='op'>|</span><span class='ident'>resp</span><span class='op'>|</span> {
-        <span class='comment'>// By default, `resp` is a `Package` that contains the raw protobuf defined message</span>
-        <span class='comment'>// (`RawMessage`). It is possible to refine it into AdaptedMessage which can fail:</span>
-        <span class='kw'>match</span> <span class='ident'>resp</span>.<span class='ident'>message</span>.<span class='ident'>try_adapt</span>().<span class='ident'>unwrap</span>() {
-            <span class='ident'>AdaptedMessage</span>::<span class='ident'>WriteEventsCompleted</span>(<span class='prelude-val'>Ok</span>(_)) <span class='op'>=&gt;</span>
-                <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;Event was written successfully&quot;</span>),
-            <span class='ident'>AdaptedMessage</span>::<span class='ident'>WriteEventsCompleted</span>(<span class='prelude-val'>Err</span>(<span class='ident'>fail</span>)) <span class='op'>=&gt;</span>
-                <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;Event writing failed: {:?}&quot;</span>, <span class='ident'>fail</span>),
-            <span class='ident'>unexpected</span> <span class='op'>=&gt;</span> <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;Unexpected response: {:#?}&quot;</span>, <span class='ident'>unexpected</span>),
+        <span class="comment">// call returns a future representing the response</span>
+    }).<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">resp</span><span class="op">|</span> {
+        <span class="comment">// By default, `resp` is a `Package` that contains the raw protobuf defined message</span>
+        <span class="comment">// (`RawMessage`). It is possible to refine it into AdaptedMessage which can fail:</span>
+        <span class="kw">match</span> <span class="ident">resp</span>.<span class="ident">message</span>.<span class="ident">try_adapt</span>().<span class="ident">unwrap</span>() {
+            <span class="ident">AdaptedMessage</span>::<span class="ident">WriteEventsCompleted</span>(<span class="prelude-val">Ok</span>(_)) <span class="op">=&gt;</span>
+                <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;Event was written successfully&quot;</span>),
+            <span class="ident">AdaptedMessage</span>::<span class="ident">WriteEventsCompleted</span>(<span class="prelude-val">Err</span>(<span class="ident">fail</span>)) <span class="op">=&gt;</span>
+                <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;Event writing failed: {:?}&quot;</span>, <span class="ident">fail</span>),
+            <span class="ident">unexpected</span> <span class="op">=&gt;</span> <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;Unexpected response: {:#?}&quot;</span>, <span class="ident">unexpected</span>),
         };
 
-        <span class='prelude-val'>Ok</span>(())
+        <span class="prelude-val">Ok</span>(())
     });
 
-    <span class='ident'>core</span>.<span class='ident'>run</span>(<span class='ident'>value</span>).<span class='ident'>unwrap</span>();
+    <span class="ident">core</span>.<span class="ident">run</span>(<span class="ident">value</span>).<span class="ident">unwrap</span>();
 }</pre>
 
 <p>More examples can be found in the aspiring command line tool under <code>examples/testclient</code>.</p>
 </div><h2 id='reexports' class='section-header'><a href="#reexports">Reexports</a></h2>
-<table><tr><td><code>pub use raw::<a class='enum' href='../eventstore_tcp/raw/enum.RawMessage.html' title='enum eventstore_tcp::raw::RawMessage'>RawMessage</a>;</code></td></tr><tr><td><code>pub use raw::client_messages::<a class='struct' href='../eventstore_tcp/raw/client_messages/struct.WriteEvents.html' title='struct eventstore_tcp::raw::client_messages::WriteEvents'>WriteEvents</a>;</code></td></tr><tr><td><code>pub use raw::client_messages::<a class='struct' href='../eventstore_tcp/raw/client_messages/struct.ResolvedIndexedEvent.html' title='struct eventstore_tcp::raw::client_messages::ResolvedIndexedEvent'>ResolvedIndexedEvent</a>;</code></td></tr><tr><td><code>pub use raw::client_messages::<a class='struct' href='../eventstore_tcp/raw/client_messages/struct.EventRecord.html' title='struct eventstore_tcp::raw::client_messages::EventRecord'>EventRecord</a>;</code></td></tr><tr><td><code>pub use raw::client_messages::<a class='struct' href='../eventstore_tcp/raw/client_messages/struct.ReadAllEvents.html' title='struct eventstore_tcp::raw::client_messages::ReadAllEvents'>ReadAllEvents</a>;</code></td></tr><tr><td><code>pub use raw::client_messages::mod_NotHandled::<a class='enum' href='../eventstore_tcp/raw/client_messages/mod_NotHandled/enum.NotHandledReason.html' title='enum eventstore_tcp::raw::client_messages::mod_NotHandled::NotHandledReason'>NotHandledReason</a>;</code></td></tr><tr><td><code>pub use raw::client_messages::mod_NotHandled::<a class='struct' href='../eventstore_tcp/raw/client_messages/mod_NotHandled/struct.MasterInfo.html' title='struct eventstore_tcp::raw::client_messages::mod_NotHandled::MasterInfo'>MasterInfo</a>;</code></td></tr><tr><td><code>pub use adapted::<a class='enum' href='../eventstore_tcp/adapted/enum.AdaptedMessage.html' title='enum eventstore_tcp::adapted::AdaptedMessage'>AdaptedMessage</a>;</code></td></tr><tr><td><code>pub use package::<a class='struct' href='../eventstore_tcp/package/struct.Package.html' title='struct eventstore_tcp::package::Package'>Package</a>;</code></td></tr><tr><td><code>pub use builder::<a class='struct' href='../eventstore_tcp/builder/struct.Builder.html' title='struct eventstore_tcp::builder::Builder'>Builder</a>;</code></td></tr></table><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+<table><tr><td><code>pub use raw::<a class="enum" href="../eventstore_tcp/raw/enum.RawMessage.html" title="enum eventstore_tcp::raw::RawMessage">RawMessage</a>;</code></td></tr><tr><td><code>pub use raw::client_messages::<a class="struct" href="../eventstore_tcp/raw/client_messages/struct.WriteEvents.html" title="struct eventstore_tcp::raw::client_messages::WriteEvents">WriteEvents</a>;</code></td></tr><tr><td><code>pub use raw::client_messages::<a class="struct" href="../eventstore_tcp/raw/client_messages/struct.ResolvedIndexedEvent.html" title="struct eventstore_tcp::raw::client_messages::ResolvedIndexedEvent">ResolvedIndexedEvent</a>;</code></td></tr><tr><td><code>pub use raw::client_messages::<a class="struct" href="../eventstore_tcp/raw/client_messages/struct.EventRecord.html" title="struct eventstore_tcp::raw::client_messages::EventRecord">EventRecord</a>;</code></td></tr><tr><td><code>pub use raw::client_messages::<a class="struct" href="../eventstore_tcp/raw/client_messages/struct.ReadAllEvents.html" title="struct eventstore_tcp::raw::client_messages::ReadAllEvents">ReadAllEvents</a>;</code></td></tr><tr><td><code>pub use raw::client_messages::mod_NotHandled::<a class="enum" href="../eventstore_tcp/raw/client_messages/mod_NotHandled/enum.NotHandledReason.html" title="enum eventstore_tcp::raw::client_messages::mod_NotHandled::NotHandledReason">NotHandledReason</a>;</code></td></tr><tr><td><code>pub use raw::client_messages::mod_NotHandled::<a class="struct" href="../eventstore_tcp/raw/client_messages/mod_NotHandled/struct.MasterInfo.html" title="struct eventstore_tcp::raw::client_messages::mod_NotHandled::MasterInfo">MasterInfo</a>;</code></td></tr><tr><td><code>pub use adapted::<a class="enum" href="../eventstore_tcp/adapted/enum.AdaptedMessage.html" title="enum eventstore_tcp::adapted::AdaptedMessage">AdaptedMessage</a>;</code></td></tr><tr><td><code>pub use package::<a class="struct" href="../eventstore_tcp/package/struct.Package.html" title="struct eventstore_tcp::package::Package">Package</a>;</code></td></tr><tr><td><code>pub use builder::<a class="struct" href="../eventstore_tcp/builder/struct.Builder.html" title="struct eventstore_tcp::builder::Builder">Builder</a>;</code></td></tr></table><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
 <table>
                        <tr class=' module-item'>
-                           <td><a class='mod' href='adapted/index.html'
+                           <td><a class="mod" href="adapted/index.html"
                                   title='mod eventstore_tcp::adapted'>adapted</a></td>
                            <td class='docblock-short'>
                                 <p>Adapted or refined types providing a much more oxidized API for handling the messages in the
@@ -135,21 +135,29 @@ protocol.</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='mod' href='builder/index.html'
+                           <td><a class="mod" href="builder/index.html"
                                   title='mod eventstore_tcp::builder'>builder</a></td>
                            <td class='docblock-short'>
                                 <p>Builders to help building requests.</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='mod' href='package/index.html'
+                           <td><a class="mod" href="codec/index.html"
+                                  title='mod eventstore_tcp::codec'>codec</a></td>
+                           <td class='docblock-short'>
+                                <p><code>codec</code> module contains the <code>Package</code> (frame) decoding and an <code>tokio_core::io::Codec</code>
+implementation.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="mod" href="package/index.html"
                                   title='mod eventstore_tcp::package'>package</a></td>
                            <td class='docblock-short'>
                                 <p>Frame and MessageContainer</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='mod' href='raw/index.html'
+                           <td><a class="mod" href="raw/index.html"
                                   title='mod eventstore_tcp::raw'>raw</a></td>
                            <td class='docblock-short'>
                                 <p>Raw module contains the enumeration <code>RawMessage</code> and raw decoding and encoding functionality.
@@ -159,14 +167,14 @@ using the raw messages should still work.</p>
                        </tr></table><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
 <table>
                        <tr class=' module-item'>
-                           <td><a class='struct' href='struct.EventStoreClient.html'
+                           <td><a class="struct" href="struct.EventStoreClient.html"
                                   title='struct eventstore_tcp::EventStoreClient'>EventStoreClient</a></td>
                            <td class='docblock-short'>
                                 <p><code>tokio_service::Service</code> implementation of the client.</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='struct' href='struct.StreamVersion.html'
+                           <td><a class="struct" href="struct.StreamVersion.html"
                                   title='struct eventstore_tcp::StreamVersion'>StreamVersion</a></td>
                            <td class='docblock-short'>
                                 <p><code>StreamVersion</code> represents the valid values for a stream version which is the same as the
@@ -176,7 +184,7 @@ restricted from being used with this type.</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='struct' href='struct.UsernamePassword.html'
+                           <td><a class="struct" href="struct.UsernamePassword.html"
                                   title='struct eventstore_tcp::UsernamePassword'>UsernamePassword</a></td>
                            <td class='docblock-short'>
                                 <p>Username and password authentication token embedded in requests as there is no concept of
@@ -185,14 +193,14 @@ session in the TCP protocol, every request must be authenticated.</p>
                        </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
 <table>
                        <tr class=' module-item'>
-                           <td><a class='enum' href='enum.ContentType.html'
+                           <td><a class="enum" href="enum.ContentType.html"
                                   title='enum eventstore_tcp::ContentType'>ContentType</a></td>
                            <td class='docblock-short'>
                                 <p>Content type of the event <code>data</code> or <code>metadata</code>.</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='enum' href='enum.EventNumber.html'
+                           <td><a class="enum" href="enum.EventNumber.html"
                                   title='enum eventstore_tcp::EventNumber'>EventNumber</a></td>
                            <td class='docblock-short'>
                                 <p><code>EventNumber</code> is similar to <code>StreamVersion</code> and <code>ExpectedVersion</code> but is used when specifying a
@@ -201,7 +209,7 @@ backwards) event in addition to exact event number.</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='enum' href='enum.ExpectedVersion.html'
+                           <td><a class="enum" href="enum.ExpectedVersion.html"
                                   title='enum eventstore_tcp::ExpectedVersion'>ExpectedVersion</a></td>
                            <td class='docblock-short'>
                                 <p><code>ExpectedVersion</code> represents the different modes of optimistic locking when writing to a stream
@@ -209,7 +217,7 @@ using <code>WriteEventsBuilder</code>.</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='enum' href='enum.LogPosition.html'
+                           <td><a class="enum" href="enum.LogPosition.html"
                                   title='enum eventstore_tcp::LogPosition'>LogPosition</a></td>
                            <td class='docblock-short'>
                                 <p>Global unique position in the EventStore, used when reading all events.
@@ -217,7 +225,7 @@ Range -1..i64::max_value()</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='enum' href='enum.ReadDirection.html'
+                           <td><a class="enum" href="enum.ReadDirection.html"
                                   title='enum eventstore_tcp::ReadDirection'>ReadDirection</a></td>
                            <td class='docblock-short'>
                                 <p>The direction in which events are read.</p>

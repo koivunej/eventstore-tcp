@@ -110,71 +110,71 @@
 <span id="65">65</span>
 <span id="66">66</span>
 <span id="67">67</span>
-</pre><pre class='rust '>
-<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>borrow</span>::<span class='ident'>Cow</span>;
-<span class='kw'>use</span> <span class='ident'>raw</span>::<span class='ident'>client_messages</span>;
-<span class='kw'>use</span> <span class='ident'>raw</span>::<span class='ident'>client_messages</span>::<span class='ident'>mod_ReadAllEventsCompleted</span>::<span class='ident'>ReadAllResult</span>;
+</pre><pre class="rust ">
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">borrow</span>::<span class="ident">Cow</span>;
+<span class="kw">use</span> <span class="ident">raw</span>::<span class="ident">client_messages</span>;
+<span class="kw">use</span> <span class="ident">raw</span>::<span class="ident">client_messages</span>::<span class="ident">mod_ReadAllEventsCompleted</span>::<span class="ident">ReadAllResult</span>;
 
-<span class='kw'>use</span> <span class='ident'>LogPosition</span>;
+<span class="kw">use</span> <span class="ident">LogPosition</span>;
 
-<span class='doccomment'>/// Successful response to `Message::ReadAllEvents`.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>Clone</span>, <span class='ident'>PartialEq</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>ReadAllCompleted</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='doccomment'>/// Position of the commit of the current prepare</span>
-    <span class='kw'>pub</span> <span class='ident'>commit_position</span>: <span class='ident'>LogPosition</span>,
-    <span class='doccomment'>/// Position of the current prepare</span>
-    <span class='kw'>pub</span> <span class='ident'>prepare_position</span>: <span class='ident'>LogPosition</span>,
-    <span class='doccomment'>/// The read events, with position metadata</span>
-    <span class='kw'>pub</span> <span class='ident'>events</span>: <span class='ident'>Vec</span><span class='op'>&lt;</span><span class='ident'>ResolvedEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;&gt;</span>,
-    <span class='doccomment'>/// For paging: next commit position</span>
-    <span class='kw'>pub</span> <span class='ident'>next_commit_position</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>LogPosition</span><span class='op'>&gt;</span>,
-    <span class='doccomment'>/// For paging: next prepare position</span>
-    <span class='kw'>pub</span> <span class='ident'>next_prepare_position</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>LogPosition</span><span class='op'>&gt;</span>,
+<span class="doccomment">/// Successful response to `Message::ReadAllEvents`.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ReadAllCompleted</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Position of the commit of the current prepare</span>
+    <span class="kw">pub</span> <span class="ident">commit_position</span>: <span class="ident">LogPosition</span>,
+    <span class="doccomment">/// Position of the current prepare</span>
+    <span class="kw">pub</span> <span class="ident">prepare_position</span>: <span class="ident">LogPosition</span>,
+    <span class="doccomment">/// The read events, with position metadata</span>
+    <span class="kw">pub</span> <span class="ident">events</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ResolvedEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;&gt;</span>,
+    <span class="doccomment">/// For paging: next commit position</span>
+    <span class="kw">pub</span> <span class="ident">next_commit_position</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">LogPosition</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// For paging: next prepare position</span>
+    <span class="kw">pub</span> <span class="ident">next_prepare_position</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">LogPosition</span><span class="op">&gt;</span>,
 }
 
-<span class='doccomment'>/// Read event in `ReadAllSuccess` response</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>Clone</span>, <span class='ident'>PartialEq</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>ResolvedEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='doccomment'>/// The read event</span>
-    <span class='kw'>pub</span> <span class='ident'>event</span>: <span class='ident'>client_messages</span>::<span class='ident'>EventRecord</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>,
-    <span class='doccomment'>/// Possible linking event</span>
-    <span class='kw'>pub</span> <span class='ident'>link</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>client_messages</span>::<span class='ident'>EventRecord</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;&gt;</span>,
-    <span class='doccomment'>/// Position where this events transaction is commited</span>
-    <span class='kw'>pub</span> <span class='ident'>commit_position</span>: <span class='ident'>LogPosition</span>,
-    <span class='doccomment'>/// Position where this event is stored</span>
-    <span class='kw'>pub</span> <span class='ident'>prepare_position</span>: <span class='ident'>LogPosition</span>,
+<span class="doccomment">/// Read event in `ReadAllSuccess` response</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ResolvedEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// The read event</span>
+    <span class="kw">pub</span> <span class="ident">event</span>: <span class="ident">client_messages</span>::<span class="ident">EventRecord</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Possible linking event</span>
+    <span class="kw">pub</span> <span class="ident">link</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">client_messages</span>::<span class="ident">EventRecord</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;&gt;</span>,
+    <span class="doccomment">/// Position where this events transaction is commited</span>
+    <span class="kw">pub</span> <span class="ident">commit_position</span>: <span class="ident">LogPosition</span>,
+    <span class="doccomment">/// Position where this event is stored</span>
+    <span class="kw">pub</span> <span class="ident">prepare_position</span>: <span class="ident">LogPosition</span>,
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>From</span><span class='op'>&lt;</span><span class='ident'>client_messages</span>::<span class='ident'>ResolvedEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;&gt;</span> <span class='kw'>for</span> <span class='ident'>ResolvedEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>from</span>(<span class='ident'>e</span>: <span class='ident'>client_messages</span>::<span class='ident'>ResolvedEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>ResolvedEvent</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-        <span class='ident'>ResolvedEvent</span> {
-            <span class='ident'>event</span>: <span class='ident'>e</span>.<span class='ident'>event</span>.<span class='ident'>into</span>(),
-            <span class='ident'>link</span>: <span class='ident'>e</span>.<span class='ident'>link</span>.<span class='ident'>into</span>(),
-            <span class='ident'>commit_position</span>: <span class='ident'>e</span>.<span class='ident'>commit_position</span>.<span class='ident'>into</span>(),
-            <span class='ident'>prepare_position</span>: <span class='ident'>e</span>.<span class='ident'>prepare_position</span>.<span class='ident'>into</span>()
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">client_messages</span>::<span class="ident">ResolvedEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;&gt;</span> <span class="kw">for</span> <span class="ident">ResolvedEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">e</span>: <span class="ident">client_messages</span>::<span class="ident">ResolvedEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> <span class="ident">ResolvedEvent</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+        <span class="ident">ResolvedEvent</span> {
+            <span class="ident">event</span>: <span class="ident">e</span>.<span class="ident">event</span>.<span class="ident">into</span>(),
+            <span class="ident">link</span>: <span class="ident">e</span>.<span class="ident">link</span>.<span class="ident">into</span>(),
+            <span class="ident">commit_position</span>: <span class="ident">e</span>.<span class="ident">commit_position</span>.<span class="ident">into</span>(),
+            <span class="ident">prepare_position</span>: <span class="ident">e</span>.<span class="ident">prepare_position</span>.<span class="ident">into</span>()
         }
     }
 }
 
-<span class='doccomment'>/// Failure cases of wire enum `ReadAllResult`.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>, <span class='ident'>Clone</span>, <span class='ident'>PartialEq</span>)]</span>
-<span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>ReadAllError</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='doccomment'>/// Unknown when this happens,</span>
-    <span class='ident'>NotModified</span>,
-    <span class='doccomment'>/// Other error</span>
-    <span class='ident'>Error</span>(<span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, <span class='ident'>str</span><span class='op'>&gt;&gt;</span>),
-    <span class='doccomment'>/// Access was denied (no credentials provided or insufficient permissions)</span>
-    <span class='ident'>AccessDenied</span>
+<span class="doccomment">/// Failure cases of wire enum `ReadAllResult`.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ReadAllError</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Unknown when this happens,</span>
+    <span class="ident">NotModified</span>,
+    <span class="doccomment">/// Other error</span>
+    <span class="ident">Error</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">str</span><span class="op">&gt;&gt;</span>),
+    <span class="doccomment">/// Access was denied (no credentials provided or insufficient permissions)</span>
+    <span class="ident">AccessDenied</span>
 }
 
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>From</span><span class='op'>&lt;</span>(<span class='ident'>ReadAllResult</span>, <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, <span class='ident'>str</span><span class='op'>&gt;&gt;</span>)<span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>ReadAllError</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='kw'>fn</span> <span class='ident'>from</span>((<span class='ident'>r</span>, <span class='ident'>msg</span>): (<span class='ident'>ReadAllResult</span>, <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Cow</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, <span class='ident'>str</span><span class='op'>&gt;&gt;</span>)) <span class='op'>-&gt;</span> <span class='ident'>ReadAllError</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-        <span class='kw'>use</span> <span class='self'>self</span>::<span class='ident'>ReadAllResult</span>::<span class='kw-2'>*</span>;
-        <span class='kw'>match</span> <span class='ident'>r</span> {
-            <span class='ident'>Success</span> <span class='op'>=&gt;</span> <span class='macro'>unreachable</span><span class='macro'>!</span>(),
-            <span class='ident'>NotModified</span> <span class='op'>=&gt;</span> <span class='ident'>ReadAllError</span>::<span class='ident'>NotModified</span>,
-            <span class='ident'>Error</span> <span class='op'>=&gt;</span> <span class='ident'>ReadAllError</span>::<span class='ident'>Error</span>(<span class='ident'>msg</span>),
-            <span class='ident'>AccessDenied</span> <span class='op'>=&gt;</span> <span class='ident'>ReadAllError</span>::<span class='ident'>AccessDenied</span>,
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span>(<span class="ident">ReadAllResult</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">str</span><span class="op">&gt;&gt;</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ReadAllError</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>((<span class="ident">r</span>, <span class="ident">msg</span>): (<span class="ident">ReadAllResult</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">str</span><span class="op">&gt;&gt;</span>)) <span class="op">-&gt;</span> <span class="ident">ReadAllError</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+        <span class="kw">use</span> <span class="self">self</span>::<span class="ident">ReadAllResult</span>::<span class="kw-2">*</span>;
+        <span class="kw">match</span> <span class="ident">r</span> {
+            <span class="ident">Success</span> <span class="op">=&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(),
+            <span class="ident">NotModified</span> <span class="op">=&gt;</span> <span class="ident">ReadAllError</span>::<span class="ident">NotModified</span>,
+            <span class="ident">Error</span> <span class="op">=&gt;</span> <span class="ident">ReadAllError</span>::<span class="ident">Error</span>(<span class="ident">msg</span>),
+            <span class="ident">AccessDenied</span> <span class="op">=&gt;</span> <span class="ident">ReadAllError</span>::<span class="ident">AccessDenied</span>,
         }
     }
 }
