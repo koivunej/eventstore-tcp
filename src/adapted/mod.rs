@@ -291,7 +291,8 @@ impl<'a> CustomTryFrom<raw::client_messages::WriteEventsCompleted<'a>> for Adapt
                     event_numbers: range_from_parts(msg.first_event_number, msg.last_event_number),
                     // unsure if these should be:
                     //  * separate (instead of newtype for tuple)
-                    //  * options
+                    // these must be options, as for idempotent writes the positions might not be
+                    // returned. both seem to be returned always.
                     prepare_position: msg.prepare_position.map(|x| x.into()),
                     commit_position: msg.commit_position.map(|x| x.into()),
                 })
