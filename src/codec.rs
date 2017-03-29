@@ -4,7 +4,8 @@
 use std::io::{self, Read, Write};
 use uuid::Uuid;
 use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
-use tokio_core::io::{Codec, EasyBuf};
+use tokio_io::codec::{Encoder, Decoder};
+use bytes::{BytesMut, BufMut};
 
 use errors::ErrorKind;
 use package::Package;
@@ -26,15 +27,12 @@ bitflags!{
 pub struct PackageCodec;
 
 impl PackageCodec {
-    fn decode_inner(&mut self, buf: &mut EasyBuf) -> io::Result<Option<Package>> {
+    fn decode_inner(&mut self, buf: &mut BytesMut) -> io::Result<Option<Package>> {
         if buf.len() < 4 + 1 + 1 + 16 {
             return Ok(None);
         }
 
-        let len = {
-            let mut cursor = io::Cursor::new(buf.as_slice());
-            cursor.read_u32::<LittleEndian>()?
-        } as usize;
+        let len = io::Cursor::new(&buf[0..4]).read_u32::<LittleEndian>()? as usize;
 
         if len < 18 {
             panic!("length is too little: {}", len);
@@ -44,15 +42,11 @@ impl PackageCodec {
             return Ok(None);
         }
 
-        let mut frame = buf.clone();
-        frame.drain_to(4);
-        frame.split_off(len);
-
-        let decoded_frame = self.decode_body(&mut frame);
+        let decoded_frame = self.decode_body(&buf[4..(4 + len)]);
 
         match decoded_frame {
             Ok((c, a, m)) => {
-                buf.drain_to(4 + len);
+                buf.split_to(4 + len);
                 Ok(Some(Package {
                     correlation_id: c,
                     authentication: a,
@@ -63,19 +57,15 @@ impl PackageCodec {
         }
     }
 
-    fn decode_body(&mut self,
-                   buf: &mut EasyBuf)
-                   -> io::Result<(Uuid, Option<UsernamePassword>, RawMessage<'static>)> {
-        let (d, c, a) = self.decode_header(buf)?;
-        let message = RawMessage::decode(d, buf.as_slice())?.into_owned();
+    fn decode_body(&mut self, buf: &[u8]) -> io::Result<(Uuid, Option<UsernamePassword>, RawMessage<'static>)> {
+        let (d, c, a, pos) = self.decode_header(buf)?;
+        let message = RawMessage::decode(d, &buf[pos..])?.into_owned();
         Ok((c, a, message))
     }
 
-    fn decode_header(&mut self,
-                     buf: &mut EasyBuf)
-                     -> io::Result<(u8, Uuid, Option<UsernamePassword>)> {
+    fn decode_header(&mut self, buf: &[u8]) -> io::Result<(u8, Uuid, Option<UsernamePassword>, usize)> {
         let (d, c, a, pos) = {
-            let mut cursor = io::Cursor::new(buf.as_slice());
+            let mut cursor = io::Cursor::new(buf);
             let discriminator = cursor.read_u8()?;
             let flags = cursor.read_u8()?;
             let flags = match TcpFlags::from_bits(flags) {
@@ -99,20 +89,24 @@ impl PackageCodec {
             (discriminator, correlation_id, authentication, cursor.position() as usize)
         };
 
-        buf.drain_to(pos);
-        Ok((d, c, a))
+        Ok((d, c, a, pos))
     }
 }
 
-impl Codec for PackageCodec {
-    type In = Package;
-    type Out = Package;
+impl Decoder for PackageCodec {
+    type Item = Package;
+    type Error = io::Error;
 
-    fn decode(&mut self, buf: &mut EasyBuf) -> io::Result<Option<Self::In>> {
+    fn decode(&mut self, buf: &mut BytesMut) -> io::Result<Option<Self::Item>> {
         self.decode_inner(buf).map_err(|e| e.into())
     }
+}
 
-    fn encode(&mut self, msg: Package, buf: &mut Vec<u8>) -> io::Result<()> {
+impl Encoder for PackageCodec {
+    type Item = Package;
+    type Error = io::Error;
+
+    fn encode(&mut self, msg: Package, buf: &mut BytesMut) -> io::Result<()> {
         // not sure how to make this without tmp vec
         let mut cursor = io::Cursor::new(Vec::new());
 
@@ -142,7 +136,7 @@ impl Codec for PackageCodec {
         cursor.write_u32::<LittleEndian>(len)?;
 
         let tmp = cursor.into_inner();
-        buf.extend(tmp);
+        buf.put_slice(&tmp);
         Ok(())
     }
 }
@@ -151,7 +145,7 @@ impl Codec for PackageCodec {
 mod tests {
     use std::fmt::Debug;
     use rustc_serialize::hex::FromHex;
-    use tokio_core::io::Codec;
+    use tokio_io::codec::{Decoder, Encoder};
     use uuid::Uuid;
     use super::{PackageCodec};
     use package::Package;
@@ -253,14 +247,14 @@ mod tests {
 
     }
 
-    fn test_decoding_hex<C: Codec>(input: &str, codec: C, expected: C::In)
-        where C::In: Debug + PartialEq
+    fn test_decoding_hex<C: Decoder>(input: &str, codec: C, expected: C::Item)
+        where C::Item: Debug + PartialEq, C::Error: Debug
     {
         test_decoding(input.to_string().from_hex().unwrap(), codec, expected);
     }
 
-    fn test_decoding<C: Codec>(input: Vec<u8>, mut codec: C, expected: C::In)
-        where C::In: Debug + PartialEq
+    fn test_decoding<C: Decoder>(input: Vec<u8>, mut codec: C, expected: C::Item)
+        where C::Item: Debug + PartialEq, C::Error: Debug
     {
         // decode whole buffer
         {
@@ -293,19 +287,21 @@ mod tests {
         }
     }
 
-    fn test_encoding_hex<C: Codec>(input: &str, codec: C, expected: C::Out)
-        where C::In: Debug + PartialEq
+    fn test_encoding_hex<C: Encoder>(input: &str, codec: C, expected: C::Item)
+        where C::Item: Debug + PartialEq, C::Error: Debug
     {
         test_encoding(input.to_string().from_hex().unwrap(), codec, expected);
     }
 
-    fn test_encoding<C: Codec>(input: Vec<u8>, mut codec: C, expected: C::Out)
-        where C::In: Debug + PartialEq
+    fn test_encoding<C: Encoder>(input: Vec<u8>, mut codec: C, expected: C::Item)
+        where C::Item: Debug + PartialEq, C::Error: Debug
     {
-        let mut buf = Vec::new();
+        use bytes::BytesMut;
+
+        let mut buf = BytesMut::with_capacity(input.len());
         codec.encode(expected, &mut buf).unwrap();
-        assert_eq!(buf.as_slice(),
-                   input.as_slice(),
+        assert_eq!(&buf[..],
+                   &input[..],
                    "encoding did not yield same");
     }
 }

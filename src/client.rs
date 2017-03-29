@@ -4,12 +4,13 @@ use std::net::SocketAddr;
 use futures::Future;
 
 use tokio_core::reactor::Handle;
-use tokio_core::io::{Framed, Io};
+use tokio_io::{AsyncWrite, AsyncRead};
+use tokio_io::codec::{Encoder, Decoder, Framed};
 use tokio_core::net::TcpStream;
-use tokio_core::io::{Codec, EasyBuf};
 use tokio_proto::TcpClient;
 use tokio_proto::multiplex::{ClientProto, ClientService, NewRequestIdSource, RequestIdSource};
 use tokio_service::Service;
+use bytes::BytesMut;
 
 use package::Package;
 use codec::PackageCodec;
@@ -75,15 +76,20 @@ impl<T> Stream for Heartbeats<T>
 
 pub struct Separator;
 
-impl Codec for Separator {
-    type In = (Uuid, Package);
-    type Out = (Uuid, Package);
+impl Decoder for Separator {
+    type Item = (Uuid, Package);
+    type Error = io::Error;
 
-    fn decode(&mut self, buf: &mut EasyBuf) -> io::Result<Option<Self::In>> {
+    fn decode(&mut self, buf: &mut BytesMut) -> io::Result<Option<Self::Item>> {
         PackageCodec.decode(buf).map(|x| x.map(|x| (x.correlation_id, x)))
     }
+}
 
-    fn encode(&mut self, msg: (Uuid, Package), buf: &mut Vec<u8>) -> io::Result<()> {
+impl Encoder for Separator {
+    type Item = (Uuid, Package);
+    type Error = io::Error;
+
+    fn encode(&mut self, msg: (Uuid, Package), buf: &mut BytesMut) -> io::Result<()> {
         let (id, pkg) = msg;
         assert_eq!(id, pkg.correlation_id);
         PackageCodec.encode(pkg, buf)
@@ -106,7 +112,7 @@ impl NewRequestIdSource<Uuid, Package> for Uuid {
 
 struct PackageProto;
 
-impl<T: Io + 'static> ClientProto<T> for PackageProto {
+impl<T: AsyncRead + AsyncWrite + 'static> ClientProto<T> for PackageProto {
     type Request = Package;
     type Response = Package;
     type RequestId = Uuid;

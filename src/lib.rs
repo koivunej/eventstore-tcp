@@ -85,9 +85,11 @@ extern crate byteorder;
 #[macro_use]
 extern crate error_chain;
 extern crate futures;
+extern crate tokio_io;
 extern crate tokio_core;
 extern crate tokio_proto;
 extern crate tokio_service;
+extern crate bytes;
 
 #[cfg(test)]
 extern crate rustc_serialize;
