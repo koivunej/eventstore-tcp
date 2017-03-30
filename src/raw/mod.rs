@@ -17,7 +17,7 @@ use errors::Error;
 use ReadDirection;
 
 /// Enumeration much like the `adapted::AdaptedMessage` for all the messages in the protocol.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, From)]
 pub enum RawMessage<'a> {
     /// Requests heartbeat from the other side. Unsure if clients or server sends these.
     HeartbeatRequest,
@@ -103,7 +103,7 @@ pub trait ByteWrapper<'a>: Into<Cow<'a, [u8]>> + From<Cow<'a, [u8]>> {
 
 /// Newtype for an arbitary NotAuthenticated "info", which could be
 /// UTF8 string.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, From, Into)]
 pub struct NotAuthenticatedPayload<'a>(Cow<'a, [u8]>);
 
 impl<'a> NotAuthenticatedPayload<'a> {
@@ -122,21 +122,9 @@ impl<'a> ByteWrapper<'a> for NotAuthenticatedPayload<'a> {
     type ConversionErr = Error;
 }
 
-impl<'a> From<Cow<'a, [u8]>> for NotAuthenticatedPayload<'a> {
-    fn from(data: Cow<'a, [u8]>) -> NotAuthenticatedPayload<'a> {
-        NotAuthenticatedPayload(data)
-    }
-}
-
-impl<'a> Into<Cow<'a, [u8]>> for NotAuthenticatedPayload<'a> {
-    fn into(self) -> Cow<'a, [u8]> {
-        self.0
-    }
-}
-
 /// Newtype for an arbitary BadRequest "info", which could be
 /// UTF8 string.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, From, Into)]
 pub struct BadRequestPayload<'a>(Cow<'a, [u8]>);
 
 impl<'a> BadRequestPayload<'a> {
@@ -153,58 +141,6 @@ impl<'a> AsRef<[u8]> for BadRequestPayload<'a> {
 
 impl<'a> ByteWrapper<'a> for BadRequestPayload<'a> {
     type ConversionErr = Error;
-}
-
-impl<'a> From<Cow<'a, [u8]>> for BadRequestPayload<'a> {
-    fn from(data: Cow<'a, [u8]>) -> BadRequestPayload<'a> {
-        BadRequestPayload(data)
-    }
-}
-
-impl<'a> Into<Cow<'a, [u8]>> for BadRequestPayload<'a> {
-    fn into(self) -> Cow<'a, [u8]> {
-        self.0
-    }
-}
-
-macro_rules! wrapup {
-    ($x:ty, $f:expr) => {
-        impl<'a> From<$x> for RawMessage<'a> {
-            fn from(x: $x) -> RawMessage<'a> {
-                $f(x)
-            }
-        }
-    };
-}
-
-macro_rules! wrapup_directed {
-    ($x: ty, $f: expr) => {
-        impl<'a> From<(ReadDirection, $x)> for RawMessage<'a> {
-            fn from((x, y): (ReadDirection, $x)) -> RawMessage<'a> {
-                $f(x, y)
-            }
-        }
-    };
-}
-
-wrapup!(BadRequestPayload<'a>, RawMessage::BadRequest);
-wrapup!(NotAuthenticatedPayload<'a>, RawMessage::NotAuthenticated);
-wrapup!(WriteEvents<'a>, RawMessage::WriteEvents);
-wrapup!(WriteEventsCompleted<'a>, RawMessage::WriteEventsCompleted);
-wrapup!(DeleteStream<'a>, RawMessage::DeleteStream);
-wrapup!(DeleteStreamCompleted<'a>, RawMessage::DeleteStreamCompleted);
-wrapup!(ReadEvent<'a>, RawMessage::ReadEvent);
-wrapup!(ReadEventCompleted<'a>, RawMessage::ReadEventCompleted);
-wrapup!(NotHandled<'a>, RawMessage::NotHandled);
-wrapup_directed!(ReadStreamEvents<'a>, RawMessage::ReadStreamEvents);
-wrapup_directed!(ReadStreamEventsCompleted<'a>, RawMessage::ReadStreamEventsCompleted);
-wrapup_directed!(ReadAllEvents, RawMessage::ReadAllEvents);
-wrapup_directed!(ReadAllEventsCompleted<'a>, RawMessage::ReadAllEventsCompleted);
-
-impl<'a> From<(u8, Cow<'a, [u8]>)> for RawMessage<'a> {
-    fn from((d, data): (u8, Cow<'a, [u8]>)) -> RawMessage<'a> {
-        RawMessage::Unsupported(d, data)
-    }
 }
 
 impl<'a> RawMessage<'a> {
