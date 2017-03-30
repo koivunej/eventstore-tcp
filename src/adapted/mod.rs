@@ -22,7 +22,7 @@ mod read_all;
 pub use self::read_all::{ReadAllCompleted, ReadAllError};
 
 /// Enumeration of converted messages for more oxidized API.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, From)]
 pub enum AdaptedMessage<'a> {
     /// Requests heartbeat from the other side. Unsure if clients or server sends these.
     HeartbeatRequest,
@@ -174,7 +174,7 @@ impl<'a, 'b: 'a> AsRawPayload<'a, 'b, raw::client_messages::NotHandled<'b>> for 
 }
 
 /// Newtype for wrapping a specific message, AdaptedMessage::BadRequest
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, From, Into)]
 pub struct BadRequestMessage<'a>(Cow<'a, str>);
 
 impl<'a, 'b: 'a> AsRawPayload<'a, 'b, raw::BadRequestPayload<'b>> for BadRequestMessage<'a> {
@@ -192,26 +192,8 @@ impl<'a> AsRef<str> for BadRequestMessage<'a> {
     }
 }
 
-impl<'a> From<Cow<'a, str>> for BadRequestMessage<'a> {
-    fn from(s: Cow<'a, str>) -> BadRequestMessage<'a> {
-        BadRequestMessage(s)
-    }
-}
-
-impl<'a> Into<Cow<'a, str>> for BadRequestMessage<'a> {
-    fn into(self) -> Cow<'a, str> {
-        self.0
-    }
-}
-
-impl<'a> From<BadRequestMessage<'a>> for AdaptedMessage<'a> {
-    fn from(m: BadRequestMessage<'a>) -> AdaptedMessage<'a> {
-        AdaptedMessage::BadRequest(m)
-    }
-}
-
 /// Newtype for wrapping a specific message, AdaptedMessage::NotAuthenticated
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, From, Into)]
 pub struct NotAuthenticatedMessage<'a>(Cow<'a, str>);
 
 impl<'a, 'b: 'a> AsRawPayload<'a, 'b, raw::NotAuthenticatedPayload<'b>> for NotAuthenticatedMessage<'a> {
@@ -226,24 +208,6 @@ impl<'a, 'b: 'a> AsRawPayload<'a, 'b, raw::NotAuthenticatedPayload<'b>> for NotA
 impl<'a> AsRef<str> for NotAuthenticatedMessage<'a> {
     fn as_ref(&self) -> &str {
         self.0.as_ref()
-    }
-}
-
-impl<'a> From<Cow<'a, str>> for NotAuthenticatedMessage<'a> {
-    fn from(s: Cow<'a, str>) -> NotAuthenticatedMessage<'a> {
-        NotAuthenticatedMessage(s)
-    }
-}
-
-impl<'a> Into<Cow<'a, str>> for NotAuthenticatedMessage<'a> {
-    fn into(self) -> Cow<'a, str> {
-        self.0
-    }
-}
-
-impl<'a> From<NotAuthenticatedMessage<'a>> for AdaptedMessage<'a> {
-    fn from(m: NotAuthenticatedMessage<'a>) -> AdaptedMessage<'a> {
-        AdaptedMessage::NotAuthenticated(m)
     }
 }
 
