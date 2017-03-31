@@ -199,7 +199,7 @@ impl<'a> RawMessage<'a> {
                     let mut reader = ::quick_protobuf::reader::BytesReader::from_bytes($buf);
                     let res: Result<$x, io::Error> = <$x>::from_reader(&mut reader, $buf)
                         .map_err(|x| x.into());
-                    assert!(reader.is_eof());
+                    assert!(reader.is_eof(), "reader did not decode everything: {:?}, bytes:\n{:?}", reader, Hexdump { bytes: $buf });
                     res
                 }
             }
@@ -346,4 +346,118 @@ impl<'a> RawMessage<'a> {
             Unsupported(d, _) => d,
         }
     }
+}
+
+use std::fmt;
+
+struct Hexdump<'x> {
+    bytes: &'x [u8],
+}
+
+impl<'x> Hexdump<'x> {
+    fn format_ascii(&self, fmt: &mut fmt::Formatter, start: usize, end: usize) -> fmt::Result {
+        let group_len = 8;
+        let mut char_count = 0;
+
+        for i in start..end {
+            let b = self.bytes[i];
+
+            if 0x20 <= b && b < 0x7e {
+                write!(fmt, "{}", b as char)?;
+            } else {
+                write!(fmt, ".")?;
+            }
+
+            char_count += 1;
+
+            if i < end - 1 && char_count % group_len == 0 {
+                write!(fmt, " ")?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl<'x> fmt::Debug for Hexdump<'x> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+
+        let group_len = 4;
+        let groups_per_line = 4;
+
+        let bytes_per_line = group_len * groups_per_line;
+
+        let mut count = 0;
+
+        let prefix_len = (self.bytes.len() as f64).log10().ceil() as usize;
+
+
+        for b in self.bytes[..].iter() {
+            if count % bytes_per_line == 0 {
+                write!(fmt, "0x{:01$x}: ", count, prefix_len)?;
+            }
+
+            let last = count == self.bytes.len() - 1;
+            write!(fmt, "{:02x}", b)?;
+            count += 1;
+            if count % bytes_per_line == 0 {
+
+                write!(fmt, " | ")?;
+
+                self.format_ascii(fmt, (count - 4*4), count)?;
+
+                writeln!(fmt)?;
+            } else if !last {
+                if count % group_len == 0 {
+                    write!(fmt, "  ")?;
+                } else {
+                    write!(fmt, " ")?;
+                }
+            }
+        }
+
+        if count % bytes_per_line > 0 {
+
+            let offset = count % 4;
+            let end = (bytes_per_line - (count % bytes_per_line)) + offset;
+
+            for i in offset..end {
+                write!(fmt, "  ")?;
+
+                if i % group_len == 0 {
+                    write!(fmt, "  ")?;
+                } else {
+                    write!(fmt, " ")?;
+                }
+            }
+
+            write!(fmt, " | ")?;
+
+            self.format_ascii(fmt, (count - (count % bytes_per_line)), count)?;
+
+            writeln!(fmt)?;
+        }
+
+        Ok(())
+    }
+}
+
+#[test]
+fn test_hexdump_even() {
+    let bytes = (0u8..10).into_iter().cycle().take(20).collect::<Vec<u8>>();
+
+    let out = format!("{:?}", Hexdump { bytes: &bytes[..] });
+    println!("\n{}", out);
+
+    assert_eq!(out, "0x00: 00 01 02 03  04 05 06 07  08 09 00 01  02 03 04 05 | ........ ........\n0x10: 06 07 08 09                                        | ....\n");
+}
+
+#[test]
+fn test_hexdump_odd() {
+    let bytes = (0u8..10).into_iter().cycle().take(21).collect::<Vec<u8>>();
+
+    let out = format!("{:?}", Hexdump { bytes: &bytes[..] });
+    println!("\n{}", out);
+
+    assert_eq!(out, "0x00: 00 01 02 03  04 05 06 07  08 09 00 01  02 03 04 05 | ........ ........\n0x10: 06 07 08 09  00                                    | .....\n");
 }

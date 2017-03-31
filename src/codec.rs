@@ -125,6 +125,8 @@ impl Encoder for PackageCodec {
             msg.authentication
                 .expect("According to flag authentication token is present")
                 .encode(&mut cursor)?;
+        } else {
+            assert!(msg.authentication.is_none());
         }
 
         raw.encode(&mut cursor)?;
