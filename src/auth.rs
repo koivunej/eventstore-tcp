@@ -6,7 +6,7 @@ use byteorder::{ReadBytesExt, WriteBytesExt};
 /// Username and password authentication token embedded in requests as there is no concept of
 /// session in the TCP protocol, every request must be authenticated.
 #[derive(Clone, PartialEq, Eq)]
-pub struct UsernamePassword(Cow<'static, str>, Cow<'static, str>);
+pub struct UsernamePassword(pub Cow<'static, str>, pub Cow<'static, str>);
 
 impl fmt::Debug for UsernamePassword {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
