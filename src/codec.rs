@@ -249,6 +249,27 @@ mod tests {
 
     }
 
+    #[test]
+    fn decode_authenticated_package() {
+        use bytes::BytesMut;
+        use auth::UsernamePassword;
+
+        let mut buf = BytesMut::with_capacity(1024);
+        let id = Uuid::new_v4();
+
+        let msg = Package {
+            correlation_id: id,
+            authentication: Some(UsernamePassword::new("foobar", "abbacd")),
+            message: RawMessage::Ping,
+        };
+
+        PackageCodec.encode(msg.clone(), &mut buf).unwrap();
+
+        let decoded = PackageCodec.decode(&mut buf).unwrap().unwrap();
+
+        assert_eq!(msg, decoded);
+    }
+
     fn test_decoding_hex<C: Decoder>(input: &str, codec: C, expected: C::Item)
         where C::Item: Debug + PartialEq, C::Error: Debug
     {
