@@ -91,6 +91,35 @@ impl PackageCodec {
 
         Ok((d, c, a, pos))
     }
+
+    #[doc(hidden)]
+    pub fn encode_parts<'a>(&self, cursor: &mut io::Cursor<Vec<u8>>, correlation_id: &Uuid, authentication: Option<&UsernamePassword>, raw: &RawMessage<'a>) -> io::Result<()> {
+        let mut flags = FLAG_NONE;
+        if authentication.is_some() {
+            flags.insert(FLAG_AUTHENTICATED);
+        }
+
+        cursor.write_u32::<LittleEndian>(0)?; // placeholder for prefix
+        cursor.write_u8(raw.discriminator())?;
+        cursor.write_u8(flags.bits())?;
+        cursor.write_all(correlation_id.as_bytes())?;
+        if flags.contains(FLAG_AUTHENTICATED) {
+            authentication
+                .expect("According to flag authentication token is present")
+                .encode(cursor)?;
+        } else {
+            assert!(authentication.is_none());
+        }
+
+        raw.encode(cursor)?;
+
+        let at_end = cursor.position();
+        let len = at_end as u32 - 4;
+
+        cursor.set_position(0);
+        cursor.write_u32::<LittleEndian>(len)?;
+        Ok(())
+    }
 }
 
 impl Decoder for PackageCodec {
@@ -107,35 +136,9 @@ impl Encoder for PackageCodec {
     type Error = io::Error;
 
     fn encode(&mut self, msg: Package, buf: &mut BytesMut) -> io::Result<()> {
-        // not sure how to make this without tmp vec
         let mut cursor = io::Cursor::new(Vec::new());
 
-        let mut flags = FLAG_NONE;
-        if msg.authentication.is_some() {
-            flags.insert(FLAG_AUTHENTICATED);
-        }
-
-        let raw = msg.message;
-
-        cursor.write_u32::<LittleEndian>(0)?; // placeholder for prefix
-        cursor.write_u8(raw.discriminator())?;
-        cursor.write_u8(flags.bits())?;
-        cursor.write_all(msg.correlation_id.as_bytes())?;
-        if flags.contains(FLAG_AUTHENTICATED) {
-            msg.authentication
-                .expect("According to flag authentication token is present")
-                .encode(&mut cursor)?;
-        } else {
-            assert!(msg.authentication.is_none());
-        }
-
-        raw.encode(&mut cursor)?;
-
-        let at_end = cursor.position();
-        let len = at_end as u32 - 4;
-
-        cursor.set_position(0);
-        cursor.write_u32::<LittleEndian>(len)?;
+        self.encode_parts(&mut cursor, &msg.correlation_id, msg.authentication.as_ref(), &msg.message)?;
 
         let tmp = cursor.into_inner();
         buf.put_slice(&tmp);
