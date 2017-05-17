@@ -198,7 +198,7 @@ mod errors {
 use self::errors::{Error, ErrorKind};
 
 /// The direction in which events are read.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ReadDirection {
     /// Read from first (event 0) to the latest
     Forward,
@@ -206,11 +206,9 @@ pub enum ReadDirection {
     Backward
 }
 
-impl Copy for ReadDirection {}
-
 /// `ExpectedVersion` represents the different modes of optimistic locking when writing to a stream
 /// using `WriteEventsBuilder`.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum ExpectedVersion {
     /// No optimistic locking
     Any,
@@ -219,8 +217,6 @@ pub enum ExpectedVersion {
     /// Expect exact number of events in the stream
     Exact(StreamVersion)
 }
-
-impl Copy for ExpectedVersion {}
 
 impl Into<i32> for ExpectedVersion {
     /// Returns the wire representation.
@@ -255,15 +251,13 @@ impl CustomTryFrom<i32> for ExpectedVersion {
 /// restricted from being used with this type.
 ///
 /// Conversions to StreamVersion are quite horrible until TryFrom is stabilized.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct StreamVersion(u32);
-
-impl Copy for StreamVersion {}
 
 impl StreamVersion {
     /// Converts the value to a StreamVersion or panics if the value is out of range
     pub fn from(version: u32) -> Self {
-        Self::from_opt(version).expect("StreamVersion overflow")
+        Self::from_opt(version).expect("stream version overflow")
     }
 
     /// Converts the value to a StreamVersion returning None if the input is out of range.
@@ -310,7 +304,7 @@ impl Into<i32> for StreamVersion {
 /// `EventNumber` is similar to `StreamVersion` and `ExpectedVersion` but is used when specifying a
 /// position to read from in the stream. Allows specifying the first or last (when reading
 /// backwards) event in addition to exact event number.
-#[derive(Debug, Clone, Eq)]
+#[derive(Debug, Copy, Clone, Eq)]
 pub enum EventNumber {
     /// The first event in a stream
     First,
@@ -319,8 +313,6 @@ pub enum EventNumber {
     /// The last event in a stream
     Last,
 }
-
-impl Copy for EventNumber {}
 
 impl PartialEq<EventNumber> for EventNumber {
     fn eq(&self, other: &EventNumber) -> bool {
@@ -363,15 +355,13 @@ impl Into<i32> for EventNumber {
 }
 
 /// Content type of the event `data` or `metadata`.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ContentType {
     /// Raw bytes
     Bytes,
     /// JSON values usable with projections in EventStore
     Json
 }
-
-impl Copy for ContentType {}
 
 impl Into<i32> for ContentType {
     fn into(self) -> i32 {
@@ -384,7 +374,7 @@ impl Into<i32> for ContentType {
 
 /// Global unique position in the EventStore, used when reading all events.
 /// Range -1..i64::max_value()
-#[derive(Debug, Clone, Eq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, Eq, PartialOrd, Ord)]
 pub enum LogPosition {
     /// The first event ever
     First,
@@ -393,8 +383,6 @@ pub enum LogPosition {
     /// The last event written to the database at the moment
     Last,
 }
-
-impl Copy for LogPosition {}
 
 impl PartialEq<LogPosition> for LogPosition {
     fn eq(&self, other: &LogPosition) -> bool {

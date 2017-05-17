@@ -19,7 +19,7 @@ pub struct WriteEventsCompleted {
 
 /// Like `OperationResult` on the wire but does not have a success value. Explains the reason for
 /// failure.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum WriteEventsFailure {
     /// Server failed to process the request before timeout
     PrepareTimeout,
@@ -34,8 +34,6 @@ pub enum WriteEventsFailure {
     /// No authentication provided or insufficient permissions to a stream
     AccessDenied,
 }
-
-impl Copy for WriteEventsFailure {}
 
 impl WriteEventsFailure {
     /// Return `true` if the operation failed in a transient way that might be resolved by
