@@ -341,10 +341,9 @@ impl CustomTryFrom<i32> for EventNumber {
     }
 }
 
-impl Into<i32> for EventNumber {
-    /// Returns the wire representation.
-    fn into(self) -> i32 {
-        match self {
+impl From<EventNumber> for i32 {
+    fn from(number: EventNumber) -> Self {
+        match number {
             EventNumber::First => 0,
             EventNumber::Exact(x) => x.into(),
             EventNumber::Last => -1
@@ -363,9 +362,9 @@ pub enum ContentType {
 
 impl Copy for ContentType {}
 
-impl Into<i32> for ContentType {
-    fn into(self) -> i32 {
-        match self {
+impl From<ContentType> for i32 {
+    fn from(ctype: ContentType) -> Self {
+        match ctype {
             ContentType::Bytes => 0,
             ContentType::Json => 1,
         }
