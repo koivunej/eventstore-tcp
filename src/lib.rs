@@ -137,12 +137,12 @@ mod errors {
     }
 
     impl fmt::Display for ResultStatusKind {
-        fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             use self::ResultStatusKind::*;
-            write!(fmt, "{}", match self {
-                &WriteEvents => "WriteEventsCompleted::result",
-                &ReadEvent => "ReadEventCompleted::result",
-                &ReadStream => "ReadStreamEventsCompleted::result",
+            f.write_str(match *self {
+                WriteEvents => "WriteEventsCompleted::result",
+                ReadEvent => "ReadEventCompleted::result",
+                ReadStream => "ReadStreamEventsCompleted::result",
             })
         }
     }
@@ -160,13 +160,13 @@ mod errors {
                 display("Missing result field: {}", which)
             }
             InvalidStreamVersion(value: i32) {
-                display("Invalid StreamVersion: {}", value)
+                display("Invalid stream version: {}", value)
             }
             InvalidEventNumber(value: i32) {
-                display("Invalid EventNumber: {}", value)
+                display("Invalid event number: {}", value)
             }
             InvalidLogPosition(value: i64) {
-                display("Invalid LogPosition: {}", value)
+                display("Invalid log position: {}", value)
             }
             UnsupportedDiscriminator(d: u8) {
                 display("Unsupported discriminator 0x{:02x}", d)
@@ -175,7 +175,7 @@ mod errors {
                 display("Unimplemented conversion")
             }
             WriteEventsInvalidTransaction {
-                display("Unexpected WriteEvents result: InvalidTransaction")
+                display("Unexpected write events result: invalid transaction")
             }
         }
     }
