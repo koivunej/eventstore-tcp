@@ -308,7 +308,7 @@ impl Into<i32> for StreamVersion {
 /// `EventNumber` is similar to `StreamVersion` and `ExpectedVersion` but is used when specifying a
 /// position to read from in the stream. Allows specifying the first or last (when reading
 /// backwards) event in addition to exact event number.
-#[derive(Debug, Clone, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EventNumber {
     /// The first event in a stream
     First,
@@ -319,14 +319,6 @@ pub enum EventNumber {
 }
 
 impl Copy for EventNumber {}
-
-impl PartialEq<EventNumber> for EventNumber {
-    fn eq(&self, other: &EventNumber) -> bool {
-        let val: i32 = (*self).into();
-        let other: i32 = (*other).into();
-        val == other
-    }
-}
 
 impl From<StreamVersion> for EventNumber {
     fn from(ver: StreamVersion) -> Self {
