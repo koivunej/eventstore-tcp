@@ -43,18 +43,14 @@ impl PackageCodec {
         }
 
         let decoded_frame = self.decode_body(&buf[4..(4 + len)]);
-
-        match decoded_frame {
-            Ok((c, a, m)) => {
-                buf.split_to(4 + len);
-                Ok(Some(Package {
-                    correlation_id: c,
-                    authentication: a,
-                    message: m.into(),
-                }))
-            }
-            Err(e) => Err(e),
-        }
+        decoded_frame.and_then(|(c, a, m)| {
+            buf.split_to(4 + len);
+            Ok(Some(Package {
+                correlation_id: c,
+                authentication: a,
+                message: m.into(),
+            }))
+        })
     }
 
     fn decode_body(&mut self, buf: &[u8]) -> io::Result<(Uuid, Option<UsernamePassword>, RawMessage<'static>)> {

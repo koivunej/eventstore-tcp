@@ -373,7 +373,7 @@ impl From<ContentType> for i32 {
 
 /// Global unique position in the EventStore, used when reading all events.
 /// Range -1..i64::max_value()
-#[derive(Debug, Clone, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LogPosition {
     /// The first event ever
     First,
@@ -384,14 +384,6 @@ pub enum LogPosition {
 }
 
 impl Copy for LogPosition {}
-
-impl PartialEq<LogPosition> for LogPosition {
-    fn eq(&self, other: &LogPosition) -> bool {
-        let left: i64 = (*self).into();
-        let right: i64 = (*other).into();
-        left == right
-    }
-}
 
 impl From<i64> for LogPosition {
     fn from(val: i64) -> LogPosition {
