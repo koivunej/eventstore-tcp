@@ -182,9 +182,7 @@ mod errors {
 
     impl Into<io::Error> for Error {
         fn into(self) -> io::Error {
-            match self {
-                e => io::Error::new(io::ErrorKind::Other, e),
-            }
+            io::Error::new(io::ErrorKind::Other, self)
         }
     }
 
