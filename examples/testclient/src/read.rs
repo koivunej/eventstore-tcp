@@ -111,13 +111,11 @@ impl Command for Read {
         let package = self.read_mode.borrow_mut().take().unwrap().into_request(&self.stream_id, config.credentials.clone());
         let send = client.call(package);
 
-        let ret = send.and_then(move |resp| {
+        send.and_then(move |resp| {
             let mut stdout = io::stdout();
             let mut stderr = io::stderr();
             output.format(verbose, resp.message.try_adapt().unwrap(), &mut stdout, &mut stderr)
-        });
-
-        Box::new(ret)
+        }).boxed()
     }
 }
 
