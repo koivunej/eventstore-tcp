@@ -120,6 +120,9 @@ pub use builder::Builder;
 mod auth;
 pub use auth::UsernamePassword;
 
+mod read_direction;
+pub use read_direction::ReadDirection;
+
 mod errors {
     use std::str;
     use std::io;
@@ -196,17 +199,6 @@ mod errors {
 }
 
 use self::errors::{Error, ErrorKind};
-
-/// The direction in which events are read.
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum ReadDirection {
-    /// Read from first (event 0) to the latest
-    Forward,
-    /// Read from latest (highest event number) to the first (event 0)
-    Backward
-}
-
-impl Copy for ReadDirection {}
 
 /// `ExpectedVersion` represents the different modes of optimistic locking when writing to a stream
 /// using `WriteEventsBuilder`.
