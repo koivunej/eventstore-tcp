@@ -98,7 +98,6 @@ extern crate derive_more;
 extern crate rustc_serialize;
 
 use std::str;
-use std::convert::TryFrom;
 
 pub mod raw;
 pub use raw::RawMessage;
@@ -121,6 +120,9 @@ pub use builder::Builder;
 
 mod auth;
 pub use auth::UsernamePassword;
+
+mod event_number;
+pub use event_number::EventNumber;
 
 mod stream_version;
 pub use stream_version::StreamVersion;
@@ -215,61 +217,6 @@ pub enum ReadDirection {
 }
 
 impl Copy for ReadDirection {}
-
-/// `EventNumber` is similar to `StreamVersion` and `ExpectedVersion` but is used when specifying a
-/// position to read from in the stream. Allows specifying the first or last (when reading
-/// backwards) event in addition to exact event number.
-#[derive(Debug, Clone, Eq)]
-pub enum EventNumber {
-    /// The first event in a stream
-    First,
-    /// Exactly the given event number
-    Exact(StreamVersion),
-    /// The last event in a stream
-    Last,
-}
-
-impl Copy for EventNumber {}
-
-impl PartialEq<EventNumber> for EventNumber {
-    fn eq(&self, other: &EventNumber) -> bool {
-        let val: i32 = (*self).into();
-        let other: i32 = (*other).into();
-        val == other
-    }
-}
-
-impl From<StreamVersion> for EventNumber {
-    fn from(ver: StreamVersion) -> Self {
-        EventNumber::Exact(ver)
-    }
-}
-
-impl CustomTryFrom<i32> for EventNumber {
-    type Err = Error;
-
-    fn try_from(val: i32) -> Result<Self, (i32, Self::Err)> {
-        match val {
-            0 => Ok(EventNumber::First),
-            -1 => Ok(EventNumber::Last),
-            x if x > 0 => Ok(EventNumber::Exact(StreamVersion::from_i32(x))),
-            invalid => {
-                Err((invalid, ErrorKind::InvalidEventNumber(val).into()))
-            }
-        }
-    }
-}
-
-impl Into<i32> for EventNumber {
-    /// Returns the wire representation.
-    fn into(self) -> i32 {
-        match self {
-            EventNumber::First => 0,
-            EventNumber::Exact(x) => x.into(),
-            EventNumber::Last => -1
-        }
-    }
-}
 
 /// Content type of the event `data` or `metadata`.
 #[derive(Debug, PartialEq, Eq, Clone)]
