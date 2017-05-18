@@ -125,6 +125,9 @@ pub use auth::UsernamePassword;
 mod stream_version;
 pub use stream_version::StreamVersion;
 
+mod expected_version;
+pub use expected_version::ExpectedVersion;
+
 mod errors {
     use std::str;
     use std::io;
@@ -212,47 +215,6 @@ pub enum ReadDirection {
 }
 
 impl Copy for ReadDirection {}
-
-/// `ExpectedVersion` represents the different modes of optimistic locking when writing to a stream
-/// using `WriteEventsBuilder`.
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum ExpectedVersion {
-    /// No optimistic locking
-    Any,
-    /// Expect a stream not to exist
-    NewStream,
-    /// Expect exact number of events in the stream
-    Exact(StreamVersion)
-}
-
-impl Copy for ExpectedVersion {}
-
-impl Into<i32> for ExpectedVersion {
-    /// Returns the wire representation.
-    fn into(self) -> i32 {
-        use self::ExpectedVersion::*;
-        match self {
-            Any => -2,
-            NewStream => -1,
-            Exact(ver) => ver.into()
-        }
-    }
-}
-
-impl From<StreamVersion> for ExpectedVersion {
-    fn from(ver: StreamVersion) -> Self {
-        ExpectedVersion::Exact(ver)
-    }
-}
-
-impl CustomTryFrom<i32> for ExpectedVersion {
-    type Err = Error;
-
-    fn try_from(val: i32) -> Result<ExpectedVersion, (i32, Self::Err)> {
-        let ver = StreamVersion::try_from(val)?;
-        Ok(ExpectedVersion::from(ver))
-    }
-}
 
 /// `EventNumber` is similar to `StreamVersion` and `ExpectedVersion` but is used when specifying a
 /// position to read from in the stream. Allows specifying the first or last (when reading
