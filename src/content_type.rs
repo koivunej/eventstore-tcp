@@ -7,9 +7,9 @@ pub enum ContentType {
     Json
 }
 
-impl Into<i32> for ContentType {
-    fn into(self) -> i32 {
-        match self {
+impl From<ContentType> for i32 {
+    fn from(content_type: ContentType) -> Self {
+        match content_type {
             ContentType::Bytes => 0,
             ContentType::Json => 1,
         }
