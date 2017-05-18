@@ -76,6 +76,7 @@
 //!
 //! More examples can be found in the aspiring command line tool under `examples/testclient`.
 #![deny(missing_docs)]
+#![feature(try_from)]
 
 #[macro_use]
 extern crate bitflags;
@@ -97,6 +98,7 @@ extern crate derive_more;
 extern crate rustc_serialize;
 
 use std::str;
+use std::convert::TryFrom;
 
 pub mod raw;
 pub use raw::RawMessage;
@@ -119,6 +121,9 @@ pub use builder::Builder;
 
 mod auth;
 pub use auth::UsernamePassword;
+
+mod stream_version;
+pub use stream_version::StreamVersion;
 
 mod errors {
     use std::str;
@@ -246,64 +251,6 @@ impl CustomTryFrom<i32> for ExpectedVersion {
     fn try_from(val: i32) -> Result<ExpectedVersion, (i32, Self::Err)> {
         let ver = StreamVersion::try_from(val)?;
         Ok(ExpectedVersion::from(ver))
-    }
-}
-
-/// `StreamVersion` represents the valid values for a stream version which is the same as the
-/// event number of the latest event. As such, values are non-negative integers up to
-/// `i32::max_value`. Negative values of `i32` have special meaning in the protocol, and are
-/// restricted from being used with this type.
-///
-/// Conversions to StreamVersion are quite horrible until TryFrom is stabilized.
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct StreamVersion(u32);
-
-impl Copy for StreamVersion {}
-
-impl StreamVersion {
-    /// Converts the value to a StreamVersion or panics if the value is out of range
-    pub fn from(version: u32) -> Self {
-        Self::from_opt(version).expect("StreamVersion overflow")
-    }
-
-    /// Converts the value to a StreamVersion returning None if the input is out of range.
-    pub fn from_opt(version: u32) -> Option<Self> {
-        // TODO: MAX_VALUE might be some magical value, should be lower?
-        if version < i32::max_value() as u32 {
-            Some(StreamVersion(version))
-        } else {
-            None
-        }
-    }
-
-    #[doc(hidden)]
-    pub fn from_i32(version: i32) -> Self {
-        Self::try_from(version).unwrap()
-
-    }
-
-    #[doc(hidden)]
-    pub fn from_i32_opt(version: i32) -> Option<Self> {
-        Self::try_from(version).ok()
-    }
-}
-
-impl CustomTryFrom<i32> for StreamVersion {
-    type Err = Error;
-
-    fn try_from(val: i32) -> Result<Self, (i32, Self::Err)> {
-        if val < 0 {
-            Err((val, ErrorKind::InvalidStreamVersion(val).into()))
-        } else {
-            Ok(StreamVersion(val as u32))
-        }
-    }
-}
-
-impl Into<i32> for StreamVersion {
-    /// Returns the wire representation.
-    fn into(self) -> i32 {
-        self.0 as i32
     }
 }
 
