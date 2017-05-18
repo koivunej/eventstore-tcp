@@ -120,6 +120,9 @@ pub use builder::Builder;
 mod auth;
 pub use auth::UsernamePassword;
 
+mod content_type;
+pub use content_type::ContentType;
+
 mod errors {
     use std::str;
     use std::io;
@@ -358,26 +361,6 @@ impl Into<i32> for EventNumber {
             EventNumber::First => 0,
             EventNumber::Exact(x) => x.into(),
             EventNumber::Last => -1
-        }
-    }
-}
-
-/// Content type of the event `data` or `metadata`.
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum ContentType {
-    /// Raw bytes
-    Bytes,
-    /// JSON values usable with projections in EventStore
-    Json
-}
-
-impl Copy for ContentType {}
-
-impl Into<i32> for ContentType {
-    fn into(self) -> i32 {
-        match self {
-            ContentType::Bytes => 0,
-            ContentType::Json => 1,
         }
     }
 }
