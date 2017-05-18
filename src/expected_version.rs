@@ -23,3 +23,9 @@ impl From<ExpectedVersion> for i32 {
         }
     }
 }
+
+impl From<StreamVersion> for ExpectedVersion {
+    fn from(version: StreamVersion) -> Self {
+        ExpectedVersion::Exact(version)
+    }
+}

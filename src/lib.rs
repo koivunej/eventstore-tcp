@@ -21,12 +21,15 @@
 //! Example of writing to the database and simple handling of the response.
 //!
 //! ```no_run
+//! #![feature(try_from)]
+//!
 //! extern crate futures;
 //! extern crate tokio_core;
 //! extern crate tokio_proto;
 //! extern crate tokio_service;
 //! extern crate eventstore_tcp;
 //!
+//! use std::convert::TryFrom;
 //! use std::net::SocketAddr;
 //! use futures::Future;
 //! use tokio_core::reactor::Core;
@@ -47,7 +50,7 @@
 //!         // is created, send a WriteEvents request:
 //!         client.call(Builder::write_events()
 //!             .stream_id("my_stream-1")
-//!             .expected_version(StreamVersion::from(42))
+//!             .expected_version(StreamVersion::try_from(42).unwrap()) // don't do that ?
 //!             .new_event()
 //!                 .event_type("meaning_of_life")
 //!                 .data("{ 'meaning': 42 }".as_bytes())
