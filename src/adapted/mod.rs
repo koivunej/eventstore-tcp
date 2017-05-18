@@ -2,6 +2,7 @@
 //! protocol.
 
 use std::borrow::Cow;
+use std::convert::TryFrom;
 use std::ops::Range;
 use errors::{Error, ErrorKind, ResultStatusKind};
 use {CustomTryFrom, CustomTryInto, ReadDirection, EventNumber, StreamVersion, LogPosition};
@@ -257,8 +258,19 @@ impl<'a> CustomTryFrom<raw::client_messages::WriteEventsCompleted<'a>> for Adapt
                     //  * separate (instead of newtype for tuple)
                     // these must be options, as for idempotent writes the positions might not be
                     // returned. both seem to be returned always.
-                    prepare_position: msg.prepare_position.map(|x| x.into()),
-                    commit_position: msg.commit_position.map(|x| x.into()),
+
+                    // FIXME once this sort of error return were removed,
+                    // it will be possible to use the Carrier syntax (?)
+                    prepare_position: match msg.prepare_position.map(TryFrom::try_from) {
+                        Some(Err(e)) => return Err( (msg, e) ),
+                        Some(Ok(x)) => Some(x),
+                        None => None
+                    },
+                    commit_position: match msg.commit_position.map(TryFrom::try_from) {
+                        Some(Err(e)) => return Err( (msg, e) ),
+                        Some(Ok(x)) => Some(x),
+                        None => None
+                    },
                 })
             }
             InvalidTransaction => {
@@ -497,18 +509,22 @@ impl<'a> CustomTryFrom<(ReadDirection, raw::client_messages::ReadAllEventsComple
     fn try_from((dir, msg): (ReadDirection, raw::client_messages::ReadAllEventsCompleted<'a>)) -> Result<AdaptedMessage<'a>, ((ReadDirection, raw::client_messages::ReadAllEventsCompleted<'a>), Self::Err)> {
         use raw::client_messages::mod_ReadAllEventsCompleted::ReadAllResult;
 
-        let next_commit_position = LogPosition::from_i64_opt(msg.next_commit_position);
-        let next_prepare_position = LogPosition::from_i64_opt(msg.next_prepare_position);
+        // what is that ? is it ok to try parsing and if it fail just use None ?
+        let next_commit_position = LogPosition::try_from(msg.next_commit_position).ok();
+        let next_prepare_position = LogPosition::try_from(msg.next_prepare_position).ok();
 
         let res = match msg.result {
             ReadAllResult::Success => {
                 Ok(ReadAllCompleted {
-                    commit_position: msg.commit_position.into(),
-                    prepare_position: msg.prepare_position.into(),
-                    events: msg.events.into_iter().map(|x| {
-                        let re: self::read_all::ResolvedEvent<'a> = x.into();
-                        re
-                    }).collect(),
+                    commit_position: match LogPosition::try_from(msg.commit_position) {
+                        Err(e) => return Err( ((dir, msg), e) ),
+                        Ok(x) => x,
+                    },
+                    prepare_position: match LogPosition::try_from(msg.prepare_position) {
+                        Err(e) => return Err( ((dir, msg), e) ),
+                        Ok(x) => x,
+                    },
+                    events: msg.events.into_iter().map(From::from).collect(),
                     next_commit_position: next_commit_position,
                     next_prepare_position: next_prepare_position,
                 })
@@ -628,8 +644,8 @@ mod tests {
             RawMessage::WriteEventsCompleted(body.clone()),
             AdaptedMessage::WriteEventsCompleted(Ok(WriteEventsCompleted {
                 event_numbers: StreamVersion::from(0)..StreamVersion::from(1),
-                prepare_position: Some(LogPosition::from(100)),
-                commit_position: Some(LogPosition::from(100)),
+                prepare_position: Some(LogPosition::try_from(100_i64).unwrap()),
+                commit_position: Some(LogPosition::try_from(100_i64).unwrap()),
             })));
     }
 

@@ -76,6 +76,7 @@
 //!
 //! More examples can be found in the aspiring command line tool under `examples/testclient`.
 #![deny(missing_docs)]
+#![feature(try_from)]
 
 #[macro_use]
 extern crate bitflags;
@@ -95,8 +96,6 @@ extern crate derive_more;
 
 #[cfg(test)]
 extern crate rustc_serialize;
-
-use std::str;
 
 pub mod raw;
 pub use raw::RawMessage;
@@ -119,6 +118,9 @@ pub use builder::Builder;
 
 mod auth;
 pub use auth::UsernamePassword;
+
+mod log_position;
+pub use log_position::LogPosition;
 
 mod errors {
     use std::str;
@@ -379,86 +381,6 @@ impl Into<i32> for ContentType {
             ContentType::Bytes => 0,
             ContentType::Json => 1,
         }
-    }
-}
-
-/// Global unique position in the EventStore, used when reading all events.
-/// Range -1..i64::max_value()
-#[derive(Debug, Clone, Eq, PartialOrd, Ord)]
-pub enum LogPosition {
-    /// The first event ever
-    First,
-    /// Exact position
-    Exact(u64),
-    /// The last event written to the database at the moment
-    Last,
-}
-
-impl Copy for LogPosition {}
-
-impl PartialEq<LogPosition> for LogPosition {
-    fn eq(&self, other: &LogPosition) -> bool {
-        let left: i64 = (*self).into();
-        let right: i64 = (*other).into();
-        left == right
-    }
-}
-
-impl From<i64> for LogPosition {
-    fn from(val: i64) -> LogPosition {
-        match LogPosition::from_i64_opt(val) {
-            Some(x) => x,
-            None => panic!("LogPosition undeflow: {}", val),
-        }
-    }
-}
-
-impl CustomTryFrom<i64> for LogPosition {
-    type Err = Error;
-
-    fn try_from(val: i64) -> Result<Self, (i64, Self::Err)> {
-        match val {
-            0 => Ok(LogPosition::First),
-            -1 => Ok(LogPosition::Last),
-            pos => {
-                if pos > 0 {
-                    Ok(LogPosition::Exact(pos as u64))
-                } else {
-                    Err((pos, ErrorKind::InvalidLogPosition(pos).into()))
-                }
-            }
-        }
-    }
-}
-
-impl Into<i64> for LogPosition {
-    fn into(self) -> i64 {
-        match self {
-            LogPosition::First => 0,
-            LogPosition::Exact(x) => x as i64,
-            LogPosition::Last => -1,
-        }
-    }
-}
-
-impl LogPosition {
-    /// Wraps the value into LogPosition or None, if it is larger than i64
-    pub fn from_opt(pos: u64) -> Option<LogPosition> {
-        match pos {
-            0 => Some(LogPosition::First),
-            pos => {
-                if pos < i64::max_value() as u64 {
-                    Some(LogPosition::Exact(pos))
-                } else {
-                    None
-                }
-            }
-        }
-    }
-
-    #[doc(hidden)]
-    pub fn from_i64_opt(pos: i64) -> Option<LogPosition> {
-        Self::try_from(pos).ok()
     }
 }
 
