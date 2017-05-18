@@ -10,11 +10,11 @@ pub enum ExpectedVersion {
     Exact(u32)
 }
 
-impl Into<i32> for ExpectedVersion {
+impl From<ExpectedVersion> for i32 {
     /// Returns the wire representation.
-    fn into(self) -> i32 {
+    fn from(version: ExpectedVersion) -> Self {
         use self::ExpectedVersion::*;
-        match self {
+        match version {
             Any => -2,
             NoStream => -1,
             Exact(ver) => ver as i32
