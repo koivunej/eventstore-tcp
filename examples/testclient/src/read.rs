@@ -1,6 +1,7 @@
 use std::io;
 use std::str;
 use std::cell::RefCell;
+use std::convert::TryFrom;
 use futures::Future;
 use tokio_service::Service;
 use json;
@@ -52,10 +53,9 @@ impl<'a> From<&'a str> for Position {
                         Position::Log(commit, prepare)
                     },
                     _ => {
+                        let num = x.parse::<u32>().expect("Failed to parse position as u32");
                         Position::Exact(
-                            StreamVersion::from_opt(
-                                x.parse::<u32>().expect("Failed to parse position as u32"))
-                            .expect("Position overflow"))
+                            StreamVersion::try_from(num).expect("Position overflow"))
                     }
                 }
             }
