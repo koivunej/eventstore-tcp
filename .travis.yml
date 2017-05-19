@@ -6,6 +6,6 @@ matrix:
 
 script:
   - |
-      cargo build --verbose &&
-      cargo test --verbose &&
-      (cd examples/testclient && cargo build --verbose && cargo test --verbose)
+      cargo build &&
+      cargo test &&
+      (cd examples/testclient && cargo build && cargo test)
