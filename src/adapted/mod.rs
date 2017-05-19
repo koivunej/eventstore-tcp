@@ -521,6 +521,7 @@ impl<'a> CustomTryFrom<(ReadDirection, raw::client_messages::ReadAllEventsComple
     fn try_from((dir, msg): (ReadDirection, raw::client_messages::ReadAllEventsCompleted<'a>)) -> Result<AdaptedMessage<'a>, ((ReadDirection, raw::client_messages::ReadAllEventsCompleted<'a>), Self::Err)> {
         use raw::client_messages::mod_ReadAllEventsCompleted::ReadAllResult;
 
+        // FIXME handle these errors
         // what is that ? is it ok to try parsing and if it fail just use None ?
         let next_commit_position = LogPosition::try_from(msg.next_commit_position).ok();
         let next_prepare_position = LogPosition::try_from(msg.next_prepare_position).ok();
