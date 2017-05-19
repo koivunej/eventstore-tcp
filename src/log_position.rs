@@ -21,7 +21,7 @@ impl TryFrom<i64> for LogPosition {
             0 => Ok(LogPosition::First),
             -1 => Ok(LogPosition::Last),
             pos if pos > 0 => Ok(LogPosition::Exact(pos as u64)),
-            invalid => Err(ErrorKind::InvalidLogPosition(invalid).into())
+            invalid => Err(ErrorKind::UnderflowLogPosition(invalid).into())
         }
     }
 }
@@ -33,7 +33,7 @@ impl TryFrom<u64> for LogPosition {
         match val {
             0 => Ok(LogPosition::First),
             pos if pos < i64::max_value() as u64 => Ok(LogPosition::Exact(pos)), // <= ?
-            invalid => Err(ErrorKind::InvalidLogPosition(invalid as i64).into()) // ugly cast as i64
+            invalid => Err(ErrorKind::OverflowLogPosition(invalid).into())
         }
     }
 }

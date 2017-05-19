@@ -179,7 +179,10 @@ mod errors {
             InvalidEventNumber(value: i32) {
                 display("Invalid event number: {}", value)
             }
-            InvalidLogPosition(value: i64) {
+            UnderflowLogPosition(value: i64) {
+                display("Invalid log position: {}", value)
+            }
+            OverflowLogPosition(value: u64) {
                 display("Invalid log position: {}", value)
             }
             UnsupportedDiscriminator(d: u8) {
