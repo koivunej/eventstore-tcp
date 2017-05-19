@@ -100,8 +100,6 @@ extern crate derive_more;
 #[cfg(test)]
 extern crate hex;
 
-use std::str;
-
 pub mod raw;
 pub use raw::RawMessage;
 pub use raw::client_messages::{WriteEvents, ResolvedIndexedEvent, EventRecord, ReadAllEvents};
@@ -132,6 +130,9 @@ pub use stream_version::StreamVersion;
 
 mod expected_version;
 pub use expected_version::ExpectedVersion;
+
+mod log_position;
+pub use log_position::LogPosition;
 
 mod errors {
     use std::str;
@@ -178,7 +179,10 @@ mod errors {
             InvalidEventNumber(value: i32) {
                 display("Invalid event number: {}", value)
             }
-            InvalidLogPosition(value: i64) {
+            UnderflowLogPosition(value: i64) {
+                display("Invalid log position: {}", value)
+            }
+            OverflowLogPosition(value: u64) {
                 display("Invalid log position: {}", value)
             }
             UnsupportedDiscriminator(d: u8) {
@@ -232,76 +236,6 @@ impl From<ContentType> for i32 {
             ContentType::Bytes => 0,
             ContentType::Json => 1,
         }
-    }
-}
-
-/// Global unique position in the EventStore, used when reading all events.
-/// Range -1..i64::max_value()
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum LogPosition {
-    /// The first event ever
-    First,
-    /// Exact position
-    Exact(u64),
-    /// The last event written to the database at the moment
-    Last,
-}
-
-impl From<i64> for LogPosition {
-    fn from(val: i64) -> LogPosition {
-        match LogPosition::from_i64_opt(val) {
-            Some(x) => x,
-            None => panic!("LogPosition undeflow: {}", val),
-        }
-    }
-}
-
-impl CustomTryFrom<i64> for LogPosition {
-    type Err = Error;
-
-    fn try_from(val: i64) -> Result<Self, (i64, Self::Err)> {
-        match val {
-            0 => Ok(LogPosition::First),
-            -1 => Ok(LogPosition::Last),
-            pos => {
-                if pos > 0 {
-                    Ok(LogPosition::Exact(pos as u64))
-                } else {
-                    Err((pos, ErrorKind::InvalidLogPosition(pos).into()))
-                }
-            }
-        }
-    }
-}
-
-impl Into<i64> for LogPosition {
-    fn into(self) -> i64 {
-        match self {
-            LogPosition::First => 0,
-            LogPosition::Exact(x) => x as i64,
-            LogPosition::Last => -1,
-        }
-    }
-}
-
-impl LogPosition {
-    /// Wraps the value into LogPosition or None, if it is larger than i64
-    pub fn from_opt(pos: u64) -> Option<LogPosition> {
-        match pos {
-            0 => Some(LogPosition::First),
-            pos => {
-                if pos < i64::max_value() as u64 {
-                    Some(LogPosition::Exact(pos))
-                } else {
-                    None
-                }
-            }
-        }
-    }
-
-    #[doc(hidden)]
-    pub fn from_i64_opt(pos: i64) -> Option<LogPosition> {
-        Self::try_from(pos).ok()
     }
 }
 
