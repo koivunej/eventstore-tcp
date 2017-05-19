@@ -195,9 +195,7 @@ mod errors {
 
     impl Into<io::Error> for Error {
         fn into(self) -> io::Error {
-            match self {
-                e => io::Error::new(io::ErrorKind::Other, e),
-            }
+            io::Error::new(io::ErrorKind::Other, self)
         }
     }
 
@@ -228,9 +226,9 @@ pub enum ContentType {
     Json
 }
 
-impl Into<i32> for ContentType {
-    fn into(self) -> i32 {
-        match self {
+impl From<ContentType> for i32 {
+    fn from(ctype: ContentType) -> Self {
+        match ctype {
             ContentType::Bytes => 0,
             ContentType::Json => 1,
         }
@@ -239,7 +237,7 @@ impl Into<i32> for ContentType {
 
 /// Global unique position in the EventStore, used when reading all events.
 /// Range -1..i64::max_value()
-#[derive(Debug, Copy, Clone, Eq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LogPosition {
     /// The first event ever
     First,
@@ -247,14 +245,6 @@ pub enum LogPosition {
     Exact(u64),
     /// The last event written to the database at the moment
     Last,
-}
-
-impl PartialEq<LogPosition> for LogPosition {
-    fn eq(&self, other: &LogPosition) -> bool {
-        let left: i64 = (*self).into();
-        let right: i64 = (*other).into();
-        left == right
-    }
 }
 
 impl From<i64> for LogPosition {
