@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Joonas Koivunen <joonas.koivunen@gmail.com>"]
 
 [dependencies]
-eventstore-tcp = { path = "../../" }
+eventstore-tcp = { path = "../" }
 hex = "0.2"
 tokio-io = "*"
 regex = "*"

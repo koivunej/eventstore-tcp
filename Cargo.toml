@@ -23,3 +23,7 @@ derive_more = "0.6.0"
 
 [dev-dependencies]
 hex = "0.2"
+
+[workspace]
+members = ["testclient", "decoder"]
+exclude = ["tokio-proto"]
