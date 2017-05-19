@@ -196,9 +196,7 @@ mod errors {
 
     impl Into<io::Error> for Error {
         fn into(self) -> io::Error {
-            match self {
-                e => io::Error::new(io::ErrorKind::Other, e),
-            }
+            io::Error::new(io::ErrorKind::Other, self)
         }
     }
 
@@ -233,9 +231,9 @@ pub enum ContentType {
 
 impl Copy for ContentType {}
 
-impl Into<i32> for ContentType {
-    fn into(self) -> i32 {
-        match self {
+impl From<ContentType> for i32 {
+    fn from(ctype: ContentType) -> Self {
+        match ctype {
             ContentType::Bytes => 0,
             ContentType::Json => 1,
         }
