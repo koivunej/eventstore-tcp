@@ -1,6 +1,7 @@
 use std::io;
 use std::str;
 use std::cell::RefCell;
+use std::convert::TryFrom;
 use futures::Future;
 use tokio_service::Service;
 use json;
@@ -52,10 +53,9 @@ impl<'a> From<&'a str> for Position {
                         Position::Log(commit, prepare)
                     },
                     _ => {
+                        let num = x.parse::<u32>().expect("Failed to parse position as u32");
                         Position::Exact(
-                            StreamVersion::from_opt(
-                                x.parse::<u32>().expect("Failed to parse position as u32"))
-                            .expect("Position overflow"))
+                            StreamVersion::try_from(num).expect("Position overflow"))
                     }
                 }
             }
@@ -111,13 +111,11 @@ impl Command for Read {
         let package = self.read_mode.borrow_mut().take().unwrap().into_request(&self.stream_id, config.credentials.clone());
         let send = client.call(package);
 
-        let ret = send.and_then(move |resp| {
+        Box::new(send.and_then(move |resp| {
             let mut stdout = io::stdout();
             let mut stderr = io::stderr();
             output.format(verbose, resp.message.try_adapt().unwrap(), &mut stdout, &mut stderr)
-        });
-
-        Box::new(ret)
+        }))
     }
 }
 

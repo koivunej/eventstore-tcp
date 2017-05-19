@@ -45,7 +45,7 @@ impl Service for EventStoreClient {
     type Future = Box<Future<Item = Package, Error = io::Error>>;
 
     fn call(&self, req: Package) -> Self::Future {
-        Box::new(self.inner.call(req))
+        self.inner.call(req).boxed()
     }
 }
 

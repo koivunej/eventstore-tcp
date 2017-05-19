@@ -1,6 +1,7 @@
 //! Adapted or refined types providing a much more oxidized API for handling the messages in the
 //! protocol.
 
+use std::convert::{TryFrom, From};
 use std::borrow::Cow;
 use std::ops::Range;
 use errors::{Error, ErrorKind, ResultStatusKind};
@@ -227,8 +228,10 @@ impl<'a> CustomTryFrom<raw::client_messages::WriteEvents<'a>> for AdaptedMessage
     }
 }
 
-fn range_from_parts(start: i32, end: i32) -> Range<StreamVersion> {
-    StreamVersion::from_i32(start)..StreamVersion::from_i32(end + 1)
+fn range_from_parts(start: i32, end: i32) -> Result<Range<StreamVersion>, Error> {
+    let start = StreamVersion::try_from(start)?;
+    let end = StreamVersion::try_from(end + 1)?;
+    Ok(start..end)
 }
 
 fn range_to_parts(r: &Range<StreamVersion>) -> (i32, i32) {
@@ -251,8 +254,12 @@ impl<'a> CustomTryFrom<raw::client_messages::WriteEventsCompleted<'a>> for Adapt
 
         let res = match status {
             Success => {
+                let range = match range_from_parts(msg.first_event_number, msg.last_event_number) {
+                                Ok(x) => x,
+                                Err(e) => return Err( (msg, e) ),
+                            };
                 Ok(WriteEventsCompleted {
-                    event_numbers: range_from_parts(msg.first_event_number, msg.last_event_number),
+                    event_numbers: range,
                     // unsure if these should be:
                     //  * separate (instead of newtype for tuple)
                     // these must be options, as for idempotent writes the positions might not be
@@ -413,10 +420,16 @@ impl<'a> CustomTryFrom<(ReadDirection, raw::client_messages::ReadStreamEventsCom
         let next_page = if dir == ReadDirection::Backward && msg.next_event_number < 0 {
             None
         } else {
-            Some(try_conv!(EventNumber::try_from(msg.next_event_number), (dir, msg)))
+            let stream_version = match StreamVersion::try_from(msg.next_event_number) {
+                                     Ok(x) => x,
+                                     Err(e) => return Err( ((dir, msg), e) ),
+                                 };
+            Some(EventNumber::from(stream_version))
         };
-
-        let last_event_number = try_conv!(StreamVersion::try_from(msg.last_event_number), (dir, msg));
+        let last_event_number = match StreamVersion::try_from(msg.last_event_number) {
+            Ok(x) => x,
+            Err(e) => return Err( ((dir, msg), e) ),
+        };
 
         // clone to avoid borrowing it
         let result = msg.result.as_ref().unwrap().clone();
@@ -627,7 +640,7 @@ mod tests {
         test_conversions(
             RawMessage::WriteEventsCompleted(body.clone()),
             AdaptedMessage::WriteEventsCompleted(Ok(WriteEventsCompleted {
-                event_numbers: StreamVersion::from(0)..StreamVersion::from(1),
+                event_numbers: StreamVersion::try_from(0).unwrap()..StreamVersion::try_from(1).unwrap(),
                 prepare_position: Some(LogPosition::from(100)),
                 commit_position: Some(LogPosition::from(100)),
             })));

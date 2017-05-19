@@ -1,3 +1,5 @@
+#![feature(try_from)]
+
 extern crate futures;
 extern crate tokio_core;
 extern crate tokio_service;
@@ -9,6 +11,7 @@ extern crate eventstore_tcp;
 
 extern crate testclient;
 
+use std::convert::TryFrom;
 use std::env;
 use std::net::SocketAddr;
 use std::process;
@@ -194,8 +197,8 @@ fn prepare_write<'a>(args: &ArgMatches<'a>) -> Write {
     builder.stream_id(args.value_of("stream_id").unwrap().to_owned())
         .expected_version(match args.value_of("expected_version").unwrap() {
             "any" => ExpectedVersion::Any,
-            "created" => ExpectedVersion::NewStream,
-            n => ExpectedVersion::Exact(StreamVersion::from(n.parse().unwrap()))
+            "created" => ExpectedVersion::NoStream,
+            n => ExpectedVersion::Exact(StreamVersion::try_from(n.parse::<u32>().unwrap()).unwrap())
         })
         .require_master(args.is_present("require_master"));
 
@@ -248,8 +251,8 @@ fn prepare_delete<'a>(d: &ArgMatches<'a>) -> Delete {
     builder.stream_id(d.value_of("stream_id").unwrap().to_string())
         .expected_version(match d.value_of("expected_version").unwrap() {
             "any" => ExpectedVersion::Any,
-            "created" => ExpectedVersion::NewStream,
-            n => ExpectedVersion::Exact(StreamVersion::from(n.parse().unwrap()))
+            "created" => ExpectedVersion::NoStream,
+            n => ExpectedVersion::Exact(StreamVersion::try_from(n.parse::<u32>().unwrap()).unwrap())
         })
         .hard_delete(d.is_present("hard_delete"))
         .require_master(d.is_present("require_master"));

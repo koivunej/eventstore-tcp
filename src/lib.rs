@@ -21,12 +21,15 @@
 //! Example of writing to the database and simple handling of the response.
 //!
 //! ```no_run
+//! #![feature(try_from)]
+//!
 //! extern crate futures;
 //! extern crate tokio_core;
 //! extern crate tokio_proto;
 //! extern crate tokio_service;
 //! extern crate eventstore_tcp;
 //!
+//! use std::convert::TryFrom;
 //! use std::net::SocketAddr;
 //! use futures::Future;
 //! use tokio_core::reactor::Core;
@@ -47,7 +50,7 @@
 //!         // is created, send a WriteEvents request:
 //!         client.call(Builder::write_events()
 //!             .stream_id("my_stream-1")
-//!             .expected_version(StreamVersion::from(42))
+//!             .expected_version(StreamVersion::try_from(42).unwrap()) // don't do that ?
 //!             .new_event()
 //!                 .event_type("meaning_of_life")
 //!                 .data("{ 'meaning': 42 }".as_bytes())
@@ -76,6 +79,7 @@
 //!
 //! More examples can be found in the aspiring command line tool under `examples/testclient`.
 #![deny(missing_docs)]
+#![feature(try_from)]
 
 #[macro_use]
 extern crate bitflags;
@@ -119,6 +123,15 @@ pub use builder::Builder;
 
 mod auth;
 pub use auth::UsernamePassword;
+
+mod event_number;
+pub use event_number::EventNumber;
+
+mod stream_version;
+pub use stream_version::StreamVersion;
+
+mod expected_version;
+pub use expected_version::ExpectedVersion;
 
 mod errors {
     use std::str;
@@ -205,151 +218,6 @@ pub enum ReadDirection {
 }
 
 impl Copy for ReadDirection {}
-
-/// `ExpectedVersion` represents the different modes of optimistic locking when writing to a stream
-/// using `WriteEventsBuilder`.
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum ExpectedVersion {
-    /// No optimistic locking
-    Any,
-    /// Expect a stream not to exist
-    NewStream,
-    /// Expect exact number of events in the stream
-    Exact(StreamVersion)
-}
-
-impl Copy for ExpectedVersion {}
-
-impl Into<i32> for ExpectedVersion {
-    /// Returns the wire representation.
-    fn into(self) -> i32 {
-        use self::ExpectedVersion::*;
-        match self {
-            Any => -2,
-            NewStream => -1,
-            Exact(ver) => ver.into()
-        }
-    }
-}
-
-impl From<StreamVersion> for ExpectedVersion {
-    fn from(ver: StreamVersion) -> Self {
-        ExpectedVersion::Exact(ver)
-    }
-}
-
-impl CustomTryFrom<i32> for ExpectedVersion {
-    type Err = Error;
-
-    fn try_from(val: i32) -> Result<ExpectedVersion, (i32, Self::Err)> {
-        let ver = StreamVersion::try_from(val)?;
-        Ok(ExpectedVersion::from(ver))
-    }
-}
-
-/// `StreamVersion` represents the valid values for a stream version which is the same as the
-/// event number of the latest event. As such, values are non-negative integers up to
-/// `i32::max_value`. Negative values of `i32` have special meaning in the protocol, and are
-/// restricted from being used with this type.
-///
-/// Conversions to StreamVersion are quite horrible until TryFrom is stabilized.
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct StreamVersion(u32);
-
-impl Copy for StreamVersion {}
-
-impl StreamVersion {
-    /// Converts the value to a StreamVersion or panics if the value is out of range
-    pub fn from(version: u32) -> Self {
-        Self::from_opt(version).expect("StreamVersion overflow")
-    }
-
-    /// Converts the value to a StreamVersion returning None if the input is out of range.
-    pub fn from_opt(version: u32) -> Option<Self> {
-        // TODO: MAX_VALUE might be some magical value, should be lower?
-        if version < i32::max_value() as u32 {
-            Some(StreamVersion(version))
-        } else {
-            None
-        }
-    }
-
-    #[doc(hidden)]
-    pub fn from_i32(version: i32) -> Self {
-        Self::try_from(version).unwrap()
-
-    }
-
-    #[doc(hidden)]
-    pub fn from_i32_opt(version: i32) -> Option<Self> {
-        Self::try_from(version).ok()
-    }
-}
-
-impl CustomTryFrom<i32> for StreamVersion {
-    type Err = Error;
-
-    fn try_from(val: i32) -> Result<Self, (i32, Self::Err)> {
-        if val < 0 {
-            Err((val, ErrorKind::InvalidStreamVersion(val).into()))
-        } else {
-            Ok(StreamVersion(val as u32))
-        }
-    }
-}
-
-impl Into<i32> for StreamVersion {
-    /// Returns the wire representation.
-    fn into(self) -> i32 {
-        self.0 as i32
-    }
-}
-
-/// `EventNumber` is similar to `StreamVersion` and `ExpectedVersion` but is used when specifying a
-/// position to read from in the stream. Allows specifying the first or last (when reading
-/// backwards) event in addition to exact event number.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum EventNumber {
-    /// The first event in a stream
-    First,
-    /// Exactly the given event number
-    Exact(StreamVersion),
-    /// The last event in a stream
-    Last,
-}
-
-impl Copy for EventNumber {}
-
-impl From<StreamVersion> for EventNumber {
-    fn from(ver: StreamVersion) -> Self {
-        EventNumber::Exact(ver)
-    }
-}
-
-impl CustomTryFrom<i32> for EventNumber {
-    type Err = Error;
-
-    fn try_from(val: i32) -> Result<Self, (i32, Self::Err)> {
-        match val {
-            0 => Ok(EventNumber::First),
-            -1 => Ok(EventNumber::Last),
-            x if x > 0 => Ok(EventNumber::Exact(StreamVersion::from_i32(x))),
-            invalid => {
-                Err((invalid, ErrorKind::InvalidEventNumber(val).into()))
-            }
-        }
-    }
-}
-
-impl From<EventNumber> for i32 {
-    fn from(number: EventNumber) -> Self {
-        match number {
-            EventNumber::First => 0,
-            EventNumber::Exact(x) => x.into(),
-            EventNumber::Last => -1
-        }
-    }
-}
 
 /// Content type of the event `data` or `metadata`.
 #[derive(Debug, PartialEq, Eq, Clone)]
