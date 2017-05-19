@@ -8,4 +8,5 @@ script:
   - |
       cargo build &&
       cargo test &&
-      (cd examples/testclient && cargo build && cargo test)
+      (cd examples/testclient && cargo build && cargo test) &&
+      (cd examples/decoder && cargo build && cargo test)
