@@ -69,14 +69,12 @@ pub enum ReadMode {
     Backward { position: Position, count: u8 }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum OutputMode {
     Debug,
     JsonOneline,
     Hex
 }
-
-impl Copy for OutputMode {}
 
 impl<'a> From<&'a str> for OutputMode {
     fn from(s: &'a str) -> OutputMode {

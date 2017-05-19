@@ -209,7 +209,7 @@ mod errors {
 use self::errors::{Error, ErrorKind};
 
 /// The direction in which events are read.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ReadDirection {
     /// Read from first (event 0) to the latest
     Forward,
@@ -217,18 +217,14 @@ pub enum ReadDirection {
     Backward
 }
 
-impl Copy for ReadDirection {}
-
 /// Content type of the event `data` or `metadata`.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ContentType {
     /// Raw bytes
     Bytes,
     /// JSON values usable with projections in EventStore
     Json
 }
-
-impl Copy for ContentType {}
 
 impl From<ContentType> for i32 {
     fn from(ctype: ContentType) -> Self {
@@ -241,7 +237,7 @@ impl From<ContentType> for i32 {
 
 /// Global unique position in the EventStore, used when reading all events.
 /// Range -1..i64::max_value()
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LogPosition {
     /// The first event ever
     First,
@@ -250,8 +246,6 @@ pub enum LogPosition {
     /// The last event written to the database at the moment
     Last,
 }
-
-impl Copy for LogPosition {}
 
 impl From<i64> for LogPosition {
     fn from(val: i64) -> LogPosition {
