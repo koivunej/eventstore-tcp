@@ -98,7 +98,7 @@ extern crate bytes;
 extern crate derive_more;
 
 #[cfg(test)]
-extern crate rustc_serialize;
+extern crate hex;
 
 use std::str;
 
