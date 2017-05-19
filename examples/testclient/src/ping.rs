@@ -23,18 +23,16 @@ impl Command for Ping {
     fn execute(&self, config: &Config, client: EventStoreClient) -> Box<Future<Item = (), Error = io::Error>> {
         use eventstore_tcp::AdaptedMessage;
 
-        let verbose = config.verbose;
         let started = self.started.unwrap();
         let ping = client.call(Builder::ping().build_package(config.credentials.clone(), None));
 
         Box::new(ping.map(move |resp| (resp, started))
             .and_then(move |(pong, started)| {
-                let received = Instant::now();
                 match pong.message.try_adapt().unwrap() {
-                    AdaptedMessage::Pong => Ok((started, received)),
+                    AdaptedMessage::Pong => Ok(started),
                     msg => Err(io::Error::new(io::ErrorKind::Other, format!("Unexpected response: {:?}", msg)))
                 }
-            }).and_then(move |(started, received)| {
+            }).and_then(move |started| {
                 print_elapsed("pong received in", started.elapsed());
                 Ok(())
             }))
