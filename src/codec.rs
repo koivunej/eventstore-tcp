@@ -35,7 +35,7 @@ impl PackageCodec {
         let len = io::Cursor::new(&buf[0..4]).read_u32::<LittleEndian>()? as usize;
 
         if len < 18 {
-            panic!("length is too little: {}", len);
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "length is too small"))
         }
 
         if buf.len() < len + 4 {
