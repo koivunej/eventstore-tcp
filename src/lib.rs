@@ -98,7 +98,7 @@ extern crate bytes;
 extern crate derive_more;
 
 #[cfg(test)]
-extern crate rustc_serialize;
+extern crate hex;
 
 pub mod raw;
 pub use raw::RawMessage;
@@ -151,12 +151,12 @@ mod errors {
     }
 
     impl fmt::Display for ResultStatusKind {
-        fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             use self::ResultStatusKind::*;
-            write!(fmt, "{}", match self {
-                &WriteEvents => "WriteEventsCompleted::result",
-                &ReadEvent => "ReadEventCompleted::result",
-                &ReadStream => "ReadStreamEventsCompleted::result",
+            f.write_str(match *self {
+                WriteEvents => "WriteEventsCompleted::result",
+                ReadEvent => "ReadEventCompleted::result",
+                ReadStream => "ReadStreamEventsCompleted::result",
             })
         }
     }
@@ -174,13 +174,13 @@ mod errors {
                 display("Missing result field: {}", which)
             }
             InvalidStreamVersion(value: i32) {
-                display("Invalid StreamVersion: {}", value)
+                display("Invalid stream version: {}", value)
             }
             InvalidEventNumber(value: i32) {
-                display("Invalid EventNumber: {}", value)
+                display("Invalid event number: {}", value)
             }
             InvalidLogPosition(value: i64) {
-                display("Invalid LogPosition: {}", value)
+                display("Invalid log position: {}", value)
             }
             UnsupportedDiscriminator(d: u8) {
                 display("Unsupported discriminator 0x{:02x}", d)
@@ -189,7 +189,7 @@ mod errors {
                 display("Unimplemented conversion")
             }
             WriteEventsInvalidTransaction {
-                display("Unexpected WriteEvents result: InvalidTransaction")
+                display("Unexpected write events result: invalid transaction")
             }
         }
     }
@@ -210,7 +210,7 @@ mod errors {
 use self::errors::{Error, ErrorKind};
 
 /// The direction in which events are read.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ReadDirection {
     /// Read from first (event 0) to the latest
     Forward,
@@ -218,18 +218,14 @@ pub enum ReadDirection {
     Backward
 }
 
-impl Copy for ReadDirection {}
-
 /// Content type of the event `data` or `metadata`.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ContentType {
     /// Raw bytes
     Bytes,
     /// JSON values usable with projections in EventStore
     Json
 }
-
-impl Copy for ContentType {}
 
 impl From<ContentType> for i32 {
     fn from(ctype: ContentType) -> Self {
