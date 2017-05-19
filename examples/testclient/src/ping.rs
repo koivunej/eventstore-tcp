@@ -29,7 +29,7 @@ impl Command for Ping {
         let ping = client.call(Builder::ping().build_package(config.credentials.clone(), None));
         let send_began = Instant::now();
 
-        let ret = ping.map(move |resp| (resp, started, connected, send_began))
+        ping.map(move |resp| (resp, started, connected, send_began))
             .and_then(move |(pong, started, connected, send_began)| {
                 let received = Instant::now();
                 match pong.message.try_adapt().unwrap() {
@@ -45,11 +45,8 @@ impl Command for Ping {
                 } else {
                     print_elapsed("pong received in", started.elapsed());
                 }
-
                 Ok(())
-            });
-
-        Box::new(ret)
+            }).boxed()
     }
 }
 
