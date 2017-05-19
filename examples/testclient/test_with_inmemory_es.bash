@@ -14,6 +14,9 @@ readonly ES_PATH="EventStore-OSS-Ubuntu-14.04-v3.9.3"
 ES_PID=""
 readonly self="$(basename "$0")"
 
+readonly addr="${ES_ADDR:-127.0.0.1}"
+readonly port="${ES_PORT:-1113}"
+
 # the events to write
 readonly messages_in=(
 	'{ "this": "is", "test": "ing" }'
@@ -33,7 +36,7 @@ readonly messages_out=(
 )
 
 run () {
-	RUST_BACKTRACE=1 cargo run --quiet -- --host 127.0.0.1 --port 1113 "$@"
+	RUST_BACKTRACE=1 cargo run --quiet -- --host "$addr" --port "$port" "$@"
 }
 
 main () {

@@ -1,0 +1,11 @@
+language: rust
+
+matrix:
+  include:
+    - rust: nightly
+
+script:
+  - |
+      cargo build &&
+      cargo test &&
+      (cd examples/testclient && cargo build && cargo test)

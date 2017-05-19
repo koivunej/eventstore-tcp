@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/koivunej/eventstore-tcp.svg?branch=master)](https://travis-ci.org/koivunej/eventstore-tcp)
+
 # Tokio-based EventStore client API written in Rust
 
 [EventStore](https://geteventstore.com/) is an open-source immutable event database.
