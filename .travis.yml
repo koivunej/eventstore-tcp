@@ -6,6 +6,7 @@ matrix:
 
 script:
   - |
+      export CARGO_TARGET_DIR="$(pwd)/target" &&
       cargo build &&
       cargo test &&
       (cd examples/testclient && cargo build && cargo test) &&
