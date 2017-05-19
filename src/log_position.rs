@@ -32,7 +32,7 @@ impl TryFrom<u64> for LogPosition {
     fn try_from(val: u64) -> Result<LogPosition, Self::Error> {
         match val {
             0 => Ok(LogPosition::First),
-            pos if pos < i64::max_value() as u64 => Ok(LogPosition::Exact(pos)), // <= ?
+            pos if pos <= i64::max_value() as u64 => Ok(LogPosition::Exact(pos)),
             invalid => Err(ErrorKind::OverflowLogPosition(invalid).into())
         }
     }
