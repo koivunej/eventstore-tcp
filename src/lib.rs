@@ -77,7 +77,7 @@
 //! }
 //! ```
 //!
-//! More examples can be found in the aspiring command line tool under `examples/testclient`.
+//! More examples can be found in the aspiring command line tool under `testclient/`.
 #![deny(missing_docs)]
 #![feature(try_from)]
 
