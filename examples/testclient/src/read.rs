@@ -47,8 +47,8 @@ impl<'a> From<&'a str> for Position {
                 let mut parts = s.split(",");
                 match (parts.next(), parts.next()) {
                     (Some(a), Some(b)) => {
-                        let commit = LogPosition::from(a.parse::<i64>().unwrap());
-                        let prepare = LogPosition::from(b.parse::<i64>().unwrap());
+                        let commit = LogPosition::try_from(a.parse::<i64>().unwrap()).unwrap();
+                        let prepare = LogPosition::try_from(b.parse::<i64>().unwrap()).unwrap();
 
                         Position::Log(commit, prepare)
                     },
