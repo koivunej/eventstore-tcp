@@ -25,28 +25,19 @@ impl Command for Ping {
 
         let verbose = config.verbose;
         let started = self.started.unwrap();
-        let connected = Instant::now();
         let ping = client.call(Builder::ping().build_package(config.credentials.clone(), None));
-        let send_began = Instant::now();
 
-        ping.map(move |resp| (resp, started, connected, send_began))
-            .and_then(move |(pong, started, connected, send_began)| {
+        Box::new(ping.map(move |resp| (resp, started))
+            .and_then(move |(pong, started)| {
                 let received = Instant::now();
                 match pong.message.try_adapt().unwrap() {
-                    AdaptedMessage::Pong => Ok((started, connected, send_began, received)),
+                    AdaptedMessage::Pong => Ok((started, received)),
                     msg => Err(io::Error::new(io::ErrorKind::Other, format!("Unexpected response: {:?}", msg)))
                 }
-            }).and_then(move |(started, connected, send_began, received)| {
-                if verbose {
-                    print_elapsed("connected in  ", connected - started);
-                    print_elapsed("ready to send ", send_began - connected);
-                    print_elapsed("received in   ", received - send_began);
-                    print_elapsed("total         ", started.elapsed());
-                } else {
-                    print_elapsed("pong received in", started.elapsed());
-                }
+            }).and_then(move |(started, received)| {
+                print_elapsed("pong received in", started.elapsed());
                 Ok(())
-            }).boxed()
+            }))
     }
 }
 

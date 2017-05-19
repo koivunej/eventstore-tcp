@@ -29,7 +29,7 @@ impl Command for Write {
         let verbose = config.verbose;
         let send = client.call(package);
 
-        send.and_then(move |resp| {
+        Box::new(send.and_then(move |resp| {
             match resp.message.try_adapt().unwrap() {
                 AdaptedMessage::WriteEventsCompleted(Ok(success)) => {
                     print_elapsed("Success in", started.elapsed());
@@ -45,6 +45,6 @@ impl Command for Write {
                     Err(io::Error::new(io::ErrorKind::Other, format!("Unexpected response: {:?}", x)))
                 }
             }
-        }).boxed()
+        }))
     }
 }

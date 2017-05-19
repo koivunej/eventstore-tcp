@@ -27,7 +27,7 @@ impl Command for Delete {
         let verbose = config.verbose;
         let send = client.call(package);
 
-        send.and_then(move |resp| {
+        Box::new(send.and_then(move |resp| {
             match resp.message {
                 RawMessage::DeleteStreamCompleted(body) => {
                     if body.result.is_none() {
@@ -50,6 +50,6 @@ impl Command for Delete {
                 },
                 x => Err(io::Error::new(io::ErrorKind::Other, format!("Unexpected response: {:?}", x)))
             }
-        }).boxed()
+        }))
     }
 }
