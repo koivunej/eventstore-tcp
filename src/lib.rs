@@ -133,6 +133,9 @@ pub use stream_version::StreamVersion;
 mod expected_version;
 pub use expected_version::ExpectedVersion;
 
+mod content_type;
+pub use content_type::ContentType;
+
 mod read_direction;
 pub use read_direction::ReadDirection;
 
@@ -210,24 +213,6 @@ mod errors {
 }
 
 use self::errors::{Error, ErrorKind};
-
-/// Content type of the event `data` or `metadata`.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum ContentType {
-    /// Raw bytes
-    Bytes,
-    /// JSON values usable with projections in EventStore
-    Json
-}
-
-impl From<ContentType> for i32 {
-    fn from(ctype: ContentType) -> Self {
-        match ctype {
-            ContentType::Bytes => 0,
-            ContentType::Json => 1,
-        }
-    }
-}
 
 /// Global unique position in the EventStore, used when reading all events.
 /// Range -1..i64::max_value()
