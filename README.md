@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/koivunej/eventstore-tcp.svg?branch=master)](https://travis-ci.org/koivunej/eventstore-tcp)
+
 # Tokio-based EventStore client API written in Rust
 
 [EventStore](https://geteventstore.com/) is an open-source immutable event database.
@@ -21,7 +23,7 @@ Some of the payloads are exposed by the current version of this API.
 
 Please see the [documentation](https://koivunej.github.io/eventstore-tcp/eventstore_tcp/index.html).
 
-The repository also includes an aspiring command line client under `examples/testclient`.
+The repository also includes an aspiring command line client under `testclient/`.
 
 This crate is not yet available on crates.io as it depends on a custom fork of [tokio-proto](https://github.com/koivunej/tokio-proto/tree/generic-requestid) but you can try it out by adding this to your `Cargo.toml`:
 
@@ -64,7 +66,7 @@ git clone --recursive https://github.com/koivunej/eventstore-tcp.git
 
 # Building
 
-`cargo build` will handle building, and testclient becomes usable after building it in it's own directory: `cd examples/testclient && cargo run -- --help`.
+`cargo build` will handle building, and `testclient` becomes usable after building it in it's own directory: `cd testclient && cargo run -- --help`.
 
 # Testing
 
@@ -72,7 +74,7 @@ Currently `cargo test` runs very primitive codec tests to ensure everything pret
 Also, I'm not sure if there is any point in aiming at 100% coverage en/decoding protobuf messages.
 Perhaps later on if server version differences are discovered these will make more sense.
 
-The `examples/testclient` contains `test_with_inmemory_es.bash` which will do some smoke testing against an EventStore instance expected to be running at `127.0.0.1:1113`.
+The `testclient/` contains `test_with_inmemory_es.bash` which will do some smoke testing against an EventStore instance expected to be running at `127.0.0.1:1113`.
 The script also includes code to fetch but not run an inmemory instance as it's currently impossible to download EventStore binaries from an https:// host (if you know one, please let me know) and either way this should probably be done with some jailing/sandboxing to be accessible.
 
 Simple no-brainer way to run the server is to spin-up a local ubuntu VM based on something similar to a `VagrantFile` below (assuming you have [vagrant](https://vagrantup.com) and [VirtualBox](https://www.virtualbox.org/wiki/VirtualBox) ready to go):

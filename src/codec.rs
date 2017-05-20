@@ -35,7 +35,7 @@ impl PackageCodec {
         let len = io::Cursor::new(&buf[0..4]).read_u32::<LittleEndian>()? as usize;
 
         if len < 18 {
-            panic!("length is too little: {}", len);
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "length is too small"))
         }
 
         if buf.len() < len + 4 {
@@ -43,18 +43,14 @@ impl PackageCodec {
         }
 
         let decoded_frame = self.decode_body(&buf[4..(4 + len)]);
-
-        match decoded_frame {
-            Ok((c, a, m)) => {
-                buf.split_to(4 + len);
-                Ok(Some(Package {
-                    correlation_id: c,
-                    authentication: a,
-                    message: m.into(),
-                }))
-            }
-            Err(e) => Err(e),
-        }
+        decoded_frame.and_then(|(c, a, m)| {
+            buf.split_to(4 + len);
+            Ok(Some(Package {
+                correlation_id: c,
+                authentication: a,
+                message: m.into(),
+            }))
+        })
     }
 
     fn decode_body(&mut self, buf: &[u8]) -> io::Result<(Uuid, Option<UsernamePassword>, RawMessage<'static>)> {
@@ -149,7 +145,7 @@ impl Encoder for PackageCodec {
 #[cfg(test)]
 mod tests {
     use std::fmt::Debug;
-    use rustc_serialize::hex::FromHex;
+    use hex::FromHex;
     use tokio_io::codec::{Decoder, Encoder};
     use uuid::Uuid;
     use super::{PackageCodec};
@@ -197,19 +193,13 @@ mod tests {
     fn decode_unknown_discriminator() {
         use std::borrow::Cow;
 
-        let err = PackageCodec.decode(&mut ("12000000ff007b50a1b034b9224e8f9d708c394fab2d"
-                .to_string()
-                .from_hex()
-                .unwrap()
-                .into()))
-            .unwrap() // Result
-            .unwrap();// Option
-
-        assert_eq!(err, Package {
-            authentication: None,
-            correlation_id: Uuid::parse_str("7b50a1b0-34b9-224e-8f9d-708c394fab2d").unwrap(),
-            message: RawMessage::Unsupported(255, Cow::Owned(vec![])).into()
-        });
+        test_decoding_hex("12000000ff007b50a1b034b9224e8f9d708c394fab2d",
+                          PackageCodec,
+                          Package {
+                              authentication: None,
+                              correlation_id: Uuid::parse_str("7b50a1b0-34b9-224e-8f9d-708c394fab2d").unwrap(),
+                              message: RawMessage::Unsupported(255, Cow::Owned(vec![])).into()
+                          });
     }
 
     #[test]
@@ -276,7 +266,7 @@ mod tests {
     fn test_decoding_hex<C: Decoder>(input: &str, codec: C, expected: C::Item)
         where C::Item: Debug + PartialEq, C::Error: Debug
     {
-        test_decoding(input.to_string().from_hex().unwrap(), codec, expected);
+        test_decoding(Vec::from_hex(input).unwrap(), codec, expected);
     }
 
     fn test_decoding<C: Decoder>(input: Vec<u8>, mut codec: C, expected: C::Item)
@@ -316,7 +306,7 @@ mod tests {
     fn test_encoding_hex<C: Encoder>(input: &str, codec: C, expected: C::Item)
         where C::Item: Debug + PartialEq, C::Error: Debug
     {
-        test_encoding(input.to_string().from_hex().unwrap(), codec, expected);
+        test_encoding(Vec::from_hex(input).unwrap(), codec, expected);
     }
 
     fn test_encoding<C: Encoder>(input: Vec<u8>, mut codec: C, expected: C::Item)

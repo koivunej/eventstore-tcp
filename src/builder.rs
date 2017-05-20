@@ -161,11 +161,14 @@ impl SimpleBuilder {
 /// # Example
 ///
 /// ```rust
+/// #![feature(try_from)]
+///
+/// use std::convert::TryFrom;
 /// use eventstore_tcp::{Builder, ExpectedVersion, StreamVersion, ContentType};
 ///
 /// let package = Builder::write_events()
 ///     .stream_id("my_stream-1")
-///     .expected_version(StreamVersion::from(42))
+///     .expected_version(StreamVersion::try_from(42).unwrap()) // don't do that!
 ///     .new_event()
 ///         .event_type("meaning_of_life")
 ///         .data("{ 'meaning': 42 }".as_bytes())
@@ -328,11 +331,14 @@ impl<'a> NewEventBuilder<'a> {
 /// # Example
 ///
 /// ```rust
+/// #![feature(try_from)]
+///
+/// use std::convert::TryFrom;
 /// use eventstore_tcp::{Builder, StreamVersion};
 ///
 /// let package = Builder::read_event()
 ///     .stream_id("my_stream-1")
-///     .event_number(StreamVersion::from(42))
+///     .event_number(StreamVersion::try_from(42).unwrap()) // don't do that!
 ///     .resolve_link_tos(true) // default
 ///     .require_master(false)  // default
 ///     .build_package(None, None);
@@ -388,12 +394,15 @@ impl ReadEventBuilder {
 /// # Example
 ///
 /// ```rust
+/// #![feature(try_from)]
+///
+/// use std::convert::TryFrom;
 /// use eventstore_tcp::{Builder, ReadDirection, StreamVersion};
 ///
 /// let package = Builder::read_stream_events()
 ///     .direction(ReadDirection::Forward)
 ///     .stream_id("my_stream-1")
-///     .from_event_number(StreamVersion::from(42))
+///     .from_event_number(StreamVersion::try_from(42).unwrap()) // don't do that!
 ///     .max_count(10)
 ///     .resolve_link_tos(true) // default
 ///     .require_master(false)  // default
@@ -512,11 +521,14 @@ impl ReadAllEventsBuilder {
 /// # Example
 ///
 /// ```
+/// #![feature(try_from)]
+///
+/// use std::convert::TryFrom;
 /// use eventstore_tcp::{Builder, StreamVersion};
 ///
 /// let package = Builder::delete_stream()
 ///     .stream_id("hello_world")
-///     .expected_version(StreamVersion::from(42))
+///     .expected_version(StreamVersion::try_from(42).unwrap()) // don't do that!
 ///     .require_master(false) // default
 ///     .hard_delete(false)    // default
 ///     .build_package(None, None);

@@ -7,7 +7,6 @@ version = "0.2.0"
 authors = ["Joonas Koivunen <joonas.koivunen@gmail.com>"]
 license = "MIT"
 
-
 [dependencies]
 bitflags = "0.7"
 uuid = { version = "0.2", features = ["use_std", "v4"] }
@@ -23,4 +22,8 @@ bytes = "0.4"
 derive_more = "0.6.0"
 
 [dev-dependencies]
-rustc-serialize = "*"
+hex = "0.2"
+
+[workspace]
+members = ["testclient", "decoder"]
+exclude = ["tokio-proto"]

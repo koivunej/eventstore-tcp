@@ -1,0 +1,9 @@
+language: rust
+
+matrix:
+  include:
+    - rust: nightly
+
+script:
+  - |
+      cargo build --all && cargo test --all
