@@ -5,10 +5,7 @@
 set -eu
 set -o pipefail
 
-readonly DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cargo test --quiet --all
 
-cargo test --quiet
-
-cd examples/testclient
-cargo test --quiet
+cd testclient
 bash ./test_with_inmemory_es.bash
