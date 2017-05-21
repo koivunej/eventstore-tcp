@@ -252,6 +252,19 @@ impl<'a> CustomTryFrom<raw::client_messages::WriteEventsCompleted<'a>> for Adapt
 
         let status = msg.result.clone().unwrap();
 
+        // yep, not nice to deal with these
+        macro_rules! try_conv {
+            ($x:expr, $ret:expr) => {
+                {
+                    match $x {
+                        Some(Err(e)) => return Err( ($ret, e) ),
+                        Some(Ok(x)) => Some(x),
+                        None => None
+                    }
+                }
+            }
+        }
+
         let res = match status {
             Success => {
                 let range = match range_from_parts(msg.first_event_number, msg.last_event_number) {
@@ -267,16 +280,8 @@ impl<'a> CustomTryFrom<raw::client_messages::WriteEventsCompleted<'a>> for Adapt
 
                     // FIXME once this sort of error return were removed,
                     // it will be possible to use the Carrier syntax (?)
-                    prepare_position: match msg.prepare_position.map(TryFrom::try_from) {
-                        Some(Err(e)) => return Err( (msg, e) ),
-                        Some(Ok(x)) => Some(x),
-                        None => None
-                    },
-                    commit_position: match msg.commit_position.map(TryFrom::try_from) {
-                        Some(Err(e)) => return Err( (msg, e) ),
-                        Some(Ok(x)) => Some(x),
-                        None => None
-                    },
+                    prepare_position: try_conv!(msg.prepare_position.map(TryFrom::try_from), msg),
+                    commit_position: try_conv!(msg.commit_position.map(TryFrom::try_from), msg),
                 })
             }
             InvalidTransaction => {
