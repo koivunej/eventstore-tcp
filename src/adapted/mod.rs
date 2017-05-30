@@ -22,7 +22,9 @@ pub use self::read_stream::{ReadStreamCompleted, ReadStreamError};
 mod read_all;
 pub use self::read_all::{ReadAllCompleted, ReadAllError};
 
-/// Enumeration of converted messages for more oxidized API.
+/// Enumeration of converted messages for more oxidized API. Unlike the `RawMessage` variants,
+/// `AdaptedMessage` variants are validated and converted into nicer API. This validation comes at
+/// a cost of a fallible conversion exposed in `TryFrom` implementation.
 #[derive(Debug, PartialEq, Clone, From)]
 pub enum AdaptedMessage<'a> {
     /// Requests heartbeat from the other side. Unsure if clients or server sends these.

@@ -17,6 +17,8 @@ use errors::Error;
 use ReadDirection;
 
 /// Enumeration much like the `adapted::AdaptedMessage` for all the messages in the protocol.
+/// `RawMessage` variants are literally the raw protobuf messages and are not validated in any way on
+/// top the protobuf decoding.
 #[derive(Debug, PartialEq, Clone, From)]
 pub enum RawMessage<'a> {
     /// Requests heartbeat from the other side. Unsure if clients or server sends these.
