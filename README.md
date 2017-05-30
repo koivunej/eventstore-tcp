@@ -99,6 +99,13 @@ Then download the latest EventStore tar.gz and execute it with `./run-node.sh --
  3. `cd quick-protobuf/codegen`
  4. `cargo run --single-mod --output $es_tcp_checkout/src/client_messages.rs ClientMessageDTOs.proto`
 
+Modify the generated file like:
+
+```
+-#[derive(Debug, Default, PartialEq, Clone)]
++#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
+```
+
 # License
 
 [MIT](LICENSE).

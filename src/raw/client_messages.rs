@@ -48,7 +48,7 @@ impl From<i32> for OperationResult {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct NewEvent<'a> {
     pub event_id: Cow<'a, [u8]>,
     pub event_type: Cow<'a, str>,
@@ -99,7 +99,7 @@ impl<'a> MessageWrite for NewEvent<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct EventRecord<'a> {
     pub event_stream_id: Cow<'a, str>,
     pub event_number: i32,
@@ -166,7 +166,7 @@ impl<'a> MessageWrite for EventRecord<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct ResolvedIndexedEvent<'a> {
     pub event: EventRecord<'a>,
     pub link: Option<EventRecord<'a>>,
@@ -201,7 +201,7 @@ impl<'a> MessageWrite for ResolvedIndexedEvent<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct ResolvedEvent<'a> {
     pub event: EventRecord<'a>,
     pub link: Option<EventRecord<'a>>,
@@ -244,7 +244,7 @@ impl<'a> MessageWrite for ResolvedEvent<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct WriteEvents<'a> {
     pub event_stream_id: Cow<'a, str>,
     pub expected_version: i32,
@@ -287,7 +287,7 @@ impl<'a> MessageWrite for WriteEvents<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct WriteEventsCompleted<'a> {
     pub result: Option<OperationResult>,
     pub message: Option<Cow<'a, str>>,
@@ -338,7 +338,7 @@ impl<'a> MessageWrite for WriteEventsCompleted<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct DeleteStream<'a> {
     pub event_stream_id: Cow<'a, str>,
     pub expected_version: i32,
@@ -381,7 +381,7 @@ impl<'a> MessageWrite for DeleteStream<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct DeleteStreamCompleted<'a> {
     pub result: Option<OperationResult>,
     pub message: Option<Cow<'a, str>>,
@@ -424,7 +424,7 @@ impl<'a> MessageWrite for DeleteStreamCompleted<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct TransactionStart<'a> {
     pub event_stream_id: Cow<'a, str>,
     pub expected_version: i32,
@@ -463,7 +463,7 @@ impl<'a> MessageWrite for TransactionStart<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct TransactionStartCompleted<'a> {
     pub transaction_id: i64,
     pub result: Option<OperationResult>,
@@ -502,7 +502,7 @@ impl<'a> MessageWrite for TransactionStartCompleted<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct TransactionWrite<'a> {
     pub transaction_id: i64,
     pub events: Vec<NewEvent<'a>>,
@@ -541,7 +541,7 @@ impl<'a> MessageWrite for TransactionWrite<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct TransactionWriteCompleted<'a> {
     pub transaction_id: i64,
     pub result: Option<OperationResult>,
@@ -580,7 +580,7 @@ impl<'a> MessageWrite for TransactionWriteCompleted<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct TransactionCommit {
     pub transaction_id: i64,
     pub require_master: bool,
@@ -615,7 +615,7 @@ impl MessageWrite for TransactionCommit {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct TransactionCommitCompleted<'a> {
     pub transaction_id: i64,
     pub result: Option<OperationResult>,
@@ -670,7 +670,7 @@ impl<'a> MessageWrite for TransactionCommitCompleted<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct ReadEvent<'a> {
     pub event_stream_id: Cow<'a, str>,
     pub event_number: i32,
@@ -713,7 +713,7 @@ impl<'a> MessageWrite for ReadEvent<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct ReadEventCompleted<'a> {
     pub result: Option<mod_ReadEventCompleted::ReadEventResult>,
     pub event: ResolvedIndexedEvent<'a>,
@@ -787,7 +787,7 @@ impl From<i32> for ReadEventResult {
 
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct ReadStreamEvents<'a> {
     pub event_stream_id: Cow<'a, str>,
     pub from_event_number: i32,
@@ -834,7 +834,7 @@ impl<'a> MessageWrite for ReadStreamEvents<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct ReadStreamEventsCompleted<'a> {
     pub events: Vec<ResolvedIndexedEvent<'a>>,
     pub result: Option<mod_ReadStreamEventsCompleted::ReadStreamResult>,
@@ -924,7 +924,7 @@ impl From<i32> for ReadStreamResult {
 
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct ReadAllEvents {
     pub commit_position: i64,
     pub prepare_position: i64,
@@ -971,7 +971,7 @@ impl MessageWrite for ReadAllEvents {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct ReadAllEventsCompleted<'a> {
     pub commit_position: i64,
     pub prepare_position: i64,
@@ -1060,7 +1060,7 @@ impl From<i32> for ReadAllResult {
 
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct CreatePersistentSubscription<'a> {
     pub subscription_group_name: Cow<'a, str>,
     pub event_stream_id: Cow<'a, str>,
@@ -1151,7 +1151,7 @@ impl<'a> MessageWrite for CreatePersistentSubscription<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct DeletePersistentSubscription<'a> {
     pub subscription_group_name: Cow<'a, str>,
     pub event_stream_id: Cow<'a, str>,
@@ -1186,7 +1186,7 @@ impl<'a> MessageWrite for DeletePersistentSubscription<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct UpdatePersistentSubscription<'a> {
     pub subscription_group_name: Cow<'a, str>,
     pub event_stream_id: Cow<'a, str>,
@@ -1277,7 +1277,7 @@ impl<'a> MessageWrite for UpdatePersistentSubscription<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct UpdatePersistentSubscriptionCompleted<'a> {
     pub result: mod_UpdatePersistentSubscriptionCompleted::UpdatePersistentSubscriptionResult,
     pub reason: Option<Cow<'a, str>>,
@@ -1346,7 +1346,7 @@ impl From<i32> for UpdatePersistentSubscriptionResult {
 
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct CreatePersistentSubscriptionCompleted<'a> {
     pub result: mod_CreatePersistentSubscriptionCompleted::CreatePersistentSubscriptionResult,
     pub reason: Option<Cow<'a, str>>,
@@ -1415,7 +1415,7 @@ impl From<i32> for CreatePersistentSubscriptionResult {
 
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct DeletePersistentSubscriptionCompleted<'a> {
     pub result: mod_DeletePersistentSubscriptionCompleted::DeletePersistentSubscriptionResult,
     pub reason: Option<Cow<'a, str>>,
@@ -1484,7 +1484,7 @@ impl From<i32> for DeletePersistentSubscriptionResult {
 
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct ConnectToPersistentSubscription<'a> {
     pub subscription_id: Cow<'a, str>,
     pub event_stream_id: Cow<'a, str>,
@@ -1523,7 +1523,7 @@ impl<'a> MessageWrite for ConnectToPersistentSubscription<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct PersistentSubscriptionAckEvents<'a> {
     pub subscription_id: Cow<'a, str>,
     pub processed_event_ids: Vec<Cow<'a, [u8]>>,
@@ -1558,7 +1558,7 @@ impl<'a> MessageWrite for PersistentSubscriptionAckEvents<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct PersistentSubscriptionNakEvents<'a> {
     pub subscription_id: Cow<'a, str>,
     pub processed_event_ids: Vec<Cow<'a, [u8]>>,
@@ -1637,7 +1637,7 @@ impl From<i32> for NakAction {
 
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct PersistentSubscriptionConfirmation<'a> {
     pub last_commit_position: i64,
     pub subscription_id: Cow<'a, str>,
@@ -1676,7 +1676,7 @@ impl<'a> MessageWrite for PersistentSubscriptionConfirmation<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct PersistentSubscriptionStreamEventAppeared<'a> {
     pub event: ResolvedIndexedEvent<'a>,
 }
@@ -1707,7 +1707,7 @@ impl<'a> MessageWrite for PersistentSubscriptionStreamEventAppeared<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct SubscribeToStream<'a> {
     pub event_stream_id: Cow<'a, str>,
     pub resolve_link_tos: bool,
@@ -1742,7 +1742,7 @@ impl<'a> MessageWrite for SubscribeToStream<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct SubscriptionConfirmation {
     pub last_commit_position: i64,
     pub last_event_number: Option<i32>,
@@ -1777,7 +1777,7 @@ impl MessageWrite for SubscriptionConfirmation {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct StreamEventAppeared<'a> {
     pub event: ResolvedEvent<'a>,
 }
@@ -1808,7 +1808,7 @@ impl<'a> MessageWrite for StreamEventAppeared<'a> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct UnsubscribeFromStream { }
 
 impl UnsubscribeFromStream {
@@ -1820,7 +1820,7 @@ impl UnsubscribeFromStream {
 
 impl MessageWrite for UnsubscribeFromStream { }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct SubscriptionDropped {
     pub reason: mod_SubscriptionDropped::SubscriptionDropReason,
 }
@@ -1887,7 +1887,7 @@ impl From<i32> for SubscriptionDropReason {
 
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct NotHandled<'a> {
     pub reason: Option<mod_NotHandled::NotHandledReason>,
     pub additional_info: Option<Cow<'a, [u8]>>,
@@ -1927,7 +1927,7 @@ pub mod mod_NotHandled {
 use std::borrow::Cow;
 use super::*;
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct MasterInfo<'a> {
     pub external_tcp_address: Cow<'a, str>,
     pub external_tcp_port: i32,
@@ -2004,7 +2004,7 @@ impl From<i32> for NotHandledReason {
 
 }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct ScavengeDatabase { }
 
 impl ScavengeDatabase {
@@ -2016,7 +2016,7 @@ impl ScavengeDatabase {
 
 impl MessageWrite for ScavengeDatabase { }
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(IntoOwned, Borrowed, Debug, Default, PartialEq, Clone)]
 pub struct ScavengeDatabaseCompleted<'a> {
     pub result: Option<mod_ScavengeDatabaseCompleted::ScavengeResult>,
     pub error: Option<Cow<'a, str>>,

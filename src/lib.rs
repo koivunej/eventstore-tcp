@@ -96,6 +96,8 @@ extern crate tokio_service;
 extern crate bytes;
 #[macro_use]
 extern crate derive_more;
+#[macro_use]
+extern crate derive_into_owned;
 
 #[cfg(test)]
 extern crate hex;

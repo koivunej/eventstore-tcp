@@ -10,7 +10,6 @@ use quick_protobuf;
 pub mod client_messages;
 pub use self::client_messages::{EventRecord, WriteEvents, WriteEventsCompleted, ReadEvent, ReadEventCompleted, ReadStreamEvents, ReadStreamEventsCompleted, ReadAllEvents, ReadAllEventsCompleted, NotHandled, DeleteStream, DeleteStreamCompleted, OperationResult};
 
-mod client_messages_ext;
 use adapted;
 
 use errors::Error;
@@ -156,7 +155,6 @@ impl<'a> RawMessage<'a> {
     /// Turns possibly borrowed value of `self` into one that owns all of it's data.
     pub fn into_owned(self) -> RawMessage<'static> {
         use self::RawMessage::*;
-        use self::client_messages_ext::*;
 
         match self {
             HeartbeatRequest => HeartbeatRequest,
