@@ -138,6 +138,9 @@ pub use expected_version::ExpectedVersion;
 mod content_type;
 pub use content_type::ContentType;
 
+mod read_direction;
+pub use read_direction::ReadDirection;
+
 mod errors {
     use std::str;
     use std::io;
@@ -212,15 +215,6 @@ mod errors {
 }
 
 use self::errors::{Error, ErrorKind};
-
-/// The direction in which events are read.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum ReadDirection {
-    /// Read from first (event 0) to the latest
-    Forward,
-    /// Read from latest (highest event number) to the first (event 0)
-    Backward
-}
 
 /// Global unique position in the EventStore, used when reading all events.
 /// Range -1..i64::max_value()
