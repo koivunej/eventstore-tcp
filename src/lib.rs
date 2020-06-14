@@ -21,7 +21,6 @@
 //! Example of writing to the database and simple handling of the response.
 //!
 //! ```no_run
-//! #![feature(try_from)]
 //!
 //! extern crate futures;
 //! extern crate tokio_core;
@@ -79,7 +78,6 @@
 //!
 //! More examples can be found in the aspiring command line tool under `testclient/`.
 #![deny(missing_docs)]
-#![feature(try_from)]
 
 #[macro_use]
 extern crate bitflags;
