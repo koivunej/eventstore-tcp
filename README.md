@@ -1,5 +1,21 @@
 [![Build Status](https://travis-ci.org/koivunej/eventstore-tcp.svg?branch=master)](https://travis-ci.org/koivunej/eventstore-tcp)
 
+# Post 2017 update
+
+Long story short: Apologies if you came here looking for a client library. You
+should look into [YoEight's eventstore-tcp].
+
+I originally started creating this related to my school work. Since then,
+tokio-proto with it's multiplexing support went away and I haven't really
+touched this in a long while. I haven't ever used this as a client library for
+anything, but instead I have used this crate to implement the server side of
+eventstore but then only using the pb types and adaptors on a custom
+multiplexing layer.
+
+[YoEight's eventstore-tcp]: https://github.com/YoEight/eventstore-rs
+
+---
+
 # Tokio-based EventStore client API written in Rust
 
 [EventStore](https://geteventstore.com/) is an open-source immutable event database.
