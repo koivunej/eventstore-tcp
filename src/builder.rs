@@ -161,8 +161,6 @@ impl SimpleBuilder {
 /// # Example
 ///
 /// ```rust
-/// #![feature(try_from)]
-///
 /// use std::convert::TryFrom;
 /// use eventstore_tcp::{Builder, ExpectedVersion, StreamVersion, ContentType};
 ///
@@ -331,8 +329,6 @@ impl<'a> NewEventBuilder<'a> {
 /// # Example
 ///
 /// ```rust
-/// #![feature(try_from)]
-///
 /// use std::convert::TryFrom;
 /// use eventstore_tcp::{Builder, StreamVersion};
 ///
@@ -394,8 +390,6 @@ impl ReadEventBuilder {
 /// # Example
 ///
 /// ```rust
-/// #![feature(try_from)]
-///
 /// use std::convert::TryFrom;
 /// use eventstore_tcp::{Builder, ReadDirection, StreamVersion};
 ///
@@ -521,8 +515,6 @@ impl ReadAllEventsBuilder {
 /// # Example
 ///
 /// ```
-/// #![feature(try_from)]
-///
 /// use std::convert::TryFrom;
 /// use eventstore_tcp::{Builder, StreamVersion};
 ///
