@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::convert::TryInto;
 use raw::client_messages;
 use raw::client_messages::mod_ReadAllEventsCompleted::ReadAllResult;
 
@@ -37,8 +38,8 @@ impl<'a> From<client_messages::ResolvedEvent<'a>> for ResolvedEvent<'a> {
         ResolvedEvent {
             event: e.event.into(),
             link: e.link.into(),
-            commit_position: e.commit_position.into(),
-            prepare_position: e.prepare_position.into()
+            commit_position: e.commit_position.try_into().unwrap(),
+            prepare_position: e.prepare_position.try_into().unwrap()
         }
     }
 }

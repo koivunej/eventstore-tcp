@@ -78,6 +78,7 @@
 //!
 //! More examples can be found in the aspiring command line tool under `testclient/`.
 #![deny(missing_docs)]
+#![allow(deprecated)]
 
 #[macro_use]
 extern crate bitflags;
@@ -100,7 +101,7 @@ extern crate derive_into_owned;
 #[cfg(test)]
 extern crate hex;
 
-
+use std::convert::TryFrom;
 
 pub mod raw;
 pub use raw::RawMessage;
@@ -232,19 +233,10 @@ pub enum LogPosition {
     Last,
 }
 
-impl From<i64> for LogPosition {
-    fn from(val: i64) -> LogPosition {
-        match LogPosition::from_i64_opt(val) {
-            Some(x) => x,
-            None => panic!("LogPosition undeflow: {}", val),
-        }
-    }
-}
+impl TryFrom<i64> for LogPosition {
+    type Error = (i64, Error);
 
-impl CustomTryFrom<i64> for LogPosition {
-    type Err = Error;
-
-    fn try_from(val: i64) -> Result<Self, (i64, Self::Err)> {
+    fn try_from(val: i64) -> Result<Self, Self::Error> {
         match val {
             0 => Ok(LogPosition::First),
             -1 => Ok(LogPosition::Last),
@@ -259,9 +251,9 @@ impl CustomTryFrom<i64> for LogPosition {
     }
 }
 
-impl Into<i64> for LogPosition {
-    fn into(self) -> i64 {
-        match self {
+impl From<LogPosition> for i64 {
+    fn from(pos: LogPosition) -> i64 {
+        match pos {
             LogPosition::First => 0,
             LogPosition::Exact(x) => x as i64,
             LogPosition::Last => -1,
@@ -287,25 +279,5 @@ impl LogPosition {
     #[doc(hidden)]
     pub fn from_i64_opt(pos: i64) -> Option<LogPosition> {
         Self::try_from(pos).ok()
-    }
-}
-
-trait CustomTryFrom<T: Sized>: Sized {
-    type Err;
-
-    fn try_from(t: T) -> Result<Self, (T, Self::Err)>;
-}
-
-trait CustomTryInto<T: Sized>: Sized {
-    type Err;
-
-    fn try_into(self) -> Result<T, (Self, Self::Err)>;
-}
-
-impl<T, U> CustomTryInto<U> for T where U: CustomTryFrom<T> {
-    type Err = U::Err;
-
-    fn try_into(self) -> Result<U, (T, Self::Err)> {
-        U::try_from(self)
     }
 }

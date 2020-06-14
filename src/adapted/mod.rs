@@ -1,12 +1,11 @@
 //! Adapted or refined types providing a much more oxidized API for handling the messages in the
 //! protocol.
 
-use std::convert::{TryFrom, From};
+use std::convert::{TryFrom, TryInto};
 use std::borrow::Cow;
 use std::ops::Range;
 use errors::{Error, ErrorKind, ResultStatusKind};
-use {CustomTryFrom, CustomTryInto, ReadDirection, EventNumber, StreamVersion, LogPosition};
-//use client_messages::mod_NotHandled::{NotHandledReason, MasterInfo};
+use crate::{ReadDirection, EventNumber, StreamVersion, LogPosition};
 use raw;
 use raw::client_messages::{WriteEvents, ResolvedIndexedEvent};
 
@@ -25,7 +24,7 @@ pub use self::read_all::{ReadAllCompleted, ReadAllError};
 /// Enumeration of converted messages for more oxidized API. Unlike the `RawMessage` variants,
 /// `AdaptedMessage` variants are validated and converted into nicer API. This validation comes at
 /// a cost of a fallible conversion exposed in `TryFrom` implementation.
-#[derive(Debug, PartialEq, Clone, From)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum AdaptedMessage<'a> {
     /// Requests heartbeat from the other side. Unsure if clients or server sends these.
     HeartbeatRequest,
@@ -76,19 +75,26 @@ pub enum AdaptedMessage<'a> {
     NotAuthenticated(NotAuthenticatedMessage<'a>)
 }
 
-impl<'a> CustomTryFrom<raw::RawMessage<'a>> for AdaptedMessage<'a> {
-    type Err = Error;
-    fn try_from(raw: raw::RawMessage<'a>) -> Result<AdaptedMessage<'a>, (raw::RawMessage<'a>, Error)> {
+// NOTE: While I still think this was in general a good idea to layer more idiomatic layers above
+// the message layers just the implementation is horrible
+impl<'a> TryFrom<raw::RawMessage<'a>> for AdaptedMessage<'a> {
+    type Error = (raw::RawMessage<'a>, Error);
+    fn try_from(raw: raw::RawMessage<'a>) -> Result<AdaptedMessage<'a>, Self::Error> {
         use raw::{RawMessage, ByteWrapper};
 
         macro_rules! into_or_rebuild {
             ($x: expr) => {
                 {
-                    Ok($x.try_into().map_err(|(x, e)| {
-                        let orig = raw::RawMessage::from(x);
-                        let err = Error::from(e);
-                        (orig, err)
-                    })?)
+                    let res: Result<AdaptedMessage<'_>, _> = AdaptedMessage::try_from($x);
+
+                    match res {
+                        Ok(adapted) => Ok(adapted),
+                        Err((x, e)) => {
+                            let orig = raw::RawMessage::from(x);
+                            let err = Error::from(e);
+                            return Err((orig, err))
+                        }
+                    }
                 }
             }
         }
@@ -110,9 +116,9 @@ impl<'a> CustomTryFrom<raw::RawMessage<'a>> for AdaptedMessage<'a> {
             RawMessage::HeartbeatResponse                 => Ok(AdaptedMessage::HeartbeatResponse),
             RawMessage::Ping                              => Ok(AdaptedMessage::Ping),
             RawMessage::Pong                              => Ok(AdaptedMessage::Pong),
-            RawMessage::WriteEvents(e)                    => into_or_rebuild!(e),
+            RawMessage::WriteEvents(e)                    => Ok(AdaptedMessage::from(e)),
             RawMessage::WriteEventsCompleted(e)           => into_or_rebuild!(e),
-            RawMessage::ReadEvent(e)                      => into_or_rebuild!(e),
+            RawMessage::ReadEvent(e)                      => Ok(e.into()),
             RawMessage::ReadEventCompleted(e)             => into_or_rebuild!(e),
             RawMessage::ReadStreamEvents(dir, e)          => into_or_rebuild!((dir, e)),
             RawMessage::ReadStreamEventsCompleted(dir, e) => into_or_rebuild!((dir, e)),
@@ -195,6 +201,12 @@ impl<'a> AsRef<str> for BadRequestMessage<'a> {
     }
 }
 
+impl<'a> From<BadRequestMessage<'a>> for AdaptedMessage<'a> {
+    fn from(b: BadRequestMessage<'a>) -> Self {
+        AdaptedMessage::BadRequest(b)
+    }
+}
+
 /// Newtype for wrapping a specific message, AdaptedMessage::NotAuthenticated
 #[derive(Debug, PartialEq, Clone, From, Into)]
 pub struct NotAuthenticatedMessage<'a>(Cow<'a, str>);
@@ -214,19 +226,23 @@ impl<'a> AsRef<str> for NotAuthenticatedMessage<'a> {
     }
 }
 
-impl<'a> CustomTryFrom<raw::client_messages::NotHandled<'a>> for AdaptedMessage<'a> {
-    type Err = Error;
+impl<'a> From<NotAuthenticatedMessage<'a>> for AdaptedMessage<'a> {
+    fn from(na: NotAuthenticatedMessage<'a>) -> Self {
+        AdaptedMessage::NotAuthenticated(na)
+    }
+}
 
-    fn try_from(msg: raw::client_messages::NotHandled<'a>) -> Result<AdaptedMessage<'a>, (raw::client_messages::NotHandled<'a>, Self::Err)> {
+impl<'a> TryFrom<raw::client_messages::NotHandled<'a>> for AdaptedMessage<'a> {
+    type Error = (raw::client_messages::NotHandled<'a>, Error);
+
+    fn try_from(msg: raw::client_messages::NotHandled<'a>) -> Result<AdaptedMessage<'a>, Self::Error> {
         Err((msg, ErrorKind::UnimplementedConversion.into()))
     }
 }
 
-impl<'a> CustomTryFrom<raw::client_messages::WriteEvents<'a>> for AdaptedMessage<'a> {
-    type Err = Error;
-
-    fn try_from(msg: raw::client_messages::WriteEvents<'a>) -> Result<AdaptedMessage<'a>, (raw::client_messages::WriteEvents<'a>, Self::Err)> {
-        Ok(AdaptedMessage::WriteEvents(msg))
+impl<'a> From<raw::client_messages::WriteEvents<'a>> for AdaptedMessage<'a> {
+    fn from(msg: raw::client_messages::WriteEvents<'a>) -> AdaptedMessage<'a> {
+        AdaptedMessage::WriteEvents(msg)
     }
 }
 
@@ -242,10 +258,10 @@ fn range_to_parts(r: &Range<StreamVersion>) -> (i32, i32) {
     (start, end - 1)
 }
 
-impl<'a> CustomTryFrom<raw::client_messages::WriteEventsCompleted<'a>> for AdaptedMessage<'a> {
-    type Err = Error;
+impl<'a> TryFrom<raw::client_messages::WriteEventsCompleted<'a>> for AdaptedMessage<'a> {
+    type Error = (raw::client_messages::WriteEventsCompleted<'a>, Error);
 
-    fn try_from(msg: raw::client_messages::WriteEventsCompleted<'a>) -> Result<AdaptedMessage<'a>, (raw::client_messages::WriteEventsCompleted<'a>, Self::Err)> {
+    fn try_from(msg: raw::client_messages::WriteEventsCompleted<'a>) -> Result<AdaptedMessage<'a>, Self::Error> {
         use raw::client_messages::OperationResult::*;
 
         if !msg.result.is_some() {
@@ -266,8 +282,8 @@ impl<'a> CustomTryFrom<raw::client_messages::WriteEventsCompleted<'a>> for Adapt
                     //  * separate (instead of newtype for tuple)
                     // these must be options, as for idempotent writes the positions might not be
                     // returned. both seem to be returned always.
-                    prepare_position: msg.prepare_position.map(|x| x.into()),
-                    commit_position: msg.commit_position.map(|x| x.into()),
+                    prepare_position: msg.prepare_position.map(|x| x.try_into().unwrap()),
+                    commit_position: msg.commit_position.map(|x| x.try_into().unwrap()),
                 })
             }
             InvalidTransaction => {
@@ -309,19 +325,17 @@ impl<'b> AsRawPayload<'static, 'b, raw::client_messages::WriteEventsCompleted<'b
     }
 }
 
-impl<'a> CustomTryFrom<raw::client_messages::ReadEvent<'a>> for AdaptedMessage<'a> {
-    type Err = Error;
-
-    fn try_from(msg: raw::client_messages::ReadEvent<'a>) -> Result<AdaptedMessage<'a>, (raw::client_messages::ReadEvent<'a>, Self::Err)> {
+impl<'a> From<raw::client_messages::ReadEvent<'a>> for AdaptedMessage<'a> {
+    fn from(msg: raw::client_messages::ReadEvent<'a>) -> AdaptedMessage<'a> {
         // TODO: could map event_number into EventNumber
-        Ok(AdaptedMessage::ReadEvent(msg))
+        AdaptedMessage::ReadEvent(msg)
     }
 }
 
-impl<'a> CustomTryFrom<raw::client_messages::ReadEventCompleted<'a>> for AdaptedMessage<'a> {
-    type Err = Error;
+impl<'a> TryFrom<raw::client_messages::ReadEventCompleted<'a>> for AdaptedMessage<'a> {
+    type Error = (raw::client_messages::ReadEventCompleted<'a>, Error);
 
-    fn try_from(msg: raw::client_messages::ReadEventCompleted<'a>) -> Result<AdaptedMessage<'a>, (raw::client_messages::ReadEventCompleted<'a>, Self::Err)> {
+    fn try_from(msg: raw::client_messages::ReadEventCompleted<'a>) -> Result<AdaptedMessage<'a>, Self::Error> {
         use raw::client_messages::mod_ReadEventCompleted::ReadEventResult;
 
         if msg.result.is_none() {
@@ -388,32 +402,20 @@ impl<'a, 'b: 'a> AsRawPayload<'a, 'b, raw::client_messages::ReadEventCompleted<'
     }
 }
 
-impl<'a> CustomTryFrom<(ReadDirection, raw::client_messages::ReadStreamEvents<'a>)> for AdaptedMessage<'a> {
-    type Err = Error;
+impl<'a> TryFrom<(ReadDirection, raw::client_messages::ReadStreamEvents<'a>)> for AdaptedMessage<'a> {
+    type Error = ((ReadDirection, raw::client_messages::ReadStreamEvents<'a>), Error);
 
-    fn try_from((dir, msg): (ReadDirection, raw::client_messages::ReadStreamEvents<'a>)) -> Result<AdaptedMessage<'a>, ((ReadDirection, raw::client_messages::ReadStreamEvents<'a>), Self::Err)> {
+    fn try_from((dir, msg): (ReadDirection, raw::client_messages::ReadStreamEvents<'a>)) -> Result<AdaptedMessage<'a>, Self::Error> {
         Ok(AdaptedMessage::ReadStreamEvents(dir, msg))
     }
 }
 
-impl<'a> CustomTryFrom<(ReadDirection, raw::client_messages::ReadStreamEventsCompleted<'a>)> for AdaptedMessage<'a> {
-    type Err = Error;
+impl<'a> TryFrom<(ReadDirection, raw::client_messages::ReadStreamEventsCompleted<'a>)> for AdaptedMessage<'a> {
+    type Error = ((ReadDirection, raw::client_messages::ReadStreamEventsCompleted<'a>), Error);
 
-    fn try_from((dir, msg): (ReadDirection, raw::client_messages::ReadStreamEventsCompleted<'a>)) -> Result<AdaptedMessage<'a>, ((ReadDirection, raw::client_messages::ReadStreamEventsCompleted<'a>), Self::Err)> {
+    fn try_from((dir, msg): (ReadDirection, raw::client_messages::ReadStreamEventsCompleted<'a>)) -> Result<AdaptedMessage<'a>, Self::Error> {
 
         use raw::client_messages::mod_ReadStreamEventsCompleted::ReadStreamResult;
-
-        // yep, not nice to deal with these
-        macro_rules! try_conv {
-            ($x:expr, $ret:expr) => {
-                {
-                    match $x {
-                        Ok(x) => x,
-                        Err((_, e)) => return Err(($ret, e.into())),
-                    }
-                }
-            }
-        }
 
         if msg.result.is_none() {
             return Err(((dir, msg), ErrorKind::MissingResultField(ResultStatusKind::ReadStream).into()));
@@ -498,18 +500,18 @@ impl<'a, 'b: 'a> AsRawPayload<'a, 'b, raw::client_messages::ReadStreamEventsComp
     }
 }
 
-impl<'a> CustomTryFrom<(ReadDirection, raw::client_messages::ReadAllEvents)> for AdaptedMessage<'a> {
-    type Err = Error;
+impl<'a> TryFrom<(ReadDirection, raw::client_messages::ReadAllEvents)> for AdaptedMessage<'a> {
+    type Error = ((ReadDirection, raw::client_messages::ReadAllEvents), Error);
 
-    fn try_from((dir, msg): (ReadDirection, raw::client_messages::ReadAllEvents)) -> Result<AdaptedMessage<'a>, ((ReadDirection, raw::client_messages::ReadAllEvents), Self::Err)> {
+    fn try_from((dir, msg): (ReadDirection, raw::client_messages::ReadAllEvents)) -> Result<AdaptedMessage<'a>, Self::Error> {
         Ok(AdaptedMessage::ReadAllEvents(dir, msg))
     }
 }
 
-impl<'a> CustomTryFrom<(ReadDirection, raw::client_messages::ReadAllEventsCompleted<'a>)> for AdaptedMessage<'a> {
-    type Err = Error;
+impl<'a> TryFrom<(ReadDirection, raw::client_messages::ReadAllEventsCompleted<'a>)> for AdaptedMessage<'a> {
+    type Error = ((ReadDirection, raw::client_messages::ReadAllEventsCompleted<'a>), Error);
 
-    fn try_from((dir, msg): (ReadDirection, raw::client_messages::ReadAllEventsCompleted<'a>)) -> Result<AdaptedMessage<'a>, ((ReadDirection, raw::client_messages::ReadAllEventsCompleted<'a>), Self::Err)> {
+    fn try_from((dir, msg): (ReadDirection, raw::client_messages::ReadAllEventsCompleted<'a>)) -> Result<AdaptedMessage<'a>, Self::Error> {
         use raw::client_messages::mod_ReadAllEventsCompleted::ReadAllResult;
 
         let next_commit_position = LogPosition::from_i64_opt(msg.next_commit_position);
@@ -518,8 +520,8 @@ impl<'a> CustomTryFrom<(ReadDirection, raw::client_messages::ReadAllEventsComple
         let res = match msg.result {
             ReadAllResult::Success => {
                 Ok(ReadAllCompleted {
-                    commit_position: msg.commit_position.into(),
-                    prepare_position: msg.prepare_position.into(),
+                    commit_position: msg.commit_position.try_into().unwrap(),
+                    prepare_position: msg.prepare_position.try_into().unwrap(),
                     events: msg.events.into_iter().map(|x| {
                         let re: self::read_all::ResolvedEvent<'a> = x.into();
                         re
@@ -643,8 +645,8 @@ mod tests {
             RawMessage::WriteEventsCompleted(body.clone()),
             AdaptedMessage::WriteEventsCompleted(Ok(WriteEventsCompleted {
                 event_numbers: StreamVersion::try_from(0).unwrap()..StreamVersion::try_from(1).unwrap(),
-                prepare_position: Some(LogPosition::from(100)),
-                commit_position: Some(LogPosition::from(100)),
+                prepare_position: Some(LogPosition::try_from(100).unwrap()),
+                commit_position: Some(LogPosition::try_from(100).unwrap()),
             })));
     }
 

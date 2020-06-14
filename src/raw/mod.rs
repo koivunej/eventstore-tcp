@@ -5,6 +5,7 @@
 use std::io;
 use std::str;
 use std::borrow::Cow;
+use std::convert::TryFrom;
 use quick_protobuf;
 
 pub mod client_messages;
@@ -136,13 +137,11 @@ impl<'a> RawMessage<'a> {
 
     /// Attempt to convert a raw message into an adapted one
     pub fn try_adapt(self) -> Result<adapted::AdaptedMessage<'a>, (Self, Error)> {
-        use CustomTryInto;
-        self.try_into()
+        adapted::AdaptedMessage::try_from(self)
     }
 
     /// Decodes the message from the buffer without any cloning.
     pub fn decode(discriminator: u8, buf: &'a [u8]) -> io::Result<RawMessage<'a>> {
-        use self::RawMessage;
         use ReadDirection::{Forward, Backward};
 
         macro_rules! decode {
