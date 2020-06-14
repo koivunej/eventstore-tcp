@@ -356,7 +356,7 @@ impl<'x> fmt::Debug for Hexdump<'x> {
 
                 write!(fmt, " | ")?;
 
-                self.format_ascii(fmt, (count - 4*4), count)?;
+                self.format_ascii(fmt, count - 4*4, count)?;
 
                 writeln!(fmt)?;
             } else if !last {
@@ -385,7 +385,7 @@ impl<'x> fmt::Debug for Hexdump<'x> {
 
             write!(fmt, " | ")?;
 
-            self.format_ascii(fmt, (count - (count % bytes_per_line)), count)?;
+            self.format_ascii(fmt, count - (count % bytes_per_line), count)?;
 
             writeln!(fmt)?;
         }

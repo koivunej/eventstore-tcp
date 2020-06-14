@@ -52,7 +52,7 @@ impl Runner {
 
 pub trait Command: Send {
     fn init(&mut self);
-    fn execute(&self, config: &Config, client: EventStoreClient) -> Box<Future<Item = (), Error = io::Error>>;
+    fn execute(&self, config: &Config, client: EventStoreClient) -> Box<dyn Future<Item = (), Error = io::Error>>;
 }
 
 fn print_elapsed(subject: &str, d: Duration) {

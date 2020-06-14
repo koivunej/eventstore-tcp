@@ -19,7 +19,7 @@ impl Delete {
 impl Command for Delete {
     fn init(&mut self) { }
 
-    fn execute(&self, config: &Config, client: EventStoreClient) -> Box<Future<Item = (), Error = io::Error>> {
+    fn execute(&self, config: &Config, client: EventStoreClient) -> Box<dyn Future<Item = (), Error = io::Error>> {
         use eventstore_tcp::RawMessage;
         use eventstore_tcp::raw::OperationResult;
 

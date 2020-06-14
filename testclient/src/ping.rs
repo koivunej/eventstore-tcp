@@ -20,7 +20,7 @@ impl Command for Ping {
         self.started = Some(Instant::now());
     }
 
-    fn execute(&self, config: &Config, client: EventStoreClient) -> Box<Future<Item = (), Error = io::Error>> {
+    fn execute(&self, config: &Config, client: EventStoreClient) -> Box<dyn Future<Item = (), Error = io::Error>> {
         use eventstore_tcp::AdaptedMessage;
 
         let started = self.started.unwrap();

@@ -27,7 +27,7 @@ impl EventStoreClient {
     /// `tokio::reactor::Core`s `handle`.
     /// Returns a future representing the client which can be used to send and receive `Package`
     /// values.
-    pub fn connect(addr: &SocketAddr, handle: &Handle) -> Box<Future<Item = Self, Error = io::Error>> {
+    pub fn connect(addr: &SocketAddr, handle: &Handle) -> Box<dyn Future<Item = Self, Error = io::Error>> {
         let ret = TcpClient::new(PackageProto)
             .connect(addr, handle)
             .map(|client_service| {
@@ -42,7 +42,7 @@ impl Service for EventStoreClient {
     type Request = Package;
     type Response = Package;
     type Error = io::Error;
-    type Future = Box<Future<Item = Package, Error = io::Error>>;
+    type Future = Box<dyn Future<Item = Package, Error = io::Error>>;
 
     fn call(&self, req: Package) -> Self::Future {
         self.inner.call(req).boxed()

@@ -100,7 +100,7 @@ extern crate derive_into_owned;
 #[cfg(test)]
 extern crate hex;
 
-use std::str;
+
 
 pub mod raw;
 pub use raw::RawMessage;

@@ -102,7 +102,7 @@ impl Read {
 impl Command for Read {
     fn init(&mut self) { }
 
-    fn execute(&self, config: &Config, client: EventStoreClient) -> Box<Future<Item = (), Error = io::Error>> {
+    fn execute(&self, config: &Config, client: EventStoreClient) -> Box<dyn Future<Item = (), Error = io::Error>> {
         let verbose = config.verbose;
         let output = self.output_mode.borrow_mut().take().unwrap();
 
